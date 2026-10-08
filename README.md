@@ -13,3 +13,4 @@
 Xem hướng dẫn chi tiết tại [SETUP.md](./setup.md).
 ## Cách chạy
 
+##Phân chia công việc:
