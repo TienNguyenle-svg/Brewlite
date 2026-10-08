@@ -9,5 +9,7 @@
 - Thanh toán:	Mock Payment Service (mô phỏng Momo/VNPay/Stripe)
 - DevOps:	Docker Compose, Git, README bàn giao
   
+## Cài đặt
+Xem hướng dẫn chi tiết tại [SETUP.md](./setup.md).
 ## Cách chạy
 
