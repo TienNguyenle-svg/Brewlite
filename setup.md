@@ -85,7 +85,33 @@ Test API:
 `curl http://localhost:3001/products`
 Phải thấy 4 sản phẩm.
 
+10. Cài dependencies frontend
+Mở terminal mới (giữ backend đang chạy).
+`cd Desktop\Brewlite\frontend`
+`pnpm install`
+`pnpm add @tanstack/react-query zustand axios`
 
+Lệnh này tạo node_modules cho frontend và cài thêm 3 thư viện:
+- @tanstack/react-query: gọi API, cache dữ liệu
+- zustand: quản lý state giỏ hàng
+- axios: HTTP client
+
+11. Tạo file .env.local cho frontend
+`notepad .env.local`
+
+Dán nội dung:
+NEXT_PUBLIC_API_URL=http://localhost:3001
+
+Lưu lại và đóng.
+
+12. Chạy frontend
+`pnpm dev`
+Phải thấy dòng:
+▲ Next.js 16.4.0
+- Local: http://localhost:3000
+
+Mở browser: http://localhost:3000
+Phải thấy trang mặc định Next.js.
 
 12. Lỗi thường gặp
 - 'node' is not recognized: chưa cài Node.js, cài lại và tick Add to PATH.
@@ -97,4 +123,45 @@ Phải thấy 4 sản phẩm.
 - port 3001 already in use: port bị chiếm, tắt process cũ hoặc đổi PORT trong .env.
 
 13. Quy trình làm việc nhóm
-...
+
+## 1. Quy tắc đặt tên branch và commit
+
+### Tên branch
+
+- Thêm chức năng: `feature/<tên-chức-năng>`
+  - Ví dụ: `feature/user-auth`, `feature/payment-vnpay`
+- Sửa lỗi: `bugfix/<tên-lỗi>`
+  - Ví dụ: `bugfix/fix-login-error`
+
+### Tên commit (Conventional Commits)
+
+- `feat:` cho chức năng hoặc giao diện mới
+  - Ví dụ: `feat(user): add login form validation`
+- `fix:` cho sửa lỗi
+  - Ví dụ: `fix(cart): resolve total amount calculation bug`
+- `chore:` cho cấu hình, tài liệu hoặc database
+  - Ví dụ: `chore(docs): update API docs`
+
+## 2. Quy trình 5 bước push code theo chức năng
+
+Mỗi khi muốn push một chức năng mới lên Git, hãy thực hiện đúng 5 bước sau:
+
+```bash
+
+# Bước 1: Lấy code mới nhất từ main về máy local
+git checkout main
+git pull origin main
+
+# Bước 2: Tạo branch mới cho chức năng muốn push
+git checkout -b feature/<tên-chức-năng>
+
+# Bước 3: Chỉ add các file hoặc thư mục thuộc chức năng đó
+git add <đường-dẫn-file-hoặc-folder-chức-năng>
+
+# Bước 4: Kiểm tra lại, đảm bảo không add nhầm node_modules hoặc file khác
+git status
+
+# Bước 5: Commit và push branch lên GitHub
+git commit -m "feat(<tên-mô-đun>): mô tả ngắn gọn chức năng"
+git push -u origin feature/<tên-chức-năng>
+```
