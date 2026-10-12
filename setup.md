@@ -6,38 +6,38 @@ Mục đích: dành cho thành viên mới clone repo về máy và chạy đư�
 - Node.js (>= 20): tải tại https://nodejs.org
 - Git: tải tại https://git-scm.com
 - Docker Desktop: tải tại https://www.docker.com/products/docker-desktop
-- VS Code:
+- VS Code
+
+Trên VS Code tải các Extensions sau (nếu chưa có):
+ESLint, Prettier, Prisma, Tailwind CSS IntelliSense, GitLens, Error Lens
 
 Sau khi cài, mở CMD mới và kiểm tra:
-node -v
-npm -v
-git --version
-docker --version
+`node -v`
+`npm -v`
+`git --version`
+`docker --version`
 
 Nếu cả 4 hiện version là OK.
 
 2. Cài pnpm
 Dự án ko yêu cầu cụ thể npm hay pnpm nên mình dùng pnpm cho nhẹ hơn, không dùng npm.
-npm i -g pnpm
+`npm i -g pnpm`
 Kiểm tra:
-pnpm --version
+`pnpm --version`
 
 3. Clone repo
-cd Desktop
-git clone https://github.com/TienNguyenle-svg/Brewlite.git
-cd Brewlite
+`cd Desktop`
+`git clone https://github.com/TienNguyenle-svg/Brewlite.git`
+`cd Brewlite`
 
-Nếu đã clone rồi:
-cd Desktop\Brewlite
-git pull origin main
 
 4. Cài dependencies backend
-cd backend
-pnpm install
+`cd backend`
+`pnpm install`
 Lệnh này tạo thư mục node_modules từ file pnpm-lock.yaml.
 
 5. Tạo file .env cho backend
-copy ..\.env.example .env
+`copy ..\.env.example .env`
 
 Nếu không có file .env.example, tạo thủ công:
 notepad .env
@@ -53,11 +53,11 @@ Lưu lại và đóng.
 6. Chạy database
 Mở Docker Desktop trước, đợi icon cá voi chuyển xanh.
 Sau đó chạy:
-cd ..
-docker-compose up -d postgres
+`cd ..`
+`docker-compose up -d postgres`
 
 Kiểm tra:
-docker ps
+`docker ps`
 Phải thấy container brewlite-db đang chạy.
 
 7. Migrate database
@@ -82,7 +82,7 @@ Phải thấy dòng:
 Application is running on: http://localhost:3001
 
 Test API:
-curl http://localhost:3001/products
+`curl http://localhost:3001/products`
 Phải thấy 4 sản phẩm.
 
 
