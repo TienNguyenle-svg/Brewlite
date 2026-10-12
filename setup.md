@@ -165,3 +165,5 @@ git status
 git commit -m "feat(<tên-mô-đun>): mô tả ngắn gọn chức năng"
 git push -u origin feature/<tên-chức-năng>
 ```
+
+Lưu ý: Sau khi push code xong thì vào github và pull request ngay!!!
