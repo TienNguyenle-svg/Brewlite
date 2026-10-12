@@ -14,3 +14,9 @@ Xem hướng dẫn chi tiết tại [SETUP.md](./setup.md).
 ## Cách chạy
 
 ## Phân chia công việc
+| Thành viên | Vai trò | Task chính | Hỗ trợ |
+| :--- | :---: | ---: | ---: |
+| Thủy Tiên | ... | ... |  ... |
+| Gia Hân | ... | ... |  ... |
+| Ngọc Hiển | ... | ... |  ... |
+| Hoàng Quân | ... | ... |  ... |
