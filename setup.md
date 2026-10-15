@@ -32,9 +32,10 @@ Kiểm tra:
 
 
 4. Cài dependencies backend
-`cd backend`
-`pnpm install`
-Lệnh này tạo thư mục node_modules từ file pnpm-lock.yaml.
+cd backend
+pnpm install
+pnpm add @nestjs/swagger
+Lệnh này tạo thư mục node_modules từ file pnpm-lock.yaml và cài Swagger UI để test API.
 
 5. Tạo file .env cho backend
 `copy ..\.env.example .env`
@@ -63,24 +64,37 @@ Phải thấy container brewlite-db đang chạy.
 7. Migrate database
 `cd backend`
 `pnpm prisma migrate dev`
-Lệnh này tạo 5 bảng: Product, User, Order, OrderItem, Payment.
+Lệnh này tạo các bảng: Product, Topping, User, Order, OrderItem, OrderItemTopping, Payment, Promotion, LoyaltyTransaction.
 
 Kiểm tra:
 `docker exec -it brewlite-db psql -U brewlite -d brewlite`
 Trong giao diện psql, gõ:
-`\dt`
-Phải thấy 5 bảng. Thoát bằng:
-`\q`
+\dt
+Phải thấy các bảng. Thoát bằng:
+\q
 
 8. Seed dữ liệu mẫu
 `pnpm prisma db seed`
-Lệnh này thêm 4 sản phẩm mẫu vào database.
+Lệnh này thêm:
+- 4 sản phẩm mẫu
+- 3 topping
+- 3 user (customer, barista, admin)
+- 2 đơn hàng mẫu
+- 1 promotion
+- 2 giao dịch điểm thưởng
 
 9. Chạy backend
-`pnpm start:dev`
+pnpm start:dev
 Phải thấy dòng:
 Application is running on: http://localhost:3001
+Swagger UI at: http://localhost:3001/api
 
+Nếu chưa cài Swagger, chạy:
+pnpm add @nestjs/swagger
+
+Test API:
+curl http://localhost:3001/products
+Phải thấy 4 sản phẩm.
 Test API:
 `curl http://localhost:3001/products`
 Phải thấy 4 sản phẩm.
@@ -113,7 +127,7 @@ Phải thấy dòng:
 Mở browser: http://localhost:3000
 Phải thấy trang mặc định Next.js.
 
-12. Lỗi thường gặp
+13. Lỗi thường gặp
 - 'node' is not recognized: chưa cài Node.js, cài lại và tick Add to PATH.
 - 'pnpm' is not recognized: chưa cài pnpm, chạy npm i -g pnpm.
 - ECONNREFUSED: backend chưa chạy, chạy pnpm start:dev.
@@ -121,8 +135,11 @@ Phải thấy trang mặc định Next.js.
 - Environment variable not found DATABASE_URL: chưa tạo .env, chạy copy .env.example .env.
 - Cannot find module '@prisma/client': chưa cài deps, chạy pnpm install.
 - port 3001 already in use: port bị chiếm, tắt process cũ hoặc đổi PORT trong .env.
+- port 3000 already in use: port bị chiếm, tắt process cũ hoặc đổi PORT trong lệnh pnpm dev.
+- Frontend không gọi được API: kiểm tra backend đang chạy và .env.local có NEXT_PUBLIC_API_URL=http://localhost:3001.
+- Swagger UI không hiện: kiểm tra đã cài @nestjs/swagger và cấu hình trong main.ts.
 
-13. Quy trình làm việc nhóm
+14. Quy trình làm việc nhóm
 
 ## 1. Quy tắc đặt tên branch và commit
 
