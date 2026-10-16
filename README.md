@@ -15,7 +15,7 @@
 Xem hướng dẫn chi tiết tại [SETUP.md](./setup.md).
 
 ## Cấu trúc dự án
-
+```
 Brewlite/
 ├── backend/                    # NestJS Backend
 │   ├── prisma/                 # Database
@@ -65,6 +65,7 @@ Brewlite/
 ├── .gitignore
 ├── README.md
 └── setup.md                    # Hướng dẫn cài đặt
+```
 
 ### Nguyên tắc tổ chức
 
