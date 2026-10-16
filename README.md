@@ -160,7 +160,7 @@ CANCELLED
 
 ## Giải thích chi tiết từng người
 
-### Thủy Tiên – PO + BE Lead
+### Thủy Tiên – PO + BE 
 - Task 1: Khởi tạo dự án và cấu trúc
 - Task 2: API danh sách sản phẩm (GET /products, GET /products/:id)
 - Task 6: API tạo đơn hàng (POST /orders, GET /orders/me)
@@ -174,7 +174,7 @@ CANCELLED
 - Task mở rộng: API Barista (GET /barista/orders, PATCH /barista/orders/:id)
 - Hỗ trợ: Bảng Payment trong schema, tổ chức Daily Scrum, Sprint Retrospective
 
-### Ngọc Hiển – FE Lead
+### Ngọc Hiển – FE 
 - Task 3: Trang Menu (gọi GET /products)
 - Task 4: Chi tiết sản phẩm (chọn size, topping)
 - Task 9: Xác nhận đơn + lịch sử đơn
