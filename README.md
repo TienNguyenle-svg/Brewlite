@@ -135,6 +135,8 @@ CANCELLED
 | Xác nhận đơn | Mã đơn, trạng thái PAID | GET /orders/:id |
 | Lịch sử đơn | Xem các đơn đã đặt | GET /orders/me |
 
+--> Quân & Hiển FE, Hân & Tiên BE
+
 ### Barista (mở rộng)
 
 | Chức năng | Mô tả | API |
@@ -142,12 +144,16 @@ CANCELLED
 | Xem đơn chờ | Danh sách đơn đang chờ pha chế | GET /barista/orders |
 | Cập nhật trạng thái | PAID → PREPARING → READY → COMPLETED | PATCH /barista/orders/:id |
 
+--> Quân FE, Hân BE
+
 ### Admin (mở rộng)
 
 | Chức năng | Mô tả | API |
 |-----------|-------|-----|
 | Quản lý sản phẩm | Thêm/sửa/xóa sản phẩm | POST/PATCH/DELETE /admin/products |
 | Báo cáo doanh thu | Xem doanh thu theo ngày/tháng | GET /admin/reports/revenue |
+
+--> Hiển FE, Tiên BE
 
 ## Phân chia công việc
 
