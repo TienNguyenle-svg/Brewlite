@@ -123,17 +123,17 @@ CANCELLED
 
 ### Khách hàng
 
-| Chức năng | Mô tả | API |
-|-----------|-------|-----|
-| Xem menu | Danh sách đồ uống kèm hình, tên, giá | GET /products |
-| Xem chi tiết | Chọn size (S/M/L), topping | GET /products/:id |
-| Giỏ hàng | Thêm/sửa/xóa, tính tổng tiền | (Zustand) |
-| Đăng ký | Tạo tài khoản mới | POST /auth/register |
-| Đăng nhập | Nhận JWT token | POST /auth/login |
-| Tạo đơn hàng | Đặt đơn, trạng thái PENDING | POST /orders |
-| Thanh toán | Chọn Ví/Thẻ, xác nhận | POST /payments |
-| Xác nhận đơn | Mã đơn, trạng thái PAID | GET /orders/:id |
-| Lịch sử đơn | Xem các đơn đã đặt | GET /orders/me |
+| Chức năng | Mô tả | API | BE | FE |
+| :--- | :--- | :--- | :--- | :--- |
+| Xem menu | Danh sách đồ uống kèm hình, tên, giá | GET /products | Thủy Tiên | Ngọc Hiển |
+| Xem chi tiết | Chọn size (S/M/L), topping | GET /products/:id | Thủy Tiên | Ngọc Hiển |
+| Giỏ hàng | Thêm/sửa/xóa, tính tổng tiền | (Zustand) | (Không cần API) | Hoàng Quân |
+| Đăng ký | Tạo tài khoản mới | POST /auth/register | Gia Hân | Ngọc Hiển |
+| Đăng nhập | Nhận JWT token | POST /auth/login | Gia Hân | Ngọc Hiển |
+| Tạo đơn hàng | Đặt đơn, trạng thái PENDING | POST /orders | Thủy Tiên | Hoàng Quân |
+| Thanh toán | Chọn Ví/Thẻ, xác nhận | POST /payments | Gia Hân | Hoàng Quân |
+| Xác nhận đơn | Mã đơn, trạng thái PAID | GET /orders/:id | Thủy Tiên | Ngọc Hiển |
+| Lịch sử đơn | Xem các đơn đã đặt | GET /orders/me | Thủy Tiên | Ngọc Hiển |
 
 --> Quân & Hiển FE, Hân & Tiên BE
 
