@@ -8,10 +8,15 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lấy danh sách sản phẩm' })
-  @ApiQuery({ name: 'sort', required: false, description: 'Sắp xếp: price_asc, price_desc, best_seller' })
+  @ApiOperation({ summary: 'Lấy danh sách sản phẩm (Mặc định: Bán chạy)' })
+  @ApiQuery({ 
+    name: 'sort', 
+    required: false, 
+    description: 'Sắp xếp: best_seller (mặc định), price_asc (thấp-cao), price_desc (cao-thấp)' 
+  })
   findAll(@Query('sort') sort?: string) {
-    return this.productsService.findAll(sort);
+    // Nếu không truyền sort, mặc định là 'best_seller'
+    return this.productsService.findAll(sort || 'best_seller');
   }
 
   @Get(':id')

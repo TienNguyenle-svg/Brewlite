@@ -6,17 +6,15 @@ export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
   findAll(sort?: string) {
-    // Mặc định sắp xếp theo giá từ thấp đến cao
-    let orderBy: any = { price: 'asc' };
+    // Mặc định ban đầu: Bán chạy (best_seller)
+    let orderBy: any = { name: 'asc' }; // Tạm thời sắp xếp theo tên để giả lập bán chạy (vì chưa có cột sold_count)
 
-    if (sort === 'price_desc') {
-      orderBy = { price: 'desc' };
-    } else if (sort === 'price_asc') {
-      orderBy = { price: 'asc' };
+    if (sort === 'price_asc') {
+      orderBy = { price: 'asc' };  // Giá thấp đến cao
+    } else if (sort === 'price_desc') {
+      orderBy = { price: 'desc' }; // Giá cao đến thấp
     } 
-    else if (sort === 'best_seller') {
-      orderBy = { name: 'asc' }; 
-    }
+    // Nếu sort === 'best_seller' hoặc không truyền gì, sẽ dùng mặc định (orderBy ở trên)
 
     return this.prisma.product.findMany({
       orderBy,
