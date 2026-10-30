@@ -6,15 +6,23 @@ export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(sort?: string) {
-    let orderBy: any = { name: 'asc' };
-    if (sort === 'price_asc') orderBy = { price: 'asc' };
-    if (sort === 'price_desc') orderBy = { price: 'desc' };
+    // Mặc định sắp xếp bán chạy
+    let orderBy: any = { soldCount: 'desc' }; 
+    
+    if (sort === 'price_asc') {
+      orderBy = { price: 'asc' };
+    } else if (sort === 'price_desc') {
+      orderBy = { price: 'desc' };
+    } else if (sort === 'name_asc') {
+      orderBy = { name: 'asc' };
+    }
+    // Nếu sort === 'best_seller' hoặc không truyền gì -> orderBy = { soldCount: 'desc' }
 
     const products = await this.prisma.product.findMany({
       orderBy,
       include: {
         recipes: {
-          include: { ingredient: true }, // Lấy thông tin nguyên liệu để check kho
+          include: { ingredient: true }, 
         },
       },
     });
@@ -24,7 +32,6 @@ export class ProductsService {
       let isAvailable = true;
       let maxServings = 9999;
 
-      // Duyệt qua từng nguyên liệu của món
       for (const recipe of product.recipes) {
         const possibleServings = Math.floor(recipe.ingredient.stock / recipe.amount);
         if (possibleServings < maxServings) {
@@ -36,7 +43,8 @@ export class ProductsService {
 
       return {
         ...product,
-        isAvailable, // Trả về trạng thái Còn/Hết hàng
+        isAvailable, 
+        // soldCount đã tự động có trong ...product do lấy từ DB
       };
     });
   }

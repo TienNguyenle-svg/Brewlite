@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ===== CÁC BẢNG CHUNG =====
 
 enum OrderStatus {
   PENDING
@@ -18,21 +19,28 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
 model Product {
   id         String      @id @default(uuid())
   name       String
   price      Int
   imageUrl   String?
+  soldCount  Int         @default(0)
   orderItems OrderItem[]
   toppings   Topping[]
-  recipes    Recipe[]    // Liên kết tới công thức nguyên liệu
+  recipes    Recipe[]    // Từ phần của bạn (BOM)
 }
 
 model Ingredient {
   id        String   @id @default(uuid())
-  name      String   // Ví dụ: Bột cà phê, Sữa đặc, Trà đen...
-  stock     Float    // Số lượng tồn kho (dùng Float để tính gram/ml)
-  unit      String   @default("gram") // Đơn vị tính (gram, ml, cái...)
+  name      String
+  stock     Float
+  unit      String   @default("gram")
   recipes   Recipe[]
 }
 
@@ -42,7 +50,7 @@ model Recipe {
   product      Product    @relation(fields: [productId], references: [id])
   ingredientId String
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
-  amount       Float      // Định lượng cần cho 1 ly (VD: 25 gram bột)
+  amount       Float
 }
 
 model Topping {
@@ -60,17 +68,22 @@ model User {
   passwordHash  String
   loyaltyPoints Int     @default(0)
   role          String  @default("CUSTOMER") // CUSTOMER, BARISTA, ADMIN
+  tokenVersion  Int     @default(0) // Từ phần của main (Auth)
   orders        Order[]
+  loyaltyTransactions LoyaltyTransaction[] // Từ phần của main
 }
 
 model Order {
-  id        String      @id @default(uuid())
-  userId    String
-  user      User        @relation(fields: [userId], references: [id])
-  status    OrderStatus @default(PENDING)
-  total     Int
-  createdAt DateTime    @default(now())
-  items     OrderItem[]
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  status      OrderStatus  @default(PENDING)
+  total       Int
+  createdAt   DateTime     @default(now())
+  items       OrderItem[]
+  payments    Payment[]    // Từ phần của main (Payment)
+  promotionId String?      // Từ phần của main (Promotion)
+  promotion   Promotion?   @relation(fields: [promotionId], references: [id])
 }
 
 model OrderItem {
@@ -81,7 +94,7 @@ model OrderItem {
   product   Product            @relation(fields: [productId], references: [id])
   size      String
   qty       Int
-  unitPrice Int                // giá tại thời điểm mua
+  unitPrice Int
   lineTotal Int
   toppings  OrderItemTopping[]
 }
@@ -92,5 +105,39 @@ model OrderItemTopping {
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
   toppingId   String
   topping     Topping   @relation(fields: [toppingId], references: [id])
-  price       Int       // giá tại thời điểm mua
+  price       Int
+}
+
+// ===== CÁC BẢNG CỦA MAIN (PAYMENT, PROMOTION) =====
+
+model Payment {
+  id             String        @id @default(uuid())
+  orderId        String
+  order          Order         @relation(fields: [orderId], references: [id])
+  idempotencyKey String        @unique
+  amount         Int
+  method         String
+  status         PaymentStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+}
+
+model Promotion {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  discount    Int
+  type        String   @default("PERCENT")
+  minOrder    Int      @default(0)
+  expiredAt   DateTime?
+  active      Boolean  @default(true)
+  orders      Order[]
+}
+
+model LoyaltyTransaction {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  points    Int
+  reason    String
+  orderId   String?
+  createdAt DateTime @default(now())
 }

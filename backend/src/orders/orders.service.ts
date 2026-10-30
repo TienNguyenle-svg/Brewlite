@@ -62,8 +62,14 @@ export class OrdersService {
         include: { items: true },
       });
 
-      // Trừ nguyên liệu kho
       for (const item of dto.items) {
+        // [MỚI] Cộng lượt bán (Sold Count) cho sản phẩm
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { soldCount: { increment: item.qty } },
+        });
+
+        // Trừ nguyên liệu kho
         const product = await prisma.product.findUnique({
           where: { id: item.productId }, include: { recipes: true }
         });
