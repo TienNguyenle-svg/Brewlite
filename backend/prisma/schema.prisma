@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ===== MVP =====
+// ===== CÁC BẢNG CHUNG =====
 
 enum OrderStatus {
   PENDING
@@ -30,17 +30,35 @@ model Product {
   name       String
   price      Int
   imageUrl   String?
-  stock      Int         @default(0)
+  soldCount  Int         @default(0)
   orderItems OrderItem[]
   toppings   Topping[]
+  recipes    Recipe[]    // Từ phần của bạn (BOM)
+}
+
+model Ingredient {
+  id        String   @id @default(uuid())
+  name      String
+  stock     Float
+  unit      String   @default("gram")
+  recipes   Recipe[]
+}
+
+model Recipe {
+  id           String     @id @default(uuid())
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id])
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  amount       Float
 }
 
 model Topping {
-  id              String             @id @default(uuid())
-  name            String
-  price           Int                @default(0)
-  productId       String?
-  product         Product?           @relation(fields: [productId], references: [id])
+  id                String             @id @default(uuid())
+  name              String
+  price             Int                @default(0)
+  productId         String?
+  product           Product?           @relation(fields: [productId], references: [id])
   orderItemToppings OrderItemTopping[]
 }
 
@@ -50,35 +68,35 @@ model User {
   passwordHash  String
   loyaltyPoints Int     @default(0)
   role          String  @default("CUSTOMER") // CUSTOMER, BARISTA, ADMIN
+  tokenVersion  Int     @default(0) // Từ phần của main (Auth)
   orders        Order[]
-  loyaltyTransactions LoyaltyTransaction[]
-  tokenVersion Int @default(0)
+  loyaltyTransactions LoyaltyTransaction[] // Từ phần của main
 }
 
 model Order {
-  id        String       @id @default(uuid())
-  userId    String
-  user      User         @relation(fields: [userId], references: [id])
-  status    OrderStatus  @default(PENDING)
-  total     Int
-  createdAt DateTime     @default(now())
-  items     OrderItem[]
-  payments  Payment[]
-  promotionId String?
-  promotion Promotion?   @relation(fields: [promotionId], references: [id])
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  status      OrderStatus  @default(PENDING)
+  total       Int
+  createdAt   DateTime     @default(now())
+  items       OrderItem[]
+  payments    Payment[]    // Từ phần của main (Payment)
+  promotionId String?      // Từ phần của main (Promotion)
+  promotion   Promotion?   @relation(fields: [promotionId], references: [id])
 }
 
 model OrderItem {
-  id              String             @id @default(uuid())
-  orderId         String
-  order           Order              @relation(fields: [orderId], references: [id])
-  productId       String
-  product         Product            @relation(fields: [productId], references: [id])
-  size            String
-  qty             Int
-  unitPrice       Int                // giá tại thời điểm mua
-  lineTotal       Int
-  toppings        OrderItemTopping[]
+  id        String             @id @default(uuid())
+  orderId   String
+  order     Order              @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product            @relation(fields: [productId], references: [id])
+  size      String
+  qty       Int
+  unitPrice Int
+  lineTotal Int
+  toppings  OrderItemTopping[]
 }
 
 model OrderItemTopping {
@@ -87,8 +105,10 @@ model OrderItemTopping {
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
   toppingId   String
   topping     Topping   @relation(fields: [toppingId], references: [id])
-  price       Int       // giá tại thời điểm mua
+  price       Int
 }
+
+// ===== CÁC BẢNG CỦA MAIN (PAYMENT, PROMOTION) =====
 
 model Payment {
   id             String        @id @default(uuid())
@@ -101,13 +121,11 @@ model Payment {
   createdAt      DateTime      @default(now())
 }
 
-// ===== Task 10 / Mở rộng =====
-
 model Promotion {
   id          String   @id @default(uuid())
   code        String   @unique
-  discount    Int      // % hoặc số tiền
-  type        String   @default("PERCENT") // PERCENT hoặc FIXED
+  discount    Int
+  type        String   @default("PERCENT")
   minOrder    Int      @default(0)
   expiredAt   DateTime?
   active      Boolean  @default(true)
@@ -118,7 +136,7 @@ model LoyaltyTransaction {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
-  points    Int      // dương = cộng, âm = trừ
+  points    Int
   reason    String
   orderId   String?
   createdAt DateTime @default(now())
