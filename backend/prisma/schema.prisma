@@ -52,6 +52,7 @@ model User {
   role          String  @default("CUSTOMER") // CUSTOMER, BARISTA, ADMIN
   orders        Order[]
   loyaltyTransactions LoyaltyTransaction[]
+  tokenVersion Int @default(0)
 }
 
 model Order {
