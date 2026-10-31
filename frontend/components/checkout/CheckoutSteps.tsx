@@ -1,7 +1,7 @@
 const STEPS = [
-  { n: "01", label: "Your details", cls: "text-[#B9672B] font-semibold" },
-  { n: "02", label: "Delivery", cls: "text-[#39281F] font-semibold" },
-  { n: "03", label: "Payment", cls: "text-[#82776E] font-medium" },
+  { n: "01", label: "Thông tin của bạn", cls: "text-[#B9672B] font-semibold" },
+  { n: "02", label: "Giao hàng", cls: "text-[#39281F] font-semibold" },
+  { n: "03", label: "Thanh toán", cls: "text-[#82776E] font-medium" },
 ];
 
 export default function CheckoutSteps() {

@@ -39,8 +39,8 @@ export default function PromoForm({
               apply();
             }
           }}
-          placeholder="Enter promo code"
-          aria-label="Promo code"
+          placeholder="Nhập mã giảm giá..."
+          aria-label="Mã giảm giá"
           className="h-[46px] min-w-0 flex-1 rounded-[10px] border border-[#E3DACF] bg-[#FBF7F1] px-4 text-xs uppercase outline-none placeholder:normal-case placeholder:text-[#82776E] focus:border-[#B9672B]"
         />
         <button
@@ -48,19 +48,19 @@ export default function PromoForm({
           onClick={apply}
           className="h-12 w-[116px] shrink-0 rounded-xl border border-[#E3DACF] bg-white text-sm font-semibold"
         >
-          Apply
+          Áp dụng
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
       {applied && !error && (
         <p className="mt-2 flex items-center gap-2 text-xs text-[#406B4A]">
-          Code {applied.code} applied.
+          Đã áp dụng mã {applied.code}.
           <button
             type="button"
             onClick={onRemove}
             className="underline underline-offset-2"
           >
-            Remove
+            Gỡ
           </button>
         </p>
       )}

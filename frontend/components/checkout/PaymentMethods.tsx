@@ -7,9 +7,9 @@ export const PAYMENT_LABELS: Record<PaymentId, string> = {
 };
 
 const OPTIONS: [PaymentId, string, string][] = [
-  ["momo", "Ví Momo", "E-wallet payment"],
-  ["vnpay", "VNPAY", "Bank card / QR payment"],
-  ["stripe", "Stripe", "International card"],
+  // ["momo", "Ví Momo", "E-wallet payment"],
+  ["vnpay", "VNPAY", "Thẻ / Mã QR"],
+  // ["stripe", "Stripe", "International card"],
 ];
 
 export default function PaymentMethods({
@@ -21,8 +21,8 @@ export default function PaymentMethods({
 }) {
   return (
     <section className="rounded-[18px] bg-white p-5 sm:p-8">
-      <h2 className="text-[21px] font-semibold leading-[25px]">Payment method</h2>
-      <p className="mt-2 text-xs text-[#82776E]">Choose what works best for you.</p>
+      <h2 className="text-[21px] font-semibold leading-[25px]">Phương thức thanh toán</h2>
+      <p className="mt-2 text-xs text-[#82776E]">Vui lòng chọn phương thức thanh toán phù hợp.</p>
       <div className="mt-[23px] grid gap-[26px] sm:grid-cols-3">
         {OPTIONS.map(([id, title, sub]) => {
           const on = value === id;
@@ -51,7 +51,7 @@ export default function PaymentMethods({
         })}
       </div>
       <p className="mt-[27px] text-[11px] text-[#82776E]">
-        🔒 Your information is kept safe and secure.
+        🔒 Thông tin của bạn sẽ được giữ an toàn và bảo mật.
       </p>
     </section>
   );

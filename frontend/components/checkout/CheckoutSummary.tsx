@@ -19,9 +19,9 @@ export default function CheckoutSummary({
 }) {
   return (
     <aside className="rounded-[18px] bg-white p-8">
-      <h2 className="text-[21px] font-semibold leading-[25px]">Your order</h2>
+      <h2 className="text-[21px] font-semibold leading-[25px]">Đơn hàng</h2>
       <p className="mt-2 text-xs text-[#82776E]">
-        {cart.count} {cart.count === 1 ? "item" : "items"}
+        {cart.count} {cart.count === 1 ? "Món" : "Món"}
       </p>
       <ul className="mt-[22px] flex flex-col gap-4">
         {cart.items.map((i) => (
@@ -58,23 +58,23 @@ export default function CheckoutSummary({
       <div className="mt-[22px] border-t border-[#E3DACF] pt-[22px]">
         <dl className="flex flex-col gap-4 text-[13px]">
           <div className="flex justify-between">
-            <dt className="text-[#82776E]">Subtotal</dt>
+            <dt className="text-[#82776E]">Tổng cộng</dt>
             <dd className="font-medium">{money(cart.subtotal)}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-[#82776E]">Delivery</dt>
+            <dt className="text-[#82776E]">Phí vận chuyển</dt>
             <dd className="font-medium">{money(cart.delivery)}</dd>
           </div>
           {cart.promo && (
             <div className="flex justify-between text-[#406B4A]">
-              <dt>Discount ({cart.promo.code})</dt>
+              <dt>Giảm giá ({cart.promo.code})</dt>
               <dd className="font-medium">−{money(cart.discount)}</dd>
             </div>
           )}
         </dl>
       </div>
       <div className="mt-[22px] flex items-center justify-between border-t border-[#E3DACF] pt-[22px]">
-        <span className="text-[15px] font-semibold">Total to pay</span>
+        <span className="text-[15px] font-semibold">Tổng cộng cần thanh toán</span>
         <span className="text-[22px] font-bold">{money(cart.total)}</span>
       </div>
 
@@ -86,7 +86,7 @@ export default function CheckoutSummary({
           className="size-[18px] shrink-0 accent-[#B9672B]"
         />
         <span className="text-[10px] leading-[18px] text-[#82776E]">
-          I agree to the Terms of Service and Privacy Policy.
+          Tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật.
         </span>
       </label>
 
@@ -95,18 +95,18 @@ export default function CheckoutSummary({
         disabled={!canSubmit}
         className="mt-[32px] h-12 w-full rounded-xl bg-[#39281F] text-sm font-semibold text-white disabled:opacity-60"
       >
-        Place order
+        Đặt hàng
       </button>
       <p className="mt-3.5 text-center text-[10px] text-[#82776E]">
-        By placing your order, you agree to our terms.
+        Với việc đặt hàng, bạn đồng ý với các điều khoản của chúng tôi.
       </p>
       <Link
         href="/cart"
         className="mt-[22px] flex h-12 items-center justify-center rounded-xl border border-[#E3DACF] bg-white text-sm font-semibold"
       >
-        Back to cart
+        Quay lại giỏ hàng
       </Link>
-      <p className="mt-4 text-[11px] text-[#82776E]">Questions? We’re happy to help.</p>
+      <p className="mt-4 text-[11px] text-[#82776E]">Bạn có câu hỏi gì không? Chúng tôi vui lòng hỗ trợ.</p>
     </aside>
   );
 }

@@ -4,8 +4,8 @@ import { IconChevronDown, IconCoffee, IconMapPin } from "@/components/icons";
 
 const LINKS = [
   { label: "Menu", href: "/" },
-  { label: "My orders", href: "/orders" },
-  { label: "Our story", href: "/" },
+  { label: "Đơn đặt hàng", href: "/orders" },
+  { label: "Lịch sử đặt hàng", href: "/" },
 ];
 
 export default function Navbar({ active = "My orders" }: { active?: string }) {
@@ -37,7 +37,7 @@ export default function Navbar({ active = "My orders" }: { active?: string }) {
       <div className="flex items-center gap-4 sm:gap-6">
         <div className="hidden items-center gap-[7px] text-[13px] text-[#39281F] sm:flex">
           <IconMapPin size={17} />
-          District 1, HCMC
+          Hồ Chí Minh
           <IconChevronDown size={14} />
         </div>
         <CartButton />

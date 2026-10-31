@@ -5,8 +5,8 @@ export default function Footer() {
         <span className="text-[19px] text-[#39281F]">BrewLite.</span>
         <span>A little pause. A better day.</span>
       </div>
-      <span>Freshly brewed daily · 7:00 – 22:00</span>
-      <span>Need a hand? Contact us · © 2026 BrewLite</span>
+      <span>Thời gian hoạt động · 7:00 – 22:00</span>
+      <span>Contact us · © 2026 BrewLite</span>
     </footer>
   );
 }

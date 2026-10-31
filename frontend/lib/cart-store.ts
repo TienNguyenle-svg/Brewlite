@@ -8,21 +8,25 @@ import {
   type Promotion,
   type PromoResult,
 } from "@/lib/promotions";
+import type { Product } from "@/lib/types";
 
 export interface CartItem {
   id: string;
+  productId: string;
   name: string;
   customization: string;
   summaryNote: string;
   category: string;
   price: number;
   qty: number;
+  size: "S" | "M" | "L";
   imageUrl: string; // ảnh nằm trong frontend/public/images
 }
 
 interface CartState {
   items: CartItem[];
   promo: Promotion | null;
+  addItem: (product: Product, size?: CartItem["size"]) => void;
   setQty: (id: string, qty: number) => void;
   applyPromo: (code: string) => PromoResult;
   removePromo: () => void;
@@ -32,44 +36,32 @@ interface CartState {
 export const FREE_DELIVERY_THRESHOLD = 150000;
 export const DELIVERY_FEE = 15000;
 
-// Dữ liệu mẫu lấy từ backend/prisma/seed.ts (tên, giá, imageUrl khớp seed).
-// TODO: thay bằng giỏ hàng thật (thêm từ trang Menu / API backend).
-const SAMPLE_ITEMS: CartItem[] = [
-  {
-    id: "ca-phe-sua",
-    name: "Cà phê sữa",
-    customization: "Medium · 50% sugar · Regular ice",
-    summaryNote: "Medium · 50% sugar",
-    category: "BEST SELLER",
-    price: 35000,
-    qty: 1,
-    imageUrl: "/images/ca-phe-sua.jpg",
-  },
-  {
-    id: "cappuccino",
-    name: "Cappuccino",
-    customization: "Large · Oat milk · Hot",
-    summaryNote: "Large · Oat milk",
-    category: "COFFEE",
-    price: 45000,
-    qty: 1,
-    imageUrl: "/images/cappuccino.jpg",
-  },
-  {
-    id: "tra-dao",
-    name: "Trà đào",
-    customization: "Medium · Less ice",
-    summaryNote: "Medium · Less ice",
-    category: "FRUIT TEA",
-    price: 39000,
-    qty: 1,
-    imageUrl: "/images/tra-dao.jpg",
-  },
-];
-
 export const useCartStore = create<CartState>((set, get) => ({
-  items: SAMPLE_ITEMS,
+  items: [],
   promo: null,
+  addItem: (product, size = "M") => {
+    const id = `${product.id}:${size}`;
+    const currentItem = get().items.find((item) => item.id === id);
+    const item: CartItem = currentItem
+      ? { ...currentItem, qty: currentItem.qty + 1 }
+      : {
+          id,
+          productId: product.id,
+          name: product.name,
+          customization: `Size ${size}`,
+          summaryNote: `Size ${size}`,
+          category: "BREWLITE MENU",
+          price: product.price,
+          qty: 1,
+          size,
+          imageUrl: product.imageUrl ?? "/window.svg",
+        };
+    set({
+      items: currentItem
+        ? get().items.map((existing) => (existing.id === id ? item : existing))
+        : [...get().items, item],
+    });
+  },
   setQty: (id, qty) => {
     const items = get()
       .items.map((i) => (i.id === id ? { ...i, qty } : i))
@@ -96,6 +88,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 export function useCart() {
   const items = useCartStore((s) => s.items);
   const promo = useCartStore((s) => s.promo);
+  const addItem = useCartStore((s) => s.addItem);
   const setQty = useCartStore((s) => s.setQty);
   const applyPromo = useCartStore((s) => s.applyPromo);
   const removePromo = useCartStore((s) => s.removePromo);
@@ -119,5 +112,14 @@ export function useCart() {
     };
   }, [items, promo]);
 
-  return { items, promo, setQty, applyPromo, removePromo, clear, ...totals };
+  return {
+    items,
+    promo,
+    addItem,
+    setQty,
+    applyPromo,
+    removePromo,
+    clear,
+    ...totals,
+  };
 }

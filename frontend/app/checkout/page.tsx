@@ -12,12 +12,12 @@ export default function CheckoutPage() {
         <p className="text-xs text-[#82776E]">
           <Link href="/">Menu</Link>
           {"   /   "}
-          <Link href="/cart">Cart</Link>
-          {"   /   "}Checkout
+          <Link href="/cart">Giỏ hàng</Link>
+          {"   /   "}Thanh toán
         </p>
-        <h1 className="mt-[21px] text-[38px] leading-[46px]">Almost yours.</h1>
+        <h1 className="mt-[21px] text-[38px] leading-[46px]">Đơn hàng của quý khách sắp hoàn tất.</h1>
         <p className="mt-3 text-sm text-[#82776E]">
-          Just a few details, then we’ll get brewing.
+          Vui lòng điền thêm một số chi tiết để chúng tôi bắt đầu pha chế.
         </p>
         <CheckoutView />
       </div>

@@ -29,17 +29,17 @@ export type PromoResult =
 
 export function validatePromo(code: string, subtotal: number): PromoResult {
   const key = code.trim().toUpperCase();
-  if (!key) return { ok: false, message: "Please enter a promo code." };
+  if (!key) return { ok: false, message: "Vui lòng nhập mã giảm giá." };
 
   const promo = PROMOTIONS.find((p) => p.code === key);
   if (!promo || !promo.active)
-    return { ok: false, message: "Invalid promo code." };
+    return { ok: false, message: "Mã giảm giá không hợp lệ." };
   if (promo.expiredAt && new Date(promo.expiredAt) < new Date())
-    return { ok: false, message: "This promo code has expired." };
+    return { ok: false, message: "Mã giảm giá đã hết hạn." };
   if (subtotal < promo.minOrder)
     return {
       ok: false,
-      message: `Minimum order ${promo.minOrder.toLocaleString("de-DE")}₫ to use ${promo.code}.`,
+      message: `Đơn hàng tối thiểu ${promo.minOrder.toLocaleString("de-DE")}₫ để sử dụng mã ${promo.code}.`,
     };
   return { ok: true, promo };
 }
