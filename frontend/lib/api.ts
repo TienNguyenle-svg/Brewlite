@@ -1,4 +1,4 @@
-import type { Product } from "./types";
+import type { ApiProduct, Product } from "./types";
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
@@ -79,7 +79,18 @@ export async function request<T>(
   return response.json() as Promise<T>;
 }
 
-export const getProducts = () => request<Product[]>("/products");
+type ProductResponse = Omit<Product, "imageUrl"> & {
+  imageUrl: string | null;
+  isAvailable?: boolean;
+};
+
+export async function getProducts(): Promise<ApiProduct[]> {
+  const products = await request<ProductResponse[]>("/products");
+  return products.map((product) => ({
+    ...product,
+    imageUrl: product.imageUrl ?? "/window.svg",
+  }));
+}
 
 export const createOrder = (input: CreateOrderInput) =>
   request<OrderReceipt>("/orders", {
