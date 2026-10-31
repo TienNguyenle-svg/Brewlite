@@ -39,11 +39,11 @@ function BagIcon() {
 
 export default function Header() {
   return (
-    <header className="border-b border-[#EDE6DC] bg-[#F8F5F0]">
+    <header className="border-b border-[##F8F4E8] bg-[#F8F5F0]">
       <div className="mx-auto flex h-[88px] max-w-[1440px] items-center justify-between px-4 md:px-[72px]">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#2B1F1A] text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8A4B22] text-white">
             <CupIcon />
           </span>
           <span className="text-xl text-[#2B1F1A]">BrewLite.</span>
