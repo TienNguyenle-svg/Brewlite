@@ -12,7 +12,7 @@ async function main() {
   await prisma.orderItem.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.order.deleteMany();
-  await prisma.recipe.deleteMany(); 
+  await prisma.recipe.deleteMany();
   await prisma.ingredient.deleteMany();
   await prisma.topping.deleteMany();
   await prisma.product.deleteMany();
