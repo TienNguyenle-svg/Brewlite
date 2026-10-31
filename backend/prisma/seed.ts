@@ -20,7 +20,7 @@ async function main() {
   await prisma.user.deleteMany();
 
   // 2. Tạo User 
-  const passwordHash = await bcrypt.hash('123456', 10);
+  const passwordHash = await bcrypt.hash('a123456', 10);
   const customer = await prisma.user.create({
     data: { email: 'customer@brewlite.com', passwordHash, role: 'CUSTOMER', loyaltyPoints: 100 },
   });
