@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Topping" ADD COLUMN     "stock" INTEGER NOT NULL DEFAULT 50;
