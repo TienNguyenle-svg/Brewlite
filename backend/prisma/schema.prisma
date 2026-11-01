@@ -121,6 +121,8 @@ model Payment {
   idempotencyKey String        @unique
   amount         Int
   method         String
+  expiresAt      DateTime?
+  failedAt       DateTime?
   status         PaymentStatus @default(PENDING)
   createdAt      DateTime      @default(now())
 }

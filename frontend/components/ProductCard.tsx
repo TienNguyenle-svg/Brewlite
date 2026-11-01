@@ -44,7 +44,7 @@ export default function ProductCard({ product }: { product: Product }) {
           type="button"
           className="rounded-lg border border-[#EDE6DC] px-3 py-1.5 text-xs font-medium text-[#2B1F1A] hover:bg-[#F8F5F0]"
         >
-          + Quick Add
+          Thêm vào giỏ hàng
         </button>
       </div>
     </article>

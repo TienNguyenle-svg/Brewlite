@@ -28,7 +28,7 @@ type AuthenticatedRequest = Request & {
   };
 };
 
-@ApiTags('Barista')
+@ApiTags('barista')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('barista')
