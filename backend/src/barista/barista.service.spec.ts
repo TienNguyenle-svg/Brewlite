@@ -63,6 +63,34 @@ describe('BaristaService', () => {
         }),
       );
     });
+    it('trả về danh sách đơn đã hoàn thành', async () => {
+    const orders = [
+      { id: 'order-4', status: OrderStatus.COMPLETED },
+    ];
+
+    prismaMock.order.findMany.mockResolvedValue(orders);
+
+    await expect(
+      service.findOrders(OrderStatus.COMPLETED),
+    ).resolves.toEqual(orders);
+
+    expect(prismaMock.order.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          status: OrderStatus.COMPLETED,
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+    );
+  });
+
+  it('báo lỗi khi truyền trạng thái không được hỗ trợ', async () => {
+    await expect(
+      service.findOrders('CANCELLED'),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(prismaMock.order.findMany).not.toHaveBeenCalled();
+  });
   });
 
   describe('updateOrderStatus', () => {

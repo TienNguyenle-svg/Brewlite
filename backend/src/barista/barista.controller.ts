@@ -5,12 +5,14 @@ import {
   Get,
   Param,
   Patch,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
@@ -26,7 +28,7 @@ type AuthenticatedRequest = Request & {
   };
 };
 
-@ApiTags('Barista')
+@ApiTags('barista')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('barista')
@@ -45,11 +47,22 @@ export class BaristaController {
 
   @Get('orders')
   @ApiOperation({
-    summary: 'Lấy danh sách đơn hàng đang chờ pha chế',
+    summary: 'Lấy danh sách đơn hàng Barista',
+    description:
+      'Mặc định lấy đơn chờ pha chế. Truyền status=COMPLETED để lấy đơn đã hoàn thành.',
   })
-  findOrders(@Req() req: AuthenticatedRequest) {
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['COMPLETED'],
+    description: 'Lọc danh sách đơn đã hoàn thành',
+  })
+  findOrders(
+    @Req() req: AuthenticatedRequest,
+    @Query('status') status?: string,
+  ) {
     this.ensureBarista(req);
-    return this.baristaService.findOrders();
+    return this.baristaService.findOrders(status);
   }
 
   @Patch('orders/:id')
