@@ -52,9 +52,15 @@ export class ProductsService {
   async findOne(id: string) {
     const product = await this.prisma.product.findUnique({
       where: { id },
-      include: { toppings: true, recipes: { include: { ingredient: true } } },
+      include: { recipes: { include: { ingredient: true } } },
     });
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-    return product;
+
+    // Luôn trả toàn bộ topping, không phụ thuộc món nào
+    const toppings = await this.prisma.topping.findMany({
+      orderBy: { name: 'asc' },
+    });
+
+    return { ...product, toppings };
   }
 }
