@@ -53,7 +53,7 @@ describe('BaristaController', () => {
         controller.findOrders(baristaRequest),
       ).resolves.toEqual(orders);
 
-      expect(baristaServiceMock.findOrders).toHaveBeenCalledTimes(1);
+      expect(baristaServiceMock.findOrders).toHaveBeenCalledWith(undefined);
     });
 
     it('từ chối CUSTOMER', () => {
@@ -63,6 +63,24 @@ describe('BaristaController', () => {
 
       expect(baristaServiceMock.findOrders).not.toHaveBeenCalled();
     });
+    it('cho phép BARISTA lấy danh sách đơn hoàn thành', async () => {
+  const orders = [
+    { id: 'order-4', status: 'COMPLETED' },
+  ];
+
+  baristaServiceMock.findOrders.mockResolvedValue(orders);
+
+  await expect(
+    controller.findOrders(
+      baristaRequest,
+      'COMPLETED',
+    ),
+  ).resolves.toEqual(orders);
+
+  expect(
+    baristaServiceMock.findOrders,
+  ).toHaveBeenCalledWith('COMPLETED');
+});
   });
 
   describe('updateOrderStatus', () => {
