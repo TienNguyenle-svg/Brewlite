@@ -6,6 +6,7 @@ export const metadata: Metadata = { title: "Your cart · BrewLite" };
 
 export default function CartPage() {
   return (
+<<<<<<< HEAD
     <div className="mx-auto w-full max-w-[1296px] px-6 py-10">
       <p className="text-xs text-[#82776E]">
         <Link href="/">Menu</Link>
@@ -17,5 +18,20 @@ export default function CartPage() {
       </p>
       <CartView />
     </div>
+=======
+    <StoreShell>
+      <div className="mx-auto w-full max-w-[1296px]">
+        <p className="text-xs text-[#82776E]">
+          <Link href="/">Menu</Link>
+          {"   /   "}Giỏ hàng
+        </p>
+        <h1 className="mt-[21px] text-[38px] leading-[46px]">Giỏ hàng</h1>
+        <p className="mt-3 text-sm text-[#82776E]">
+          A little happiness, coming right up.
+        </p>
+        <CartView />
+      </div>
+    </StoreShell>
+>>>>>>> origin/feature/cart-checkout
   );
 }
