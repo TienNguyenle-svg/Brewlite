@@ -23,6 +23,7 @@ enum PaymentStatus {
   PENDING
   SUCCEEDED
   FAILED
+  REFUNDED
 }
 
 model Product {

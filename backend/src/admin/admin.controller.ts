@@ -158,4 +158,9 @@ export class AdminController {
   getRevenueReport() {
     return this.adminService.getRevenueReport();
   }
+  @Get('orders')
+  @ApiOperation({ summary: 'Xem danh sách tất cả đơn hàng' })
+  getAllOrders() {
+    return this.adminService.getAllOrders();
+  }
 }
