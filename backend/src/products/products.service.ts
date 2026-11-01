@@ -24,6 +24,7 @@ export class ProductsService {
         recipes: {
           include: { ingredient: true }, 
         },
+        toppings: true,
       },
     });
 

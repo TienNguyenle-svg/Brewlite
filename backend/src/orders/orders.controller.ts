@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -19,4 +19,11 @@ export class OrdersController {
   getMyOrders() {
     return this.ordersService.findMyOrders();
   }
+
+  @Patch(':id/cancel')
+  @ApiOperation({ summary: 'Khách hủy đơn (Chỉ khi PAID) và hoàn tiền, hoàn kho' })
+  cancelOrder(@Param('id') id: string) {
+    return this.ordersService.cancelOrder(id);
+  }
+
 }
