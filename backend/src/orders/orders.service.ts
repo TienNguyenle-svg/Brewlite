@@ -58,10 +58,7 @@ export class OrdersService {
       }
 
       // 1.3 Tính giá tiền theo hệ số Size
-      // Giá gốc của món được nhân với hệ số Size (S: 0.8, M: 1.0, L: 1.2)
       const finalProductPrice = Math.round(product.price * multiplier); 
-      
-      // Giá cuối cùng = (Giá sản phẩm sau khi nhân size + Tiền topping) * Số lượng
       const lineTotal = (finalProductPrice + toppingPriceTotal) * item.qty;
       
       total += lineTotal;
@@ -70,10 +67,10 @@ export class OrdersService {
         productId: item.productId, 
         size: item.size, 
         qty: item.qty, 
-        unitPrice: finalProductPrice, // Lưu giá đã nhân hệ số vào DB
+        unitPrice: finalProductPrice, 
         lineTotal,
         toppings: {
-          create: itemToppingsData, // Lưu topping vào bảng OrderItemTopping
+          create: itemToppingsData, 
         }
       });
     }
@@ -81,7 +78,16 @@ export class OrdersService {
     // 2. Tạo đơn và trừ kho nguyên liệu
     return this.prisma.$transaction(async (prisma) => {
       const order = await prisma.order.create({
-        data: { userId: user.id, total, status: 'PENDING', items: { create: orderItems } },
+        data: { 
+          userId: user.id, 
+          total, 
+          status: 'PENDING', 
+          items: { create: orderItems },
+          // Thêm 3 trường thông tin người nhận vào đây
+          receiverName: dto.receiverName,
+          receiverPhone: dto.receiverPhone,
+          deliveryAddress: dto.deliveryAddress,
+        },
         include: { items: { include: { toppings: true } } },
       });
 

@@ -57,6 +57,7 @@ model Topping {
   id                String             @id @default(uuid())
   name              String
   price             Int                @default(0)
+  stock             Int                @default(50)
   productId         String?
   product           Product?           @relation(fields: [productId], references: [id])
   orderItemToppings OrderItemTopping[]
@@ -84,6 +85,9 @@ model Order {
   payments    Payment[]    // Từ phần của main (Payment)
   promotionId String?      // Từ phần của main (Promotion)
   promotion   Promotion?   @relation(fields: [promotionId], references: [id])
+  receiverName    String?
+  receiverPhone   String?
+  deliveryAddress String?
 }
 
 model OrderItem {
