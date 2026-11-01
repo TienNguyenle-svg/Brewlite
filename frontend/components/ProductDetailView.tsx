@@ -3,12 +3,20 @@
 import { useState } from "react";
 import Link from "next/link";
 
+export type Topping = {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+};
+
 export type Product = {
   id: string;
   name: string;
   price: number;
   imageUrl: string;
   soldCount: number;
+  toppings?: Topping[];
 };
 
 // Danh sách size (tạm, chưa có từ backend)
@@ -18,19 +26,15 @@ const SIZES = [
   { id: "L", label: "Large", extra: 15000 },
 ];
 
-// Danh sách topping (tạm, chưa lấy từ backend)
-const TOPPINGS = [
-  { id: "pearls", label: "Trân châu", extra: 5000 },
-  { id: "cheese", label: "Kem phô mai", extra: 10000 },
-  { id: "pudding", label: "Pudding", extra: 8000 },
-];
-
 export default function ProductDetailView({ product }: { product: Product }) {
   // Ô nhớ: size đang được chọn, mặc định là Medium
   const [sizeId, setSizeId] = useState("M");
 
-  // Ô nhớ: danh sách topping đang được chọn, mặc định chưa chọn gì
+  // Ô nhớ: danh sách id topping đang được chọn, mặc định chưa chọn gì
   const [toppingIds, setToppingIds] = useState<string[]>([]);
+
+  // Topping thật của món này, lấy từ backend
+  const toppings = product.toppings ?? [];
 
   // Bật/tắt một topping
   function toggleTopping(id: string) {
@@ -125,7 +129,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
             </div>
           </div>
 
-          {/* ===== PHẦN 3: CHỌN TOPPING ===== */}
+          {/* ===== PHẦN 3: CHỌN TOPPING (dữ liệu thật từ backend) ===== */}
           <div className="mt-6">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-gray-900">Topping</h2>
@@ -135,17 +139,27 @@ export default function ProductDetailView({ product }: { product: Product }) {
             </div>
 
             <div className="mt-3 flex flex-col gap-3">
-              {TOPPINGS.map((topping) => {
+              {toppings.length === 0 && (
+                <p className="text-sm text-gray-500">
+                  Món này chưa có topping.
+                </p>
+              )}
+
+              {toppings.map((topping) => {
                 const isChecked = toppingIds.includes(topping.id);
+                const isSoldOut = topping.stock <= 0;
 
                 return (
                   <button
                     key={topping.id}
                     type="button"
+                    disabled={isSoldOut}
                     onClick={() => toggleTopping(topping.id)}
                     aria-pressed={isChecked}
                     className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition ${
-                      isChecked
+                      isSoldOut
+                        ? "cursor-not-allowed border-gray-200 bg-gray-50 text-gray-400"
+                        : isChecked
                         ? "border-orange-600 bg-orange-50 font-medium text-gray-900"
                         : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
                     }`}
@@ -161,10 +175,10 @@ export default function ProductDetailView({ product }: { product: Product }) {
                       >
                         {isChecked && "✓"}
                       </span>
-                      {topping.label}
+                      {topping.name}
                     </span>
                     <span className="text-xs text-gray-500">
-                      +{topping.extra / 1000}k
+                      {isSoldOut ? "Hết hàng" : `+${topping.price / 1000}k`}
                     </span>
                   </button>
                 );
