@@ -238,8 +238,8 @@ CANCELLED
 | API Barista | Gia Hân | GET /barista/orders, PATCH /barista/orders/:id |
 | Trang Admin | Ngọc Hiển | Giao diện quản lý sản phẩm (thêm/sửa/xóa) |
 | Trang Barista | Hoàng Quân | Giao diện xem đơn đang chờ, cập nhật trạng thái |
-| Khuyến mãi | Gia Hân | POST /promotions/apply, bảng Promotion |
-| Điểm thưởng | Gia Hân | GET /users/me/loyalty, POST /users/me/redeem |
+| Xem trước tổng tiền khi áp mã và điểm thưởng trước khi order | Gia Hân | POST /checkout/preview |
+| Điểm thưởng | Gia Hân | GET /users/me/loyalty |
 | Thông báo | Hoàng Quân | Gửi email xác nhận đơn (mock) |
 | Đánh giá | Ngọc Hiển | POST /reviews, GET /products/:id/reviews |
 | Báo cáo doanh thu | Thủy Tiên | GET /admin/reports/revenue |
