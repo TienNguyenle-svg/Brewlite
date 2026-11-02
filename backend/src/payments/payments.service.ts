@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { DiscountsService } from '../discounts/discounts.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   IDEMPOTENCY_KEY_PATTERN,
@@ -28,6 +29,7 @@ export class PaymentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly discounts: DiscountsService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -119,7 +121,10 @@ export class PaymentsService {
           where: { id: orderId },
         });
 
-        if (!currentOrder || !OPEN_ORDER_STATUSES.includes(currentOrder.status)) {
+        if (
+          !currentOrder ||
+          !OPEN_ORDER_STATUSES.includes(currentOrder.status)
+        ) {
           throw new ConflictException(
             'Trạng thái đơn hàng đã thay đổi. Vui lòng tải lại trang',
           );
@@ -160,6 +165,10 @@ export class PaymentsService {
           );
         }
 
+        // Số tiền sắp được chốt: mã giảm giá và điểm gắn vào đơn phải còn hợp lệ.
+        await this.discounts.validateBeforePayment(tx, currentOrder, now);
+
+        // Order.total is the final payable amount and already includes shippingFee.
         const created = await tx.payment.create({
           data: {
             orderId,
@@ -401,8 +410,7 @@ export class PaymentsService {
     }
 
     const success =
-      params.vnp_ResponseCode === '00' &&
-      params.vnp_TransactionStatus === '00';
+      params.vnp_ResponseCode === '00' && params.vnp_TransactionStatus === '00';
 
     const result = await this.prisma.$transaction(async (tx) => {
       const currentPayment = await tx.payment.findUnique({
@@ -429,9 +437,7 @@ export class PaymentsService {
           );
         }
 
-        if (
-          ['PREPARING', 'READY', 'COMPLETED'].includes(currentOrder.status)
-        ) {
+        if (['PREPARING', 'READY', 'COMPLETED'].includes(currentOrder.status)) {
           throw new ConflictException(
             'Đơn hàng đã được xử lý; cần đối soát giao dịch',
           );
@@ -487,6 +493,15 @@ export class PaymentsService {
               'Trạng thái đơn hàng đã thay đổi; cần đối soát giao dịch',
             );
           }
+
+          // Chỉ khi đơn thật sự lên PAID mới trừ điểm đã dùng và cộng điểm mới.
+          // Thanh toán lỗi / hết hạn / hủy đơn không chạm tới điểm của khách.
+          await this.discounts.settlePaidOrder(tx, {
+            id: currentOrder.id,
+            userId: currentOrder.userId,
+            pointsUsed: currentOrder.pointsUsed,
+            amountPaid: currentPayment.amount,
+          });
         }
 
         return 'success' as const;
@@ -650,7 +665,9 @@ export class PaymentsService {
     }
 
     const latestFailure = Math.max(
-      ...failedPayments.map((item) => (item.failedAt ?? item.createdAt).getTime()),
+      ...failedPayments.map((item) =>
+        (item.failedAt ?? item.createdAt).getTime(),
+      ),
     );
 
     const expired =
