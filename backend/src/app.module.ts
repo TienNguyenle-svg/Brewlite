@@ -10,16 +10,20 @@ import { AuthModule } from './auth/auth.module';
 import { PaymentsModule } from './payments/payments.module';
 import { BaristaModule } from './barista/barista.module';
 import { AdminModule } from './admin/admin.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
+import { CheckoutModule } from './checkout/checkout.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ScheduleModule.forRoot(),
     PrismaModule,
-    ProductsModule,
-    OrdersModule,
     AuthModule,
+    ProductsModule,
+    CheckoutModule,
+    OrdersModule,
     PaymentsModule,
+    LoyaltyModule,
     BaristaModule,
     AdminModule,
   ],

@@ -9,6 +9,7 @@ import { OrderStatus, Prisma } from '@prisma/client';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { isAllowedOrderTransition } from './payments.constants';
+import { DiscountsService } from '../discounts/discounts.service';
 import { PaymentsService } from './payments.service';
 
 describe('PaymentsService', () => {
@@ -42,11 +43,17 @@ describe('PaymentsService', () => {
 
   const config = { get: jest.fn() };
 
+  const discounts = {
+    validateBeforePayment: jest.fn(),
+    settlePaidOrder: jest.fn(),
+  };
+
   const order = {
     id: 'order-1',
     userId: 'user-1',
     total: 35000,
     status: 'PENDING',
+    pointsUsed: 0,
   };
 
   const payment = {
@@ -77,7 +84,10 @@ describe('PaymentsService', () => {
 
     const queryString = Object.keys(params)
       .sort()
-      .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+      .map(
+        (key) =>
+          `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`,
+      )
       .join('&');
 
     const signature = createHmac('sha512', 'test-secret')
@@ -91,15 +101,19 @@ describe('PaymentsService', () => {
     jest.resetAllMocks();
 
     config.get.mockImplementation((key: string) => configValues[key]);
-    prisma.$transaction.mockImplementation((callback: (tx: typeof prisma) => unknown) =>
-      callback(prisma),
+    prisma.$transaction.mockImplementation(
+      (callback: (tx: typeof prisma) => unknown) => callback(prisma),
     );
     prisma.$queryRaw.mockResolvedValue([]);
     prisma.order.updateMany.mockResolvedValue({ count: 1 });
 
+    discounts.validateBeforePayment.mockResolvedValue(undefined);
+    discounts.settlePaidOrder.mockResolvedValue(undefined);
+
     service = new PaymentsService(
       prisma as unknown as PrismaService,
       config as unknown as ConfigService,
+      discounts as unknown as DiscountsService,
     );
   });
 
@@ -125,7 +139,12 @@ describe('PaymentsService', () => {
       mockCreateOk();
       const before = Date.now();
 
-      const result = await service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1');
+      const result = await service.createPayment(
+        'user-1',
+        'order-1',
+        'PAY-1',
+        '127.0.0.1',
+      );
 
       const after = Date.now();
 
@@ -147,25 +166,53 @@ describe('PaymentsService', () => {
         }),
       });
 
-      const expiresAt = prisma.payment.create.mock.calls[0][0].data.expiresAt as Date;
+      const expiresAt = prisma.payment.create.mock.calls[0][0].data
+        .expiresAt as Date;
       expect(expiresAt.getTime()).toBeGreaterThanOrEqual(before + 10 * MIN);
       expect(expiresAt.getTime()).toBeLessThanOrEqual(after + 10 * MIN);
     });
 
-    it.each(['idem-key-123', '550e8400-e29b-41d4-a716-446655440000', 'PAY-', 'pay-1', 'PAY-1a', ''])(
-      'từ chối Idempotency-Key sai dạng: "%s"',
-      async (key) => {
-        await expect(
-          service.createPayment('user-1', 'order-1', key, '127.0.0.1'),
-        ).rejects.toBeInstanceOf(BadRequestException);
+    it('dùng total đã gồm shippingFee, không cộng phí ship lần hai', async () => {
+      mockCreateOk();
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        total: 115000,
+        shippingFee: 15000,
+      });
 
-        expect(prisma.payment.create).not.toHaveBeenCalled();
-      },
-    );
+      await service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1');
+
+      expect(prisma.payment.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          orderId: 'order-1',
+          amount: 115000,
+        }),
+      });
+    });
+
+    it.each([
+      'idem-key-123',
+      '550e8400-e29b-41d4-a716-446655440000',
+      'PAY-',
+      'pay-1',
+      'PAY-1a',
+      '',
+    ])('từ chối Idempotency-Key sai dạng: "%s"', async (key) => {
+      await expect(
+        service.createPayment('user-1', 'order-1', key, '127.0.0.1'),
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(prisma.payment.create).not.toHaveBeenCalled();
+    });
 
     it('từ chối khi thiếu Idempotency-Key', async () => {
       await expect(
-        service.createPayment('user-1', 'order-1', undefined as never, '127.0.0.1'),
+        service.createPayment(
+          'user-1',
+          'order-1',
+          undefined as never,
+          '127.0.0.1',
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -178,7 +225,10 @@ describe('PaymentsService', () => {
     });
 
     it('từ chối thanh toán đơn hàng của người khác', async () => {
-      prisma.order.findUnique.mockResolvedValue({ ...order, userId: 'another-user' });
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        userId: 'another-user',
+      });
 
       await expect(
         service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1'),
@@ -205,8 +255,18 @@ describe('PaymentsService', () => {
       prisma.order.findUnique.mockResolvedValue(order);
       prisma.payment.findUnique.mockResolvedValue(payment);
 
-      const first = await service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1');
-      const second = await service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1');
+      const first = await service.createPayment(
+        'user-1',
+        'order-1',
+        'PAY-1',
+        '127.0.0.1',
+      );
+      const second = await service.createPayment(
+        'user-1',
+        'order-1',
+        'PAY-1',
+        '127.0.0.1',
+      );
 
       expect(first.paymentUrl).toBe(second.paymentUrl);
       expect(prisma.payment.findUnique).toHaveBeenCalledWith({
@@ -217,9 +277,17 @@ describe('PaymentsService', () => {
 
     it('gửi lại key của lượt đã thành công: trả SUCCEEDED dù đơn đã PAID', async () => {
       prisma.order.findUnique.mockResolvedValue({ ...order, status: 'PAID' });
-      prisma.payment.findUnique.mockResolvedValue({ ...payment, status: 'SUCCEEDED' });
+      prisma.payment.findUnique.mockResolvedValue({
+        ...payment,
+        status: 'SUCCEEDED',
+      });
 
-      const result = await service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1');
+      const result = await service.createPayment(
+        'user-1',
+        'order-1',
+        'PAY-1',
+        '127.0.0.1',
+      );
 
       expect(result.status).toBe('SUCCEEDED');
       expect(result.paymentUrl).toBeNull();
@@ -228,7 +296,10 @@ describe('PaymentsService', () => {
 
     it('từ chối dùng lại key của lượt thất bại', async () => {
       prisma.order.findUnique.mockResolvedValue(order);
-      prisma.payment.findUnique.mockResolvedValue({ ...payment, status: 'FAILED' });
+      prisma.payment.findUnique.mockResolvedValue({
+        ...payment,
+        status: 'FAILED',
+      });
 
       await expect(
         service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1'),
@@ -262,14 +333,22 @@ describe('PaymentsService', () => {
 
     it('thử lại: đơn PAYMENT_FAILED => tạo lượt PENDING mới và đơn về PENDING', async () => {
       mockCreateOk();
-      prisma.order.findUnique.mockResolvedValue({ ...order, status: 'PAYMENT_FAILED' });
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        status: 'PAYMENT_FAILED',
+      });
       // Lần gọi đầu (kiểm tra hạn thử lại): đã thất bại 2 phút trước, còn trong 10 phút.
       prisma.payment.findMany.mockResolvedValueOnce([
         { failedAt: new Date(Date.now() - 2 * MIN), createdAt: new Date() },
       ]);
       prisma.order.updateMany.mockResolvedValue({ count: 1 });
 
-      const result = await service.createPayment('user-1', 'order-1', 'PAY-2', '127.0.0.1');
+      const result = await service.createPayment(
+        'user-1',
+        'order-1',
+        'PAY-2',
+        '127.0.0.1',
+      );
 
       expect(result.status).toBe('PENDING');
       expect(prisma.payment.create).toHaveBeenCalled();
@@ -280,11 +359,17 @@ describe('PaymentsService', () => {
     });
 
     it('không thử lại trong 10 phút sau khi thất bại: hủy đơn và từ chối tạo lượt mới', async () => {
-      prisma.order.findUnique.mockResolvedValue({ ...order, status: 'PAYMENT_FAILED' });
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        status: 'PAYMENT_FAILED',
+      });
       prisma.payment.findUnique.mockResolvedValue(null);
       prisma.payment.findFirst.mockResolvedValue(null);
       prisma.payment.findMany.mockResolvedValue([
-        { failedAt: new Date(Date.now() - 11 * MIN), createdAt: new Date(Date.now() - 21 * MIN) },
+        {
+          failedAt: new Date(Date.now() - 11 * MIN),
+          createdAt: new Date(Date.now() - 21 * MIN),
+        },
       ]);
       prisma.order.updateMany.mockResolvedValue({ count: 1 });
 
@@ -321,8 +406,18 @@ describe('PaymentsService', () => {
         },
       );
 
-      const first = await service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1');
-      const second = await service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1');
+      const first = await service.createPayment(
+        'user-1',
+        'order-1',
+        'PAY-1',
+        '127.0.0.1',
+      );
+      const second = await service.createPayment(
+        'user-1',
+        'order-1',
+        'PAY-1',
+        '127.0.0.1',
+      );
 
       expect(prisma.payment.create).toHaveBeenCalledTimes(1);
       expect(second.paymentId).toBe(first.paymentId);
@@ -340,7 +435,12 @@ describe('PaymentsService', () => {
         }),
       );
 
-      const result = await service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1');
+      const result = await service.createPayment(
+        'user-1',
+        'order-1',
+        'PAY-1',
+        '127.0.0.1',
+      );
 
       expect(result.paymentId).toBe(payment.id);
       expect(prisma.payment.create).toHaveBeenCalledTimes(1);
@@ -396,7 +496,9 @@ describe('PaymentsService', () => {
     );
 
     it.each(PAIRS)('%s -> %s', (from, to) => {
-      expect(isAllowedOrderTransition(from, to)).toBe(ALLOWED.has(`${from}>${to}`));
+      expect(isAllowedOrderTransition(from, to)).toBe(
+        ALLOWED.has(`${from}>${to}`),
+      );
     });
 
     it('mũi tên một chiều không đi ngược được', () => {
@@ -404,8 +506,12 @@ describe('PaymentsService', () => {
       expect(isAllowedOrderTransition('PAID', 'PENDING')).toBe(false);
       expect(isAllowedOrderTransition('PENDING', 'CANCELLED')).toBe(true);
       expect(isAllowedOrderTransition('CANCELLED', 'PENDING')).toBe(false);
-      expect(isAllowedOrderTransition('PAYMENT_FAILED', 'CANCELLED')).toBe(true);
-      expect(isAllowedOrderTransition('CANCELLED', 'PAYMENT_FAILED')).toBe(false);
+      expect(isAllowedOrderTransition('PAYMENT_FAILED', 'CANCELLED')).toBe(
+        true,
+      );
+      expect(isAllowedOrderTransition('CANCELLED', 'PAYMENT_FAILED')).toBe(
+        false,
+      );
     });
 
     it('mũi tên hai chiều đi được cả hai hướng', () => {
@@ -414,18 +520,20 @@ describe('PaymentsService', () => {
     });
 
     it('moveOrder ném lỗi và không ghi DB khi chuyển sai (PAID -> PENDING)', async () => {
-      const move = (service as unknown as {
-        moveOrder: (
-          client: unknown,
-          id: string,
-          from: OrderStatus,
-          to: OrderStatus,
-        ) => Promise<boolean>;
-      }).moveOrder.bind(service);
+      const move = (
+        service as unknown as {
+          moveOrder: (
+            client: unknown,
+            id: string,
+            from: OrderStatus,
+            to: OrderStatus,
+          ) => Promise<boolean>;
+        }
+      ).moveOrder.bind(service);
 
-      await expect(move(prisma, 'order-1', 'PAID', 'PENDING')).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        move(prisma, 'order-1', 'PAID', 'PENDING'),
+      ).rejects.toBeInstanceOf(ConflictException);
       await expect(
         move(prisma, 'order-1', 'PAYMENT_FAILED', 'PAID'),
       ).rejects.toBeInstanceOf(ConflictException);
@@ -433,18 +541,22 @@ describe('PaymentsService', () => {
     });
 
     it('moveOrder chỉ ghi khi đơn vẫn đang ở trạng thái cũ', async () => {
-      const move = (service as unknown as {
-        moveOrder: (
-          client: unknown,
-          id: string,
-          from: OrderStatus,
-          to: OrderStatus,
-        ) => Promise<boolean>;
-      }).moveOrder.bind(service);
+      const move = (
+        service as unknown as {
+          moveOrder: (
+            client: unknown,
+            id: string,
+            from: OrderStatus,
+            to: OrderStatus,
+          ) => Promise<boolean>;
+        }
+      ).moveOrder.bind(service);
 
       prisma.order.updateMany.mockResolvedValue({ count: 0 });
 
-      await expect(move(prisma, 'order-1', 'PENDING', 'PAID')).resolves.toBe(false);
+      await expect(move(prisma, 'order-1', 'PENDING', 'PAID')).resolves.toBe(
+        false,
+      );
       expect(prisma.order.updateMany).toHaveBeenCalledWith({
         where: { id: 'order-1', status: 'PENDING' },
         data: { status: 'PAID' },
@@ -457,7 +569,10 @@ describe('PaymentsService', () => {
   // ---------------------------------------------------------------------------
   describe('cancelOrder', () => {
     it('khách hủy đơn PAYMENT_FAILED => CANCELLED, lượt cũ giữ FAILED', async () => {
-      prisma.order.findUnique.mockResolvedValue({ ...order, status: 'PAYMENT_FAILED' });
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        status: 'PAYMENT_FAILED',
+      });
       prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.findFirst.mockResolvedValue(null);
 
@@ -495,7 +610,10 @@ describe('PaymentsService', () => {
     });
 
     it('hủy lần 2 vẫn trả CANCELLED (idempotent)', async () => {
-      prisma.order.findUnique.mockResolvedValue({ ...order, status: 'CANCELLED' });
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        status: 'CANCELLED',
+      });
 
       const result = await service.cancelOrder('user-1', 'order-1');
 
@@ -510,17 +628,17 @@ describe('PaymentsService', () => {
         status: 'PAYMENT_FAILED',
       });
 
-      await expect(service.cancelOrder('user-1', 'order-1')).rejects.toBeInstanceOf(
-        ForbiddenException,
-      );
+      await expect(
+        service.cancelOrder('user-1', 'order-1'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('báo lỗi khi không tìm thấy đơn', async () => {
       prisma.order.findUnique.mockResolvedValue(null);
 
-      await expect(service.cancelOrder('user-1', 'order-1')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.cancelOrder('user-1', 'order-1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it.each(['PAID', 'PREPARING', 'READY', 'COMPLETED'])(
@@ -528,9 +646,9 @@ describe('PaymentsService', () => {
       async (status) => {
         prisma.order.findUnique.mockResolvedValue({ ...order, status });
 
-        await expect(service.cancelOrder('user-1', 'order-1')).rejects.toBeInstanceOf(
-          ConflictException,
-        );
+        await expect(
+          service.cancelOrder('user-1', 'order-1'),
+        ).rejects.toBeInstanceOf(ConflictException);
         expect(prisma.order.updateMany).not.toHaveBeenCalled();
       },
     );
@@ -540,9 +658,9 @@ describe('PaymentsService', () => {
       prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.findFirst.mockResolvedValue(null);
 
-      await expect(service.cancelOrder('user-1', 'order-1')).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.cancelOrder('user-1', 'order-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(prisma.order.updateMany).not.toHaveBeenCalled();
     });
 
@@ -551,9 +669,9 @@ describe('PaymentsService', () => {
       prisma.payment.findMany.mockResolvedValue([]);
       prisma.payment.findFirst.mockResolvedValue(payment);
 
-      await expect(service.cancelOrder('user-1', 'order-1')).rejects.toBeInstanceOf(
-        ConflictException,
-      );
+      await expect(
+        service.cancelOrder('user-1', 'order-1'),
+      ).rejects.toBeInstanceOf(ConflictException);
       expect(prisma.order.updateMany).not.toHaveBeenCalled();
     });
   });
@@ -607,8 +725,14 @@ describe('PaymentsService', () => {
     });
 
     it('kết quả thành công đến muộn: đơn PAYMENT_FAILED đi PENDING rồi PAID', async () => {
-      prisma.payment.findUnique.mockResolvedValue({ ...payment, status: 'FAILED' });
-      prisma.order.findUnique.mockResolvedValue({ ...order, status: 'PAYMENT_FAILED' });
+      prisma.payment.findUnique.mockResolvedValue({
+        ...payment,
+        status: 'FAILED',
+      });
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        status: 'PAYMENT_FAILED',
+      });
       prisma.payment.findFirst.mockResolvedValue(null);
 
       const result = await service.processVnpayReturn(createSignedQuery());
@@ -626,8 +750,14 @@ describe('PaymentsService', () => {
     });
 
     it('thành công nhưng đơn đã bị hủy: báo lỗi để đối soát', async () => {
-      prisma.payment.findUnique.mockResolvedValue({ ...payment, status: 'FAILED' });
-      prisma.order.findUnique.mockResolvedValue({ ...order, status: 'CANCELLED' });
+      prisma.payment.findUnique.mockResolvedValue({
+        ...payment,
+        status: 'FAILED',
+      });
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        status: 'CANCELLED',
+      });
 
       await expect(
         service.processVnpayReturn(createSignedQuery()),
@@ -642,7 +772,10 @@ describe('PaymentsService', () => {
       prisma.payment.count.mockResolvedValue(1);
 
       const result = await service.processVnpayReturn(
-        createSignedQuery({ vnp_ResponseCode: '24', vnp_TransactionStatus: '02' }),
+        createSignedQuery({
+          vnp_ResponseCode: '24',
+          vnp_TransactionStatus: '02',
+        }),
       );
 
       expect(result).toEqual({ orderId: 'order-1', status: 'failed' });
@@ -663,7 +796,10 @@ describe('PaymentsService', () => {
       prisma.payment.count.mockResolvedValue(3);
 
       const result = await service.processVnpayReturn(
-        createSignedQuery({ vnp_ResponseCode: '24', vnp_TransactionStatus: '02' }),
+        createSignedQuery({
+          vnp_ResponseCode: '24',
+          vnp_TransactionStatus: '02',
+        }),
       );
 
       expect(result.status).toBe('failed');
@@ -675,7 +811,10 @@ describe('PaymentsService', () => {
     });
 
     it('callback gửi lại cho payment đã thành công => success, không ghi DB', async () => {
-      prisma.payment.findUnique.mockResolvedValue({ ...payment, status: 'SUCCEEDED' });
+      prisma.payment.findUnique.mockResolvedValue({
+        ...payment,
+        status: 'SUCCEEDED',
+      });
       prisma.order.findUnique.mockResolvedValue({ ...order, status: 'PAID' });
 
       const result = await service.processVnpayReturn(createSignedQuery());
@@ -686,16 +825,155 @@ describe('PaymentsService', () => {
     });
 
     it('callback gửi lại cho payment đã thất bại => failed, không ghi DB', async () => {
-      prisma.payment.findUnique.mockResolvedValue({ ...payment, status: 'FAILED' });
-      prisma.order.findUnique.mockResolvedValue({ ...order, status: 'PAYMENT_FAILED' });
+      prisma.payment.findUnique.mockResolvedValue({
+        ...payment,
+        status: 'FAILED',
+      });
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        status: 'PAYMENT_FAILED',
+      });
 
       const result = await service.processVnpayReturn(
-        createSignedQuery({ vnp_ResponseCode: '24', vnp_TransactionStatus: '02' }),
+        createSignedQuery({
+          vnp_ResponseCode: '24',
+          vnp_TransactionStatus: '02',
+        }),
       );
 
       expect(result).toEqual({ orderId: 'order-1', status: 'failed' });
       expect(prisma.payment.update).not.toHaveBeenCalled();
       expect(prisma.order.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Mã giảm giá & điểm thưởng: chỉ quyết toán khi PAID
+  // ---------------------------------------------------------------------------
+  describe('điểm thưởng và mã giảm giá', () => {
+    it('thanh toán thành công => quyết toán điểm đúng một lần với số tiền thực trả', async () => {
+      prisma.payment.findUnique.mockResolvedValue(payment);
+      prisma.order.findUnique.mockResolvedValue({ ...order, pointsUsed: 20 });
+      prisma.payment.findFirst.mockResolvedValue(null);
+
+      await service.processVnpayReturn(createSignedQuery());
+
+      expect(discounts.settlePaidOrder).toHaveBeenCalledTimes(1);
+      expect(discounts.settlePaidOrder).toHaveBeenCalledWith(prisma, {
+        id: 'order-1',
+        userId: 'user-1',
+        pointsUsed: 20,
+        amountPaid: 35000,
+      });
+    });
+
+    it('thanh toán đến muộn (PAYMENT_FAILED -> PENDING -> PAID) vẫn quyết toán một lần', async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        ...payment,
+        status: 'FAILED',
+      });
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        status: 'PAYMENT_FAILED',
+      });
+      prisma.payment.findFirst.mockResolvedValue(null);
+
+      await service.processVnpayReturn(createSignedQuery());
+
+      expect(discounts.settlePaidOrder).toHaveBeenCalledTimes(1);
+    });
+
+    it('VNPay báo thất bại => KHÔNG trừ điểm, không quyết toán', async () => {
+      prisma.payment.findUnique.mockResolvedValue(payment);
+      prisma.order.findUnique.mockResolvedValue(order);
+      prisma.payment.findFirst.mockResolvedValue(null);
+      prisma.payment.count.mockResolvedValue(1);
+
+      await service.processVnpayReturn(
+        createSignedQuery({
+          vnp_ResponseCode: '24',
+          vnp_TransactionStatus: '02',
+        }),
+      );
+
+      expect(discounts.settlePaidOrder).not.toHaveBeenCalled();
+    });
+
+    it('thất bại lần 3 (đơn CANCELLED) => KHÔNG trừ điểm', async () => {
+      prisma.payment.findUnique.mockResolvedValue(payment);
+      prisma.order.findUnique.mockResolvedValue(order);
+      prisma.payment.findFirst.mockResolvedValue(null);
+      prisma.payment.count.mockResolvedValue(3);
+
+      await service.processVnpayReturn(
+        createSignedQuery({
+          vnp_ResponseCode: '24',
+          vnp_TransactionStatus: '02',
+        }),
+      );
+
+      expect(discounts.settlePaidOrder).not.toHaveBeenCalled();
+    });
+
+    it('callback thành công gửi lại => không quyết toán lần 2', async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        ...payment,
+        status: 'SUCCEEDED',
+      });
+      prisma.order.findUnique.mockResolvedValue({ ...order, status: 'PAID' });
+
+      await service.processVnpayReturn(createSignedQuery());
+
+      expect(discounts.settlePaidOrder).not.toHaveBeenCalled();
+    });
+
+    it('đơn đã CANCELLED nhận thành công muộn => không quyết toán', async () => {
+      prisma.payment.findUnique.mockResolvedValue({
+        ...payment,
+        status: 'FAILED',
+      });
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        status: 'CANCELLED',
+      });
+
+      await expect(
+        service.processVnpayReturn(createSignedQuery()),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(discounts.settlePaidOrder).not.toHaveBeenCalled();
+    });
+
+    it('tạo lượt thanh toán => kiểm tra lại mã và điểm trước khi chốt tiền', async () => {
+      prisma.order.findUnique.mockResolvedValue(order);
+      prisma.payment.findUnique.mockResolvedValue(null);
+      prisma.payment.findFirst.mockResolvedValue(null);
+      prisma.payment.findMany.mockResolvedValue([]);
+      prisma.payment.create.mockImplementation(
+        async ({ data }: { data: Record<string, unknown> }) => ({
+          ...payment,
+          ...data,
+          createdAt: new Date(),
+        }),
+      );
+
+      await service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1');
+
+      expect(discounts.validateBeforePayment).toHaveBeenCalledTimes(1);
+    });
+
+    it('mã hoặc điểm không còn hợp lệ => không tạo lượt thanh toán', async () => {
+      prisma.order.findUnique.mockResolvedValue(order);
+      prisma.payment.findUnique.mockResolvedValue(null);
+      prisma.payment.findFirst.mockResolvedValue(null);
+      prisma.payment.findMany.mockResolvedValue([]);
+      discounts.validateBeforePayment.mockRejectedValue(
+        new ConflictException('Mã giảm giá không còn hợp lệ'),
+      );
+
+      await expect(
+        service.createPayment('user-1', 'order-1', 'PAY-1', '127.0.0.1'),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.payment.create).not.toHaveBeenCalled();
     });
   });
 
@@ -748,7 +1026,10 @@ describe('PaymentsService', () => {
 
     it('hủy đơn không thử lại sau 10 phút', async () => {
       prisma.payment.findMany.mockResolvedValue([
-        { failedAt: new Date(Date.now() - 11 * MIN), createdAt: new Date(Date.now() - 21 * MIN) },
+        {
+          failedAt: new Date(Date.now() - 11 * MIN),
+          createdAt: new Date(Date.now() - 21 * MIN),
+        },
       ]);
 
       const count = await service.cancelStaleFailedOrders(new Date());
@@ -762,7 +1043,10 @@ describe('PaymentsService', () => {
 
     it('chưa đủ 10 phút thì giữ PAYMENT_FAILED để khách còn thử lại', async () => {
       prisma.payment.findMany.mockResolvedValue([
-        { failedAt: new Date(Date.now() - 5 * MIN), createdAt: new Date(Date.now() - 15 * MIN) },
+        {
+          failedAt: new Date(Date.now() - 5 * MIN),
+          createdAt: new Date(Date.now() - 15 * MIN),
+        },
       ]);
 
       const count = await service.cancelStaleFailedOrders(new Date());

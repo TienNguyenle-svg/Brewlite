@@ -80,12 +80,16 @@ model Order {
   userId      String
   user        User         @relation(fields: [userId], references: [id])
   status      OrderStatus  @default(PENDING)
-  total       Int
+  total       Int          // Tổng tiền cuối cùng khách phải trả
+  shippingFee Int          @default(15000) // Phí ship
+  discountAmount Int       @default(0)     // Số tiền được giảm
   createdAt   DateTime     @default(now())
   items       OrderItem[]
-  payments    Payment[]    // Từ phần của main (Payment)
-  promotionId String?      // Từ phần của main (Promotion)
+  payments    Payment[]
+  promotionId String?
   promotion   Promotion?   @relation(fields: [promotionId], references: [id])
+  pointsUsed     Int         @default(0) // số điểm dùng cho đơn này
+  pointsDiscount Int         @default(0) // tiền giảm từ điểm (pointsUsed x giá trị 1 điểm)
   receiverName    String?
   receiverPhone   String?
   deliveryAddress String?
@@ -126,6 +130,9 @@ model Payment {
   failedAt       DateTime?
   status         PaymentStatus @default(PENDING)
   createdAt      DateTime      @default(now())
+
+  @@index([status, expiresAt])
+  @@index([orderId, status])
 }
 
 model Promotion {
@@ -147,4 +154,6 @@ model LoyaltyTransaction {
   reason    String
   orderId   String?
   createdAt DateTime @default(now())
+
+  @@index([orderId, reason])
 }
