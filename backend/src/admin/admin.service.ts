@@ -104,9 +104,28 @@ export class AdminService {
   // ===== BÁO CÁO DOANH THU =====
   async getRevenueReport() {
     const orders = await this.prisma.order.findMany({
-      where: { status: { in: ['PAID', 'PREPARING', 'READY', 'COMPLETED'] as any } },
+      where: { status: { in: ['COMPLETED'] as any } },
     });
     const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
     return { totalRevenue, totalOrders: orders.length };
+  }
+  // ===== QUẢN LÝ ĐƠN HÀNG =====
+  async getAllOrders() {
+    return this.prisma.order.findMany({
+      include: {
+        items: {
+          include: {
+            product: { select: { name: true } }, 
+            toppings: { include: { topping: true } }, 
+          },
+        },
+        payments: {
+          select: { status: true, method: true, amount: true }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc', 
+      },
+    });
   }
 }
