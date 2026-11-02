@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Order" ADD COLUMN     "discountAmount" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "shippingFee" INTEGER NOT NULL DEFAULT 15000;

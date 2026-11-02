@@ -1,4 +1,4 @@
-import { IsArray, IsString, IsInt, Min, ValidateNested, IsNotEmpty } from 'class-validator';
+import { IsArray, IsString, IsInt, Min, ValidateNested, IsNotEmpty, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -43,4 +43,9 @@ export class CreateOrderDto {
   @IsString()
   @IsNotEmpty({ message: 'Địa chỉ giao hàng không được để trống' })
   deliveryAddress: string;
+
+  @ApiProperty({ example: 'WELCOME10', required: false })
+  @IsOptional()
+  @IsString()
+  promotionCode?: string;
 }

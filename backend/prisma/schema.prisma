@@ -80,11 +80,13 @@ model Order {
   userId      String
   user        User         @relation(fields: [userId], references: [id])
   status      OrderStatus  @default(PENDING)
-  total       Int
+  total       Int          // Tổng tiền cuối cùng khách phải trả
+  shippingFee Int          @default(15000) // Phí ship
+  discountAmount Int       @default(0)     // Số tiền được giảm
   createdAt   DateTime     @default(now())
   items       OrderItem[]
-  payments    Payment[]    // Từ phần của main (Payment)
-  promotionId String?      // Từ phần của main (Promotion)
+  payments    Payment[]
+  promotionId String?
   promotion   Promotion?   @relation(fields: [promotionId], references: [id])
   receiverName    String?
   receiverPhone   String?
