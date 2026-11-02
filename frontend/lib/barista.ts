@@ -59,8 +59,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 /** GET /barista/orders — đơn PAID, PREPARING, READY (cũ nhất trước) */
 export const fetchOrders = () => request<BaristaOrder[]>('/barista/orders');
 
-/** GET /barista/orders/history — đơn COMPLETED */
-export const fetchHistory = () => request<BaristaOrder[]>('/barista/orders/history');
+/** GET /barista/orders?status=COMPLETED — đơn đã hoàn thành */
+export const fetchHistory = () =>
+  request<BaristaOrder[]>('/barista/orders?status=COMPLETED');
 
 /** PATCH /barista/orders/:id — chỉ cho phép chuyển sang bước kế tiếp */
 export const updateOrderStatus = (id: string, status: BaristaOrderStatus) =>
