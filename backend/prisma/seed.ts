@@ -53,26 +53,33 @@ async function main() {
 
   // 4. Tạo 20 món nước
   const productsData = [
-    { name: 'Cà phê đen đá', price: 25000, imageUrl: '/images/ca-phe-den.jpg' },
-    { name: 'Cà phê sữa đá', price: 30000, imageUrl: '/images/ca-phe-sua.jpg' },
-    { name: 'Bạc xỉu', price: 35000, imageUrl: '/images/bac-xiu.jpg' },
-    { name: 'Cà phê muối', price: 35000, imageUrl: '/images/ca-phe-muoi.jpg' },
-    { name: 'Espresso', price: 30000, imageUrl: '/images/espresso.jpg' },
-    { name: 'Americano', price: 35000, imageUrl: '/images/americano.jpg' },
-    { name: 'Latte', price: 45000, imageUrl: '/images/latte.jpg' },
-    { name: 'Cappuccino', price: 45000, imageUrl: '/images/cappuccino.jpg' },
-    { name: 'Mocha', price: 50000, imageUrl: '/images/mocha.jpg' },
-    { name: 'Caramel Macchiato', price: 55000, imageUrl: '/images/macchiato.jpg' },
-    { name: 'Trà đào cam sả', price: 45000, imageUrl: '/images/tra-dao.jpg' },
-    { name: 'Trà sữa trân châu', price: 45000, imageUrl: '/images/tra-sua.jpg' },
-    { name: 'Trà xanh matcha', price: 40000, imageUrl: '/images/matcha.jpg' },
-    { name: 'Trà vải', price: 40000, imageUrl: '/images/tra-vai.jpg' },
-    { name: 'Trà chanh', price: 25000, imageUrl: '/images/tra-chanh.jpg' },
-    { name: 'Matcha đá xay', price: 55000, imageUrl: '/images/matcha-da-xay.jpg' },
-    { name: 'Cookie đá xay', price: 55000, imageUrl: '/images/cookie-da-xay.jpg' },
-    { name: 'Sinh tố bơ', price: 45000, imageUrl: '/images/sinh-to-bo.jpg' },
-    { name: 'Sữa tươi trân châu đường đen', price: 50000, imageUrl: '/images/sua-tuoi.jpg' },
-    { name: 'Nước ép cam', price: 35000, imageUrl: '/images/nuoc-cam.jpg' },
+    // --- Cà phê ---
+    { name: 'Cà phê đen đá', price: 25000, imageUrl: '/images/ca-phe-den.jpg', category: 'Cà phê' },
+    { name: 'Cà phê sữa đá', price: 30000, imageUrl: '/images/ca-phe-sua.jpg', category: 'Cà phê' },
+    { name: 'Bạc xỉu', price: 35000, imageUrl: '/images/bac-xiu.jpg', category: 'Cà phê' },
+    { name: 'Cà phê muối', price: 35000, imageUrl: '/images/ca-phe-muoi.jpg', category: 'Cà phê' },
+    { name: 'Espresso', price: 30000, imageUrl: '/images/espresso.jpg', category: 'Cà phê' },
+    { name: 'Americano', price: 35000, imageUrl: '/images/americano.jpg', category: 'Cà phê' },
+    { name: 'Latte', price: 45000, imageUrl: '/images/latte.jpg', category: 'Cà phê' },
+    { name: 'Cappuccino', price: 45000, imageUrl: '/images/cappuccino.jpg', category: 'Cà phê' },
+    { name: 'Mocha', price: 50000, imageUrl: '/images/mocha.jpg', category: 'Cà phê' },
+    { name: 'Caramel Macchiato', price: 55000, imageUrl: '/images/macchiato.jpg', category: 'Cà phê' },
+
+    // --- Trà ---
+    { name: 'Trà đào cam sả', price: 45000, imageUrl: '/images/tra-dao.jpg', category: 'Trà' },
+    { name: 'Trà sữa trân châu', price: 45000, imageUrl: '/images/tra-sua.jpg', category: 'Trà' },
+    { name: 'Trà xanh matcha', price: 40000, imageUrl: '/images/matcha.jpg', category: 'Trà' },
+    { name: 'Trà vải', price: 40000, imageUrl: '/images/tra-vai.jpg', category: 'Trà' },
+    { name: 'Trà chanh', price: 25000, imageUrl: '/images/tra-chanh.jpg', category: 'Trà' },
+
+    // --- Sinh tố ---
+    { name: 'Matcha đá xay', price: 55000, imageUrl: '/images/matcha-da-xay.jpg', category: 'Sinh tố' },
+    { name: 'Cookie đá xay', price: 55000, imageUrl: '/images/cookie-da-xay.jpg', category: 'Sinh tố' },
+    { name: 'Sinh tố bơ', price: 45000, imageUrl: '/images/sinh-to-bo.jpg', category: 'Sinh tố' },
+
+    // --- Khác ---
+    { name: 'Sữa tươi trân châu đường đen', price: 50000, imageUrl: '/images/sua-tuoi.jpg', category: 'Khác' },
+    { name: 'Nước ép cam', price: 35000, imageUrl: '/images/nuoc-cam.jpg', category: 'Khác' },
   ];
 
   const createdProducts: Record<string, string> = {};
