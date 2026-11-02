@@ -4,6 +4,9 @@ export interface Product {
   price: number;
   imageUrl: string;
   stock: number;
+  category?: string;
+  description?: string;
+  badge?: string;
 }
 
 export interface ApiProduct extends Product {

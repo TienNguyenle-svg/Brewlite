@@ -1,8 +1,20 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import { Product } from "@/lib/types";
+import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 
 export default function ProductCard({ product }: { product: Product }) {
+  const [added, setAdded] = useState(false);
+
+  async function handleAddToCart() {
+    await ensureCartHydrated();
+    useCartStore.getState().addItem(product);
+    setAdded(true);
+  }
+
   return (
     <article className="rounded-2xl border border-[#EDE6DC] bg-white p-2.5 shadow-sm transition hover:shadow-md">
       <Link href={`/products/${product.id}`} className="block">
@@ -42,9 +54,10 @@ export default function ProductCard({ product }: { product: Product }) {
         </span>
         <button
           type="button"
+          onClick={handleAddToCart}
           className="rounded-lg border border-[#EDE6DC] px-3 py-1.5 text-xs font-medium text-[#2B1F1A] hover:bg-[#F8F5F0]"
         >
-          Thêm vào giỏ hàng
+          {added ? "Đã thêm ✓" : "Thêm vào giỏ hàng"}
         </button>
       </div>
     </article>

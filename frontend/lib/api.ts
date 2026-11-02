@@ -4,6 +4,7 @@ const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
 ).replace(/\/+$/, "");
 export const TOKEN_KEY = "accessToken";
+export const PENDING_PAYMENT_ORDER_KEY = "brewlite-pending-payment-order";
 
 export class ApiError extends Error {
   constructor(
@@ -20,7 +21,11 @@ export type CreateOrderInput = {
     productId: string;
     size: "S" | "M" | "L";
     qty: number;
+    toppingIds: string[];
   }>;
+  receiverName: string;
+  receiverPhone: string;
+  deliveryAddress: string;
 };
 
 export type OrderReceipt = {
@@ -28,6 +33,23 @@ export type OrderReceipt = {
   status: string;
   total: number;
 };
+
+export type CreatePaymentInput = {
+  orderId: string;
+};
+
+export type PaymentReceipt = {
+  paymentId: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  status: string;
+  expiresAt?: string;
+  paymentUrl: string | null;
+};
+
+export const getAccessToken = () =>
+  typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
 
 export async function request<T>(
   path: string,
@@ -38,8 +60,7 @@ export async function request<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+  const token = getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   let response: Response;
@@ -95,5 +116,15 @@ export async function getProducts(): Promise<ApiProduct[]> {
 export const createOrder = (input: CreateOrderInput) =>
   request<OrderReceipt>("/orders", {
     method: "POST",
+    body: JSON.stringify(input),
+  });
+
+export const createPayment = (
+  input: CreatePaymentInput,
+  idempotencyKey: string,
+) =>
+  request<PaymentReceipt>("/payments", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
     body: JSON.stringify(input),
   });
