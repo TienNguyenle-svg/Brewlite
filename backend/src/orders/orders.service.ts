@@ -12,9 +12,11 @@ export class OrdersService {
     return 1.0;
   }
 
-  async create(dto: CreateOrderDto) {
-    const user = await this.prisma.user.findFirst();
-    if (!user) throw new BadRequestException('Chưa có user trong DB');
+  // Nhận userId từ Controller
+  async create(dto: CreateOrderDto, userId: string) {
+    // Kiểm tra user có tồn tại không
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new BadRequestException('User không hợp lệ');
 
     let subTotal = 0;
     const orderItems: any[] = [];
@@ -60,7 +62,7 @@ export class OrdersService {
       });
     }
 
-    // 2. Xử lý mã khuyến mãi (nếu có)
+    // 2. Xử lý mã khuyến mãi
     let discountAmount = 0;
     let promotionId = null;
 
@@ -90,7 +92,7 @@ export class OrdersService {
     // 4. Tính tổng tiền cuối cùng
     const finalTotal = subTotal - discountAmount + shippingFee;
 
-    // 5. Tạo đơn hàng
+    // 5. Tạo đơn hàng với userId chính xác
     return this.prisma.order.create({
       data: { 
         userId: user.id, 
@@ -194,11 +196,9 @@ export class OrdersService {
     });
   }
 
-  async findMyOrders() {
-    const user = await this.prisma.user.findFirst();
-    if (!user) return [];
+  async findMyOrders(userId: string) {
     return this.prisma.order.findMany({
-      where: { userId: user.id },
+      where: { userId: userId },
       include: { items: { include: { toppings: true } } },
       orderBy: { createdAt: 'desc' },
     });
