@@ -24,6 +24,8 @@ Brewlite/
 │   │   ├── auth/               # Module đăng nhập
 │   │   ├── orders/             # Module đơn hàng
 │   │   ├── payments/           # Module thanh toán
+│   │   ├── admin/              # Module quản trị
+│   │   ├── barista/            # Module pha chế
 │   │   ├── app.module.ts       # Module gốc
 │   │   └── main.ts             # Khởi động app
 │   ├── test/                   # Test tự động
@@ -40,6 +42,8 @@ Brewlite/
 │   │   ├── checkout/           # Thanh toán
 │   │   ├── orders/             # Lịch sử đơn
 │   │   ├── login/              # Đăng nhập
+│   │   ├── admin/              # Khu vực quản trị
+│   │   ├── barista/            # Khu vực pha chế
 │   │   ├── layout.tsx          # Layout chung
 │   │   └── globals.css         # CSS toàn cục
 │   ├── components/             # Component tái sử dụng
@@ -54,6 +58,7 @@ Brewlite/
 │   └── Dockerfile
 │
 ├── report/                     # File đề bài
+│   └── Assignment2-BrewLite.pdf
 │   └── BrewLite-CongNghePhanMem.pdf
 │
 ├── docker-compose.yml          # Chạy toàn bộ hệ thống
