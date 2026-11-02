@@ -6,7 +6,6 @@ import { CreateOrderDto } from './dto/create-order.dto';
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
-  // Hàm phụ trợ tính hệ số size
   private getSizeMultiplier(size: string) {
     if (size === 'S') return 0.8;
     if (size === 'L') return 1.2;
@@ -17,10 +16,10 @@ export class OrdersService {
     const user = await this.prisma.user.findFirst();
     if (!user) throw new BadRequestException('Chưa có user trong DB');
 
-    let total = 0;
+    let subTotal = 0;
     const orderItems: any[] = [];
 
-    // 1. Kiểm tra sản phẩm, nguyên liệu và tính tiền
+    // 1. Kiểm tra sản phẩm, nguyên liệu và tính tiền món
     for (const item of dto.items) {
       const product = await this.prisma.product.findUnique({
         where: { id: item.productId },
@@ -30,7 +29,7 @@ export class OrdersService {
 
       const multiplier = this.getSizeMultiplier(item.size);
 
-      // Kiểm tra kho nguyên liệu (Chỉ kiểm tra, chưa trừ)
+      // Kiểm tra kho nguyên liệu
       for (const recipe of product.recipes) {
         const ingredient = await this.prisma.ingredient.findUnique({ where: { id: recipe.ingredientId } });
         const neededAmount = recipe.amount * multiplier * item.qty;
@@ -52,7 +51,7 @@ export class OrdersService {
 
       const finalProductPrice = Math.round(product.price * multiplier); 
       const lineTotal = (finalProductPrice + toppingPriceTotal) * item.qty;
-      total += lineTotal;
+      subTotal += lineTotal;
       
       orderItems.push({ 
         productId: item.productId, size: item.size, qty: item.qty, 
@@ -61,18 +60,55 @@ export class OrdersService {
       });
     }
 
-    // 2. Tạo đơn hàng (Chưa trừ kho)
+    // 2. Xử lý mã khuyến mãi (nếu có)
+    let discountAmount = 0;
+    let promotionId = null;
+
+    if (dto.promotionCode) {
+      const promo = await this.prisma.promotion.findUnique({
+        where: { code: dto.promotionCode },
+      });
+
+      if (!promo || !promo.active || (promo.expiredAt && promo.expiredAt < new Date())) {
+        throw new BadRequestException('Mã khuyến mãi không hợp lệ hoặc đã hết hạn');
+      }
+      if (subTotal < promo.minOrder) {
+        throw new BadRequestException(`Đơn hàng chưa đạt giá trị tối thiểu ${promo.minOrder}đ để dùng mã này`);
+      }
+
+      if (promo.type === 'PERCENT') {
+        discountAmount = Math.round((subTotal * promo.discount) / 100);
+      } else {
+        discountAmount = promo.discount;
+      }
+      promotionId = promo.id;
+    }
+
+    // 3. Tính phí vận chuyển (Miễn phí ship cho đơn từ 100k, dưới 100k ship 15k)
+    const shippingFee = subTotal >= 100000 ? 0 : 15000;
+
+    // 4. Tính tổng tiền cuối cùng
+    const finalTotal = subTotal - discountAmount + shippingFee;
+
+    // 5. Tạo đơn hàng
     return this.prisma.order.create({
       data: { 
-        userId: user.id, total, status: 'PENDING', 
+        userId: user.id, 
+        total: finalTotal,
+        shippingFee: shippingFee,
+        discountAmount: discountAmount,
+        status: 'PENDING', 
         items: { create: orderItems },
-        receiverName: dto.receiverName, receiverPhone: dto.receiverPhone, deliveryAddress: dto.deliveryAddress,
+        receiverName: dto.receiverName, 
+        receiverPhone: dto.receiverPhone, 
+        deliveryAddress: dto.deliveryAddress,
+        promotionId: promotionId,
       },
       include: { items: { include: { toppings: true } } },
     });
   }
 
-  // API cập nhật đơn sang PAID và TRỪ KHO (Gia Hân gọi khi thanh toán xong)
+  // Cập nhật đơn sang PAID và TRỪ KHO (Gia Hân gọi khi thanh toán xong)
   async markAsPaid(orderId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
@@ -109,7 +145,7 @@ export class OrdersService {
     });
   }
 
-  // API Hủy đơn (CHỈ KHI PAID)
+  // API Hủy đơn (CHỈ KHI PAID) và hoàn tiền, hoàn kho
   async cancelOrder(orderId: string) {
     const order = await this.prisma.order.findUnique({ 
       where: { id: orderId },
