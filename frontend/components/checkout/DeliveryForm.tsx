@@ -9,13 +9,32 @@ export default function DeliveryForm() {
       </p>
       <div className="mt-[21px] grid gap-x-[26px] gap-y-[22px] sm:grid-cols-2">
         <Field label="Họ và tên *">
-          <input required className={inputCls} placeholder="e.g. Nguyen Minh Anh" />
+          <input
+            required
+            name="receiverName"
+            autoComplete="name"
+            className={inputCls}
+            placeholder="e.g. Nguyen Minh Anh"
+          />
         </Field>
         <Field label="Số điện thoại *">
-          <input required type="tel" className={inputCls} placeholder="+84  9xx xxx xxx" />
+          <input
+            required
+            name="receiverPhone"
+            autoComplete="tel"
+            type="tel"
+            className={inputCls}
+            placeholder="+84  9xx xxx xxx"
+          />
         </Field>
         <Field label="Địa chỉ đường *" className="sm:col-span-2">
-          <input required className={inputCls} placeholder="Số nhà, tên đường, toà nhà" />
+          <input
+            required
+            name="deliveryAddress"
+            autoComplete="street-address"
+            className={inputCls}
+            placeholder="Số nhà, tên đường, toà nhà"
+          />
         </Field>
         {/* <Field label="Quận *">
           <select required defaultValue="" className={`${inputCls} text-[#82776E] invalid:text-[#82776E]`}>

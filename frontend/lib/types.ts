@@ -2,7 +2,13 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  imageUrl: string | null;
+  imageUrl: string;
   stock: number;
-  isAvailable: boolean;
+  category?: string;
+  description?: string;
+  badge?: string;
+}
+
+export interface ApiProduct extends Product {
+  isAvailable?: boolean;
 }

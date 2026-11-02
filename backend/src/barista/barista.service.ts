@@ -12,51 +12,58 @@ import { BaristaOrderStatus } from './dto/update-barista-order-status.dto';
 export class BaristaService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findOrders() {
-    return this.prisma.order.findMany({
-      where: {
-        status: {
-          in: [
-            OrderStatus.PAID,
-            OrderStatus.PREPARING,
-            OrderStatus.READY,
-          ],
-        },
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                imageUrl: true,
-              },
+  async findOrders(status?: string) {
+  if (status && status !== OrderStatus.COMPLETED) {
+    throw new BadRequestException('Trạng thái đơn hàng không hợp lệ');
+  }
+
+  return this.prisma.order.findMany({
+    where: {
+      status:
+        status === OrderStatus.COMPLETED
+          ? OrderStatus.COMPLETED
+          : {
+              in: [
+                OrderStatus.PAID,
+                OrderStatus.PREPARING,
+                OrderStatus.READY,
+              ],
             },
-            toppings: {
-              include: {
-                topping: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+        },
+      },
+      items: {
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+          toppings: {
+            include: {
+              topping: {
+                select: {
+                  id: true,
+                  name: true,
                 },
               },
             },
           },
         },
       },
-    });
-  }
+    },
+  });
+}
 
   async updateOrderStatus(
     id: string,

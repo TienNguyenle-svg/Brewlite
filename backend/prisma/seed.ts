@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Bắt đầu seed dữ liệu...');
 
-  // 1. Xóa data cũ
+  // 1. Xóa data cũ (theo thứ tự khóa ngoại)
   await prisma.loyaltyTransaction.deleteMany(); 
   await prisma.orderItemTopping.deleteMany();
   await prisma.orderItem.deleteMany();
@@ -30,7 +30,7 @@ async function main() {
   await prisma.user.create({
     data: { email: 'barista@brewlite.com', passwordHash, role: 'BARISTA' },
   });
-  console.log('- Đã tạo 3 tài khoản test');
+  console.log('- Đã tạo 3 tài khoản test (Mật khẩu: a123456)');
 
   // 3. Tạo nguyên liệu trong kho
   const i_botCaPhe = await prisma.ingredient.create({ data: { name: 'Bột cà phê', stock: 5000, unit: 'gram' } });
@@ -85,13 +85,13 @@ async function main() {
   // 5. Tạo Topping
   await prisma.topping.createMany({
     data: [
-      { name: 'Trân châu đen', price: 5000 },
-      { name: 'Trân châu trắng', price: 5000 },
-      { name: 'Kem phô mai', price: 10000 },
-      { name: 'Kem trứng khè', price: 10000 },
-      { name: 'Thạch trái cây', price: 5000 },
-      { name: 'Pudding trứng', price: 8000 },
-      { name: 'Thạch dừa', price: 5000 },
+      { name: 'Trân châu đen', price: 5000, stock: 100 },
+      { name: 'Trân châu trắng', price: 5000, stock: 100 },
+      { name: 'Kem phô mai', price: 10000, stock: 50 },
+      { name: 'Kem trứng khè', price: 10000, stock: 50 },
+      { name: 'Thạch trái cây', price: 5000, stock: 100 },
+      { name: 'Pudding trứng', price: 8000, stock: 80 },
+      { name: 'Thạch dừa', price: 5000, stock: 100 },
     ],
   });
   console.log('- Đã tạo 7 loại topping');
@@ -132,27 +132,72 @@ async function main() {
   }
   console.log('- Đã nạp công thức chi tiết cho 20 món nước');
 
-  // 7. Tạo Khuyến mãi & Đơn hàng mẫu (Từ phần của main)
+  // ==========================================
+  // 7. TẠO ĐƠN HÀNG MẪU VÀ KHUYẾN MÃI
+  // ==========================================
   await prisma.promotion.create({
     data: { code: 'WELCOME10', discount: 10, type: 'PERCENT', minOrder: 50000, active: true },
   });
 
   const caPheSuaId = createdProducts['Cà phê sữa đá'];
+  const traDaoId = createdProducts['Trà đào cam sả'];
+  const bacXiuId = createdProducts['Bạc xỉu'];
+  const matchaId = createdProducts['Trà xanh matcha'];
+
+  // Đơn PENDING (Khách mới đặt, chưa thanh toán)
   await prisma.order.create({
     data: {
       userId: customer.id,
       status: 'PENDING',
       total: 30000,
-      items: {
-        create: { productId: caPheSuaId, size: 'M', qty: 1, unitPrice: 30000, lineTotal: 30000 },
-      },
-      payments: {
-        create: { idempotencyKey: 'seed-payment-pending-001', amount: 30000, method: 'VNPAY', status: 'PENDING' },
-      },
+      receiverName: 'Nguyen Van A',
+      receiverPhone: '0901234567',
+      deliveryAddress: '123 Nguyen Trai, Quan 1',
+      items: { create: { productId: caPheSuaId, size: 'M', qty: 1, unitPrice: 30000, lineTotal: 30000 } },
+      payments: { create: { idempotencyKey: 'seed-payment-001', amount: 30000, method: 'VNPAY', status: 'PENDING' } },
     },
   });
-  console.log('- Đã tạo mã WELCOME10 và 1 đơn hàng PENDING mẫu');
 
+  // Đơn PAID (Đã thanh toán, chờ Barista pha chế)
+  await prisma.order.create({
+    data: {
+      userId: customer.id,
+      status: 'PAID',
+      total: 45000,
+      receiverName: 'Tran Thi B',
+      receiverPhone: '0912345678',
+      deliveryAddress: '456 Le Loi, Quan 3',
+      items: { create: { productId: traDaoId, size: 'L', qty: 1, unitPrice: 45000, lineTotal: 45000 } },
+    },
+  });
+
+  // Đơn PREPARING (Barista đang pha chế)
+  await prisma.order.create({
+    data: {
+      userId: customer.id,
+      status: 'PREPARING',
+      total: 35000,
+      receiverName: 'Le Van C',
+      receiverPhone: '0923456789',
+      deliveryAddress: '789 Hai Ba Trung, Quan 1',
+      items: { create: { productId: bacXiuId, size: 'M', qty: 1, unitPrice: 35000, lineTotal: 35000 } },
+    },
+  });
+
+  // Đơn READY (Barista đã pha xong, chờ khách nhận)
+  await prisma.order.create({
+    data: {
+      userId: customer.id,
+      status: 'READY',
+      total: 40000,
+      receiverName: 'Pham Thi D',
+      receiverPhone: '0934567890',
+      deliveryAddress: '321 Vo Van Tan, Quan 3',
+      items: { create: { productId: matchaId, size: 'S', qty: 1, unitPrice: 40000, lineTotal: 40000 } },
+    },
+  });
+
+  console.log('- Đã tạo mã WELCOME10 và 4 đơn hàng mẫu (PENDING, PAID, PREPARING, READY) kèm thông tin người nhận');
   console.log('===== SEED HOÀN TẤT =====');
 }
 
