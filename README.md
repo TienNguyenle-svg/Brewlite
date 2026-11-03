@@ -159,7 +159,7 @@ CANCELLED (Hủy bởi khách qua `/orders/{id}/cancel` hoặc hệ thống tự
 | **Thủy Tiên** | PO + BE | **Khởi tạo cấu trúc dự án, viết README, SETUP.md**. Thiết kế **Database & Schema**. Viết API Sản phẩm, Đơn hàng khách, API Admin (Kho, Sản phẩm, Báo cáo, Đơn hàng). | Hỗ trợ Gia Hân, quản lý Sprint, Demo. |
 | **Gia Hân** | SM + BE | Thiết kế **Database & Schema**. Viết API Auth, API Thanh toán (VNPay), API Checkout Preview, API Barista, Order State Machine, API Điểm thưởng. | Hỗ trợ Tiên phần CSDL, tổ chức Scrum/Retro. |
 | **Ngọc Hiển** | FE | Giao diện: Trang Menu, Chi tiết sản phẩm, Auth, Lịch sử đơn/Hủy đơn, Trang Admin (Quản lý kho, Sản phẩm, Báo cáo). | Review UI, hỗ trợ Hoàng Quân. |
-| **Hoàng Quân** | FE | Giao diện: Giỏ hàng (Zustand), Checkout (xem trước tổng tiền, chọn thanh toán), Trang Barista (xem/cập nhật đơn). Cấu hình Docker. | Hỗ trợ Ngọc Hiển và Docker |
+| **Hoàng Quân** | FE | Giao diện: Giỏ hàng (Zustand), Checkout (xem trước tổng tiền, chọn thanh toán), Trang Barista (xem/cập nhật đơn). | Hỗ trợ Ngọc Hiển và review |
 
 ## Giải thích chi tiết từng người
 
@@ -182,7 +182,7 @@ CANCELLED (Hủy bởi khách qua `/orders/{id}/cancel` hoặc hệ thống tự
 ### Hoàng Quân – FE
 - **Task Frontend Khách hàng:** Quản lý state giỏ hàng (Zustand), xây dựng màn hình thanh toán tổng hợp (áp dụng voucher, điểm thưởng từ API preview) và chuyển hướng thanh toán VNPay.
 - **Task Frontend Barista:** Xây dựng màn hình xem danh sách đơn đang chờ và nút cập nhật trạng thái pha chế.
-- **Khác:** Hỗ trợ DB và Docker khi cần
+- **Khác:** Hỗ trợ Ngọc Hiển và review
 
 ## Bảng database (Chịu trách nhiệm chính: Tiên & Hân)
 
@@ -211,7 +211,7 @@ CANCELLED (Hủy bởi khách qua `/orders/{id}/cancel` hoặc hệ thống tự
 | **Sprint 1** | Khởi tạo dự án, README, Schema DB, API Sản phẩm. | Schema DB (cùng Tiên), API Auth (Login/Register). | Trang Menu, Chi tiết sản phẩm, Đăng nhập/Đăng ký. | Cấu hình Docker, Giỏ hàng (Zustand), Seed data (Hỗ trợ DB). |
 | **Sprint 2** | API Đơn hàng (Tạo, Xem lịch sử). | API Thanh toán (VNPay), Checkout Preview, Hủy đơn. | Xác nhận đơn, Lịch sử đơn. | Trang Checkout, chuyển hướng VNPay. |
 | **Sprint 3** | API Admin (Sản phẩm, Kho, Doanh thu). | API Barista, Order State Machine, API Loyalty. | Trang Admin (Quản lý kho, Sản phẩm, Báo cáo). | Trang Barista. |
-| **Cuối kỳ** | Demo, Sprint Review, chốt tài liệu. | Sprint Retrospective, hoàn thiện luồng State Machine. | Hoàn thiện UI/UX. | Hoàn thiện Docker, chạy thử toàn hệ thống nghiệm thu. |
+| **Cuối kỳ** | Demo, Sprint Review | Sprint Retrospective, hoàn thiện luồng State Machine. | Hoàn thiện UI/UX. | Chạy thử toàn hệ thống nghiệm thu. |
 
 ## Danh sách task mở rộng
 
