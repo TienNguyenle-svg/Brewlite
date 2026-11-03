@@ -115,12 +115,13 @@ Brewlite/
 - **LoyaltyTransaction:** id, userId, points, reason, orderId
 
 ## Order State Machine
+```
 PENDING → PAID → PREPARING → READY → COMPLETED
    ↓
 PAYMENT_FAILED (Có thể thử lại hoặc hủy qua `/payments/orders/{orderId}/cancel`)
    ↓
 CANCELLED (Hủy bởi khách qua `/orders/{id}/cancel` hoặc hệ thống tự hủy)
-
+```
 ## Chức năng chính
 
 ### Khách hàng
