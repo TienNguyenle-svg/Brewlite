@@ -165,7 +165,7 @@ CANCELLED (Hủy bởi khách qua `/orders/{id}/cancel` hoặc hệ thống tự
 ## Giải thích chi tiết từng người
 
 ### Thủy Tiên – PO + BE
-- **Khởi tạo:** Thiết lập cấu trúc dự án, viết tài liệu `README.md` và `setup.md`.
+- **Khởi tạo:** Thiết lập cấu trúc dự án, cấu hình Docker, viết tài liệu `README.md` và `setup.md`.
 - **Database:** Chịu trách nhiệm chính thiết kế Schema Prisma cho các bảng (cùng Gia Hân).
 - **Task Backend:** API danh sách/chi tiết sản phẩm, tạo và xem đơn hàng của khách hàng. Xây dựng toàn bộ luồng API Admin (Quản lý tồn kho chi tiết nguyên liệu, topping, quản lý sản phẩm, báo cáo doanh thu và xem toàn bộ đơn hàng).
 - **Khác:** Quản lý Product Backlog, Sprint Planning, Review, Demo.
@@ -209,7 +209,7 @@ CANCELLED (Hủy bởi khách qua `/orders/{id}/cancel` hoặc hệ thống tự
 
 | Sprint | Thủy Tiên (BE) | Gia Hân (BE) | Ngọc Hiển (FE) | Hoàng Quân (FE) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Sprint 1** | Khởi tạo dự án, README, Schema DB, API Sản phẩm. | Schema DB (cùng Tiên), API Auth (Login/Register). | Trang Menu, Chi tiết sản phẩm, Đăng nhập/Đăng ký. | Cấu hình Docker, Giỏ hàng (Zustand), Seed data (Hỗ trợ DB). |
+| **Sprint 1** | Khởi tạo dự án, cấu hình Docker, README, Schema DB, API Sản phẩm. | Schema DB (cùng Tiên), API Auth (Login/Register). | Trang Menu, Chi tiết sản phẩm, Đăng nhập/Đăng ký. | Giỏ hàng (Zustand), Seed data (Hỗ trợ DB). |
 | **Sprint 2** | API Đơn hàng (Tạo, Xem lịch sử). | API Thanh toán (VNPay), Checkout Preview, Hủy đơn. | Xác nhận đơn, Lịch sử đơn. | Trang Checkout, chuyển hướng VNPay. |
 | **Sprint 3** | API Admin (Sản phẩm, Kho, Doanh thu). | API Barista, Order State Machine, API Loyalty. | Trang Admin (Quản lý kho, Sản phẩm, Báo cáo). | Trang Barista. |
 | **Cuối kỳ** | Demo, Sprint Review | Sprint Retrospective, hoàn thiện luồng State Machine. | Hoàn thiện UI/UX. | Chạy thử toàn hệ thống nghiệm thu. |
