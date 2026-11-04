@@ -2,15 +2,15 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  imageUrl: string;
+  imageUrl: string | null;
   stock: number;
+  isAvailable: boolean;
   category?: string;
   description?: string;
-  badge?: string;
+  badge?: string | null;
 }
 
 export interface ApiProduct extends Product {
-  isAvailable?: boolean;
   toppings?: ApiTopping[];
 }
 

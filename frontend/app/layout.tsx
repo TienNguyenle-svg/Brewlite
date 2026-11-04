@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import CartHydration from "@/components/cart/CartHydration";
-import SiteChrome from "@/components/SiteChrome";
 
 const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="vi">
       <body className={`${inter.className} bg-[#F8F5F0] antialiased`}>
         <CartHydration />
-        <SiteChrome>{children}</SiteChrome>
+        <Header />
+        {children}
+        <Footer />
       </body>
     </html>
   );

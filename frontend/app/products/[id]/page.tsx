@@ -4,7 +4,7 @@ import type { Product } from "@/components/ProductDetailView";
 
 export const instant = false;
 
-const API_URL = "http://localhost:3001";
+const API_URL = process.env.API_URL_INTERNAL || "http://localhost:3001";
 
 async function getProduct(id: string): Promise<Product | null> {
   const res = await fetch(`${API_URL}/products/${id}`, {
