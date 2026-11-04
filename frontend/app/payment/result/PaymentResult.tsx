@@ -2,20 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  PENDING_PAYMENT_ORDER_KEY,
-} from "@/lib/api";
+import { useSearchParams } from "next/navigation";
+import { PENDING_PAYMENT_ORDER_KEY } from "@/lib/api";
 import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 
 type PaymentResultStatus = "loading" | "success" | "failed" | "invalid";
 
-export default function PaymentResult({
-  status,
-  orderId,
-}: {
-  status: string | null;
-  orderId: string | null;
-}) {
+export default function PaymentResult() {
+  // Tự động lấy tham số từ URL ở phía Client
+  const searchParams = useSearchParams();
+  const status = searchParams.get("status");
+  const orderId = searchParams.get("orderId");
+
   const [result, setResult] = useState<PaymentResultStatus>("loading");
 
   useEffect(() => {
