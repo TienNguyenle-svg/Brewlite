@@ -1,8 +1,16 @@
 import type { Product } from "./types";
 
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
-).replace(/\/+$/, "");
+// Hàm tự động chọn URL phù hợp với môi trường
+const getApiUrl = () => {
+  if (typeof window === "undefined") {
+    // Đang chạy trên Server (Docker) -> Gọi qua tên service nội bộ
+    return process.env.API_URL_INTERNAL || "http://localhost:3001";
+  }
+  // Đang chạy trên Trình duyệt -> Gọi qua cổng localhost
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+};
+
+const API_URL = getApiUrl().replace(/\/+$/, "");
 export const TOKEN_KEY = "accessToken";
 
 export class ApiError extends Error {
