@@ -8,7 +8,7 @@ export default function ProductCard({ product }: { product: Product }) {
       <Link href={`/products/${product.id}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-stone-200">
           <Image
-            src={product.imageUrl}
+            src={product.imageUrl ?? "/placeholder.png"}   // fallback khi null
             alt={product.name}
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"

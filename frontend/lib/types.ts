@@ -5,4 +5,7 @@ export interface Product {
   imageUrl: string | null;
   stock: number;
   isAvailable: boolean;
+  category?: string;
+  badge?: string | null;
+  description?: string;
 }

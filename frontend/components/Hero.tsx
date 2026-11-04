@@ -46,6 +46,7 @@ export default function Hero() {
           priority
           sizes="(min-width: 768px) 50vw, 100vw"
           className="object-cover"
+          unoptimized
         />
       </div>
     </section>
