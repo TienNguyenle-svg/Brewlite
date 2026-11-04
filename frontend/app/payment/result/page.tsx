@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import StoreShell from "@/components/layout/StoreShell";
 import PaymentResult from "./PaymentResult";
 
 export const metadata: Metadata = { title: "Payment result · BrewLite" };
@@ -12,11 +11,11 @@ export default async function PaymentResultPage({
   const params = await searchParams;
 
   return (
-    <StoreShell>
+    <main className="px-4 pb-16 pt-[30px] sm:px-8 lg:px-[72px]">
       <PaymentResult
         status={params.status ?? null}
         orderId={params.orderId ?? null}
       />
-    </StoreShell>
+    </main>
   );
 }

@@ -11,4 +11,12 @@ export interface Product {
 
 export interface ApiProduct extends Product {
   isAvailable?: boolean;
+  toppings?: ApiTopping[];
+}
+
+export interface ApiTopping {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
 }

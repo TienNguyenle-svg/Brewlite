@@ -34,7 +34,7 @@ interface CartState {
   clear: () => void;
 }
 
-export const FREE_DELIVERY_THRESHOLD = 150000;
+export const FREE_DELIVERY_THRESHOLD = 100000;
 export const DELIVERY_FEE = 15000;
 
 export const useCartStore = create<CartState>()(

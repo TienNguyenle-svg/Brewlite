@@ -1,4 +1,4 @@
-import type { ApiProduct, Product } from "./types";
+import type { ApiProduct, ApiTopping, Product } from "./types";
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
@@ -51,14 +51,12 @@ export type CustomerOrder = {
     size: string;
     qty: number;
     lineTotal: number;
-    product: {
-      name: string;
-      imageUrl: string | null;
-    };
+    productId: string;
     toppings: Array<{
-      topping: {
-        name: string;
-      };
+      id: string;
+      orderItemId: string;
+      toppingId: string;
+      price: number;
     }>;
   }>;
 };
@@ -132,14 +130,26 @@ export async function request<T>(
 type ProductResponse = Omit<Product, "imageUrl"> & {
   imageUrl: string | null;
   isAvailable?: boolean;
+  toppings?: ApiTopping[];
 };
+
+function normalizeProduct(product: ProductResponse): ApiProduct {
+  return {
+    ...product,
+    imageUrl: product.imageUrl ?? "/window.svg",
+  };
+}
 
 export async function getProducts(): Promise<ApiProduct[]> {
   const products = await request<ProductResponse[]>("/products");
-  return products.map((product) => ({
-    ...product,
-    imageUrl: product.imageUrl ?? "/window.svg",
-  }));
+  return products.map(normalizeProduct);
+}
+
+export async function getProduct(id: string): Promise<ApiProduct> {
+  const product = await request<ProductResponse>(
+    `/products/${encodeURIComponent(id)}`,
+  );
+  return normalizeProduct(product);
 }
 
 export const createOrder = (input: CreateOrderInput) =>
