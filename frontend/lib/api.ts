@@ -34,6 +34,35 @@ export type OrderReceipt = {
   total: number;
 };
 
+export type CustomerOrder = {
+  id: string;
+  status:
+    | "PENDING"
+    | "PAID"
+    | "PAYMENT_FAILED"
+    | "PREPARING"
+    | "READY"
+    | "COMPLETED"
+    | "CANCELLED";
+  createdAt: string;
+  total: number;
+  items: Array<{
+    id: string;
+    size: string;
+    qty: number;
+    lineTotal: number;
+    product: {
+      name: string;
+      imageUrl: string | null;
+    };
+    toppings: Array<{
+      topping: {
+        name: string;
+      };
+    }>;
+  }>;
+};
+
 export type CreatePaymentInput = {
   orderId: string;
 };
@@ -118,6 +147,8 @@ export const createOrder = (input: CreateOrderInput) =>
     method: "POST",
     body: JSON.stringify(input),
   });
+
+export const getMyOrders = () => request<CustomerOrder[]>("/orders/me");
 
 export const createPayment = (
   input: CreatePaymentInput,

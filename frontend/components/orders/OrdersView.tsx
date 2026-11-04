@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getAccessToken, getMyOrders, type CustomerOrder } from "@/lib/api";
 
 // ===== KIỂU DỮ LIỆU CỦA GIAO DIỆN =====
 // Sau này API trả về dữ liệu dạng khác thì chỉ cần đổi sang dạng này
-type UiStatus = "PENDING" | "PREPARING" | "READY" | "COMPLETED" | "CANCELLED";
+type UiStatus =
+  | "PENDING"
+  | "PAID"
+  | "PAYMENT_FAILED"
+  | "PREPARING"
+  | "READY"
+  | "COMPLETED"
+  | "CANCELLED";
 
 type OrderItemView = {
   id: string;
@@ -28,104 +36,14 @@ type OrderView = {
 
 type Tab = "active" | "history";
 
-// ===== DỮ LIỆU MẪU (tạm, thay bằng API GET /orders/me sau) =====
-const MOCK_ORDERS: OrderView[] = [
-  {
-    id: "mock-1",
-    code: "BL-10248",
-    createdAt: "2026-10-14T10:42:00+07:00",
-    status: "PREPARING",
-    items: [
-      {
-        id: "i1",
-        name: "Cà phê sữa đá",
-        imageUrl: "/images/ca-phe-sua.jpg",
-        qty: 2,
-        size: "Medium",
-        toppings: ["Trân châu đen", "Kem phô mai"],
-        note: "Ít đá",
-        lineTotal: 110000,
-      },
-      {
-        id: "i2",
-        name: "Latte",
-        imageUrl: "/images/latte.jpg",
-        qty: 1,
-        size: "Small",
-        toppings: [],
-        lineTotal: 45000,
-      },
-    ],
-    total: 155000,
-  },
-  {
-    id: "mock-2",
-    code: "BL-10249",
-    createdAt: "2026-10-14T10:46:00+07:00",
-    status: "PENDING",
-    items: [
-      {
-        id: "i3",
-        name: "Trà sữa trân châu",
-        imageUrl: "/images/tra-sua.jpg",
-        qty: 1,
-        size: "Large",
-        toppings: ["Pudding trứng"],
-        lineTotal: 68000,
-      },
-    ],
-    total: 68000,
-  },
-  {
-    id: "mock-3",
-    code: "BL-10186",
-    createdAt: "2026-10-12T09:18:00+07:00",
-    status: "COMPLETED",
-    items: [
-      {
-        id: "i4",
-        name: "Bạc xỉu",
-        imageUrl: "/images/bac-xiu.jpg",
-        qty: 2,
-        size: "Medium",
-        toppings: ["Kem trứng khè"],
-        note: "Ít đá",
-        lineTotal: 110000,
-      },
-      {
-        id: "i5",
-        name: "Cappuccino",
-        imageUrl: "/images/cappuccino.jpg",
-        qty: 1,
-        size: "Medium",
-        toppings: [],
-        lineTotal: 55000,
-      },
-    ],
-    total: 165000,
-  },
-  {
-    id: "mock-4",
-    code: "BL-10092",
-    createdAt: "2026-10-09T15:06:00+07:00",
-    status: "CANCELLED",
-    items: [
-      {
-        id: "i6",
-        name: "Trà đào cam sả",
-        imageUrl: "/images/tra-dao.jpg",
-        qty: 1,
-        size: "Small",
-        toppings: [],
-        lineTotal: 45000,
-      },
-    ],
-    total: 45000,
-  },
-];
-
 // ===== CẤU HÌNH HIỂN THỊ =====
-const ACTIVE_STATUSES: UiStatus[] = ["PENDING", "PREPARING", "READY"];
+const ACTIVE_STATUSES: UiStatus[] = [
+  "PENDING",
+  "PAID",
+  "PAYMENT_FAILED",
+  "PREPARING",
+  "READY",
+];
 
 const STATUS_INFO: Record<
   UiStatus,
@@ -135,6 +53,16 @@ const STATUS_INFO: Record<
     label: "Chờ xác nhận",
     badge: "bg-orange-100 text-orange-700",
     message: "Đã nhận đơn. Quán sẽ xác nhận với bạn sớm.",
+  },
+  PAID: {
+    label: "Đã thanh toán",
+    badge: "bg-emerald-100 text-emerald-800",
+    message: "Thanh toán thành công. Đơn hàng đang được xử lý.",
+  },
+  PAYMENT_FAILED: {
+    label: "Thanh toán thất bại",
+    badge: "bg-red-100 text-red-700",
+    message: "Thanh toán chưa hoàn tất. Vui lòng kiểm tra lại đơn hàng.",
   },
   PREPARING: {
     label: "Đang pha chế",
@@ -389,12 +317,63 @@ function UsualCard({ item }: { item: OrderItemView }) {
   );
 }
 
+function toOrderView(order: CustomerOrder): OrderView {
+  return {
+    id: order.id,
+    code: order.id.slice(0, 8).toUpperCase(),
+    createdAt: order.createdAt,
+    status: order.status,
+    items: order.items.map((item) => ({
+      id: item.id,
+      name: item.product.name,
+      imageUrl: item.product.imageUrl ?? "/window.svg",
+      qty: item.qty,
+      size: item.size,
+      toppings: item.toppings.map(({ topping }) => topping.name),
+      lineTotal: item.lineTotal,
+    })),
+    total: order.total,
+  };
+}
+
 // ===== TRANG CHÍNH =====
 export default function OrdersView({ placedId }: { placedId?: string }) {
   const [tab, setTab] = useState<Tab>("active");
+  const [orders, setOrders] = useState<OrderView[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // TODO: thay MOCK_ORDERS bằng dữ liệu thật từ GET /orders/me
-  const orders = MOCK_ORDERS;
+  useEffect(() => {
+    let active = true;
+
+    const loadOrders = async () => {
+      if (!getAccessToken()) {
+        setError("Vui lòng đăng nhập để xem đơn hàng của bạn.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const customerOrders = await getMyOrders();
+        if (active) setOrders(customerOrders.map(toOrderView));
+      } catch (cause) {
+        if (active) {
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "Không thể tải danh sách đơn hàng.",
+          );
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void loadOrders();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const activeOrders = orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
   const historyOrders = orders.filter((o) => !ACTIVE_STATUSES.includes(o.status));
@@ -447,6 +426,12 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
         Từ ly đầu tiên đến ngụm cuối cùng, theo dõi mọi thứ tại đây.
       </p>
 
+      {error && (
+        <p role="alert" className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
       {/* Hai tab */}
       <div className="mt-6 flex gap-6 border-b border-gray-200">
         {tabs.map((t) => (
@@ -471,7 +456,11 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Cột trái: danh sách đơn */}
         <div className="flex flex-col gap-4">
-          {tab === "active" ? (
+          {loading ? (
+            <p className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
+              Đang tải đơn hàng...
+            </p>
+          ) : tab === "active" ? (
             activeOrders.length > 0 ? (
               activeOrders.map((o) => <OrderCard key={o.id} order={o} />)
             ) : (
