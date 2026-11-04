@@ -6,6 +6,17 @@ export interface Product {
   stock: number;
   isAvailable: boolean;
   category?: string;
-  badge?: string | null;
   description?: string;
+  badge?: string | null;
+}
+
+export interface ApiProduct extends Product {
+  toppings?: ApiTopping[];
+}
+
+export interface ApiTopping {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
 }

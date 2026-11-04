@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import {
   calcDiscount,
   validatePromo,
@@ -33,10 +34,12 @@ interface CartState {
   clear: () => void;
 }
 
-export const FREE_DELIVERY_THRESHOLD = 150000;
+export const FREE_DELIVERY_THRESHOLD = 100000;
 export const DELIVERY_FEE = 15000;
 
-export const useCartStore = create<CartState>((set, get) => ({
+export const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
   items: [],
   promo: null,
   addItem: (product, size = "M") => {
@@ -82,7 +85,22 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
   removePromo: () => set({ promo: null }),
   clear: () => set({ items: [], promo: null }),
-}));
+    }),
+    {
+      name: "brewlite-cart",
+      storage: createJSONStorage(() => sessionStorage),
+      skipHydration: true,
+    },
+  ),
+);
+
+let cartHydration: Promise<void> | null = null;
+
+export function ensureCartHydrated(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  cartHydration ??= Promise.resolve(useCartStore.persist.rehydrate());
+  return cartHydration;
+}
 
 /** Giỏ hàng + các giá trị tính toán (tạm tính, phí ship, giảm giá, tổng). */
 export function useCart() {
