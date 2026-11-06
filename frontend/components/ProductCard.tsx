@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Product } from "@/lib/types";
+import { useCart } from "@/lib/cart-store";
 
 export default function ProductCard({ product }: { product: Product }) {
   return (
