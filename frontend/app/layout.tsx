@@ -3,10 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-<<<<<<< HEAD
 import CartHydration from "@/components/cart/CartHydration";
-=======
->>>>>>> feature/header
 
 const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
