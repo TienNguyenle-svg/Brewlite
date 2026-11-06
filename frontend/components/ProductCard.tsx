@@ -1,26 +1,14 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
 import { Product } from "@/lib/types";
-import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 
 export default function ProductCard({ product }: { product: Product }) {
-  const [added, setAdded] = useState(false);
-
-  async function handleAddToCart() {
-    await ensureCartHydrated();
-    useCartStore.getState().addItem(product);
-    setAdded(true);
-  }
-
   return (
     <article className="rounded-2xl border border-[#EDE6DC] bg-white p-2.5 shadow-sm transition hover:shadow-md">
       <Link href={`/products/${product.id}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-stone-200">
           <Image
-            src={product.imageUrl ?? "/placeholder.png"}   // fallback khi null
+            src={product.imageUrl ?? "/placeholder.png"} // fallback khi null
             alt={product.name}
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
@@ -52,13 +40,12 @@ export default function ProductCard({ product }: { product: Product }) {
         <span className="font-semibold text-[#2B1F1A]">
           {product.price.toLocaleString("vi-VN")}₫
         </span>
-        <button
-          type="button"
-          onClick={handleAddToCart}
+        <Link
+          href={`/products/${product.id}`}
           className="rounded-lg border border-[#EDE6DC] px-3 py-1.5 text-xs font-medium text-[#2B1F1A] hover:bg-[#F8F5F0]"
         >
-          {added ? "Đã thêm ✓" : "Thêm vào giỏ hàng"}
-        </button>
+          Thêm vào giỏ hàng
+        </Link>
       </div>
     </article>
   );

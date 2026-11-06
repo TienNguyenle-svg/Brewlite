@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { Product as StoreProduct } from "@/lib/types";
+import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 
 export type Topping = {
   id: string;
@@ -58,6 +61,8 @@ function formatK(n: number) {
 }
 
 export default function ProductDetailView({ product }: { product: Product }) {
+  const router = useRouter();
+
   // Topping thật lấy từ backend (không có thì là danh sách rỗng)
   const toppings = product.toppings ?? [];
 
@@ -65,6 +70,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
   const [toppingIds, setToppingIds] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [adding, setAdding] = useState(false);
 
   function toggleTopping(id: string) {
     setToppingIds((prev) =>
@@ -88,22 +94,26 @@ export default function ProductDetailView({ product }: { product: Product }) {
     ...selectedToppings.map((t) => `${t.name} ${formatK(t.price)}`),
   ].join(" + ");
 
-  // Tạm thời chỉ in ra Console, sẽ nối với giỏ hàng (Zustand) ở bước sau
-  function handleAddToCart() {
-    console.log("Thêm vào giỏ:", {
-      productId: product.id,
-      name: product.name,
-      size: size.id,
-      toppings: selectedToppings.map((t) => ({
-        id: t.id,
-        name: t.name,
-        price: t.price,
-      })),
-      note,
-      quantity,
-      unitPrice,
-      total,
-    });
+  // Thêm vào giỏ rồi chuyển sang trang thanh toán
+  async function handleAddToCart() {
+    if (adding) return;
+    setAdding(true);
+
+    await ensureCartHydrated();
+    useCartStore
+      .getState()
+      .addItem(product as unknown as StoreProduct, size.id as "S" | "M" | "L", {
+        qty: quantity,
+        unitPrice,
+        toppings: selectedToppings.map((t) => ({
+          id: t.id,
+          name: t.name,
+          price: t.price,
+        })),
+        note,
+      });
+
+    router.push("/checkout");
   }
 
   return (
@@ -347,9 +357,12 @@ export default function ProductDetailView({ product }: { product: Product }) {
             <button
               type="button"
               onClick={handleAddToCart}
-              className="flex-1 rounded-xl bg-stone-800 px-6 py-3.5 text-sm font-medium text-white transition hover:bg-stone-900"
+              disabled={adding}
+              className="flex-1 rounded-xl bg-stone-800 px-6 py-3.5 text-sm font-medium text-white transition hover:bg-stone-900 disabled:opacity-60"
             >
-              Thêm vào giỏ hàng - {formatVND(total)}
+              {adding
+                ? "Đang chuyển..."
+                : `Thêm vào giỏ hàng - ${formatVND(total)}`}
             </button>
           </div>
 
