@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Product } from "@/lib/types";
 import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 
+
 export default function ProductCard({ product }: { product: Product }) {
   const [added, setAdded] = useState(false);
 
@@ -57,7 +58,11 @@ export default function ProductCard({ product }: { product: Product }) {
           onClick={handleAddToCart}
           className="rounded-lg border border-[#EDE6DC] px-3 py-1.5 text-xs font-medium text-[#2B1F1A] hover:bg-[#F8F5F0]"
         >
+<<<<<<< HEAD
           {added ? "Đã thêm ✓" : "Thêm vào giỏ hàng"}
+=======
+          Thêm vào giỏ hàng
+>>>>>>> feature/header
         </button>
       </div>
     </article>

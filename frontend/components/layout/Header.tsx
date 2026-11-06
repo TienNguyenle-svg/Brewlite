@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useCart } from "@/lib/cart-store";
 
 function CupIcon() {
   return (
@@ -38,8 +41,11 @@ function BagIcon() {
 }
 
 export default function Header() {
+  // Tổng số ly trong giỏ, lấy từ store nên tự cập nhật khi thêm món
+  const { count } = useCart();
+
   return (
-    <header className="border-b border-[##F8F4E8] bg-[#F8F5F0]">
+    <header className="border-b border-[#F8F4E8] bg-[#F8F5F0]">
       <div className="mx-auto flex h-[88px] max-w-[1440px] items-center justify-between px-4 md:px-[72px]">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5">
@@ -83,8 +89,8 @@ export default function Header() {
           >
             <BagIcon />
             Giỏ hàng
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] text-[#2B1F1A]">
-              3
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[10px] text-[#2B1F1A]">
+              {count}
             </span>
           </Link>
 
