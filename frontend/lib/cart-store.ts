@@ -24,10 +24,22 @@ export interface CartItem {
   imageUrl: string; // ảnh nằm trong frontend/public/images
 }
 
+// Tùy chọn khi thêm món từ trang chi tiết (size đã có tham số riêng)
+export interface AddItemOptions {
+  qty?: number;
+  unitPrice?: number; // giá 1 ly đã gồm size + topping
+  toppings?: { id: string; name: string; price: number }[];
+  note?: string;
+}
+
 interface CartState {
   items: CartItem[];
   promo: Promotion | null;
-  addItem: (product: Product, size?: CartItem["size"]) => void;
+  addItem: (
+    product: Product,
+    size?: CartItem["size"],
+    options?: AddItemOptions,
+  ) => void;
   setQty: (id: string, qty: number) => void;
   applyPromo: (code: string) => PromoResult;
   removePromo: () => void;
@@ -42,20 +54,42 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
   items: [],
   promo: null,
-  addItem: (product, size = "M") => {
-    const id = `${product.id}:${size}`;
+  addItem: (product, size = "M", options = {}) => {
+    const {
+      qty = 1,
+      unitPrice = product.price,
+      toppings = [],
+      note = "",
+    } = options;
+
+    const cleanNote = note.trim();
+    const toppingKey = toppings
+      .map((t) => t.id)
+      .sort()
+      .join(",");
+    // cùng món + size + topping + ghi chú thì mới gộp thành một dòng
+    const id = `${product.id}:${size}:${toppingKey}:${cleanNote}`;
+
+    const toppingText = toppings.map((t) => t.name).join(", ");
+    const customization = toppingText
+      ? `Size ${size} · ${toppingText}`
+      : `Size ${size}`;
+    const summaryNote = cleanNote
+      ? `${customization} · ${cleanNote}`
+      : customization;
+
     const currentItem = get().items.find((item) => item.id === id);
     const item: CartItem = currentItem
-      ? { ...currentItem, qty: currentItem.qty + 1 }
+      ? { ...currentItem, qty: currentItem.qty + qty }
       : {
           id,
           productId: product.id,
           name: product.name,
-          customization: `Size ${size}`,
-          summaryNote: `Size ${size}`,
+          customization,
+          summaryNote,
           category: "BREWLITE MENU",
-          price: product.price,
-          qty: 1,
+          price: unitPrice,
+          qty,
           size,
           imageUrl: product.imageUrl ?? "/window.svg",
         };

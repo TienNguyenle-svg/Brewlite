@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCart } from "@/lib/cart-store";
 
 function CupIcon() {
@@ -44,6 +45,28 @@ export default function Header() {
   // Tổng số ly trong giỏ, lấy từ store nên tự cập nhật khi thêm món
   const { count } = useCart();
 
+  // Đường dẫn hiện tại, dùng để biết mục nào đang được chọn
+  const pathname = usePathname();
+
+  const navItems = [
+    {
+      label: "Thực đơn",
+      href: "/",
+      // trang chủ và trang chi tiết món đều thuộc "Thực đơn"
+      active: pathname === "/" || pathname.startsWith("/products"),
+    },
+    {
+      label: "Đơn hàng của tôi",
+      href: "/orders",
+      active: pathname.startsWith("/orders"),
+    },
+    {
+      label: "Về chúng tôi",
+      href: "#",
+      active: false,
+    },
+  ];
+
   return (
     <header className="border-b border-[#F8F4E8] bg-[#F8F5F0]">
       <div className="mx-auto flex h-[88px] max-w-[1440px] items-center justify-between px-4 md:px-[72px]">
@@ -55,21 +78,24 @@ export default function Header() {
           <span className="text-xl text-[#2B1F1A]">BrewLite.</span>
         </Link>
 
-        {/* Điều hướng giữa */}
+        {/* Điều hướng giữa: mục nào active thì có chữ đậm + thanh cam */}
         <nav className="hidden h-full items-center gap-8 text-sm md:flex">
-          <Link
-            href="/"
-            className="relative flex h-full items-center font-medium text-[#2B1F1A]"
-          >
-            Thực đơn
-            <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#C8672B]" />
-          </Link>
-          <Link href="/orders" className="text-stone-500 hover:text-[#2B1F1A]">
-            Đơn hàng của tôi
-          </Link>
-          <Link href="#" className="text-stone-500 hover:text-[#2B1F1A]">
-            Về chúng tôi
-          </Link>
+          {navItems.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={`relative flex h-full items-center ${
+                item.active
+                  ? "font-medium text-[#2B1F1A]"
+                  : "text-stone-500 hover:text-[#2B1F1A]"
+              }`}
+            >
+              {item.label}
+              {item.active && (
+                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#C8672B]" />
+              )}
+            </Link>
+          ))}
         </nav>
 
         {/* Bên phải */}
