@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-store";
+import { TOKEN_KEY } from "@/lib/barista";
 
 function CupIcon() {
   return (
@@ -47,6 +48,63 @@ export default function Header() {
 
   // Đường dẫn hiện tại, dùng để biết mục nào đang được chọn
   const pathname = usePathname();
+  const router = useRouter();
+
+  if (pathname.startsWith("/barista")) {
+    const baristaNav = [
+      { href: "/barista/orders", label: "Hàng đợi đơn" },
+      { href: "/barista/history", label: "Đã hoàn thành" },
+    ];
+
+    return (
+      <header className="border-b border-[#E7E1DA] bg-[#F8F5F0]">
+        <div className="mx-auto flex min-h-[88px] max-w-[1440px] items-center justify-between gap-4 px-4 md:px-[72px]">
+          <Link href="/barista" className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8A4B22] text-white">
+              <CupIcon />
+            </span>
+            <span className="text-xl text-[#2B1F1A]">BrewLite.</span>
+          </Link>
+
+          <nav className="flex h-full items-center gap-4 text-sm md:gap-9">
+            {baristaNav.map((item) => {
+              const active = pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex min-h-[88px] items-center border-b-[3px] ${
+                    active
+                      ? "border-[#B9672B] text-[#39281F]"
+                      : "border-transparent text-[#82776E]"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="flex items-center gap-3 text-[13px] md:gap-6">
+            <span className="hidden sm:inline">BrewLite · Quận 1</span>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem(TOKEN_KEY);
+                router.replace("/login");
+              }}
+              className="rounded-[10px] bg-[#39281F] px-3.5 py-2.5 font-semibold text-white"
+            >
+              Đăng xuất
+            </button>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EEE2D2] text-xs">
+              BR
+            </span>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   const navItems = [
     {
