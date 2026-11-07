@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./backend # Đảm bảo dòng này có
+        working-directory: ./backend
 
     steps:
       - name: Checkout code
@@ -27,16 +27,21 @@ jobs:
         with:
           node-version: 20
           cache: 'pnpm'
-          cache-dependency-path: './backend/pnpm-lock.yaml' # Chỉ rõ đường dẫn cache
+          cache-dependency-path: './backend/pnpm-lock.yaml'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --ignore-workspace # <-- SỬA DÒNG NÀY
+        run: pnpm install --no-frozen-lockfile --ignore-workspace
+
+      - name: Generate Prisma Client
+        run: pnpm prisma generate
 
       - name: Run Lint
         run: pnpm run lint
 
       - name: Run Tests
-        run: pnpm run test
+        run: node --experimental-vm-modules node_modules/jest/bin/jest.js
+        env:
+          NODE_OPTIONS: --experimental-vm-modules
 
       - name: Build project
         run: pnpm run build
