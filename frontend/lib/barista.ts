@@ -1,3 +1,5 @@
+import { formatOrderCode } from './order-code';
+
 export type OrderStatus = 'PAID' | 'PREPARING' | 'READY' | 'COMPLETED';
 export type BaristaOrderStatus = Exclude<OrderStatus, 'PAID'>;
 
@@ -12,7 +14,6 @@ export type BaristaOrderItem = {
 
 export type BaristaOrder = {
   id: string;
-  code?: string | null;
   status: OrderStatus;
   createdAt: string;
   updatedAt?: string | null;
@@ -59,8 +60,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 /** GET /barista/orders — đơn PAID, PREPARING, READY (cũ nhất trước) */
 export const fetchOrders = () => request<BaristaOrder[]>('/barista/orders');
 
-/** GET /barista/orders/history — đơn COMPLETED */
-export const fetchHistory = () => request<BaristaOrder[]>('/barista/orders/history');
+/** GET /barista/orders?status=COMPLETED — đơn đã hoàn thành */
+export const fetchHistory = () =>
+  request<BaristaOrder[]>('/barista/orders?status=COMPLETED');
 
 /** PATCH /barista/orders/:id — chỉ cho phép chuyển sang bước kế tiếp */
 export const updateOrderStatus = (id: string, status: BaristaOrderStatus) =>
@@ -113,8 +115,7 @@ export const COLUMN_ORDER = ['PAID', 'PREPARING', 'READY'] as const;
 
 export const LATE_AFTER_MINUTES = 10;
 
-export const orderCode = (o: BaristaOrder) =>
-  o.code ?? o.id.slice(-6).toUpperCase();
+export const orderCode = (o: BaristaOrder) => formatOrderCode(o.id);
 
 export const minutesSince = (iso: string) =>
   Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));

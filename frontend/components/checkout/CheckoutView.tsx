@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { createOrder, type OrderReceipt } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import {
+  ApiError,
+  PENDING_PAYMENT_ORDER_KEY,
+  createOrder,
+  createPayment,
+  getAccessToken,
+} from "@/lib/api";
 import { useCart } from "@/lib/cart-store";
-import { money } from "@/lib/format";
 import CheckoutSteps from "./CheckoutSteps";
 import DeliveryForm from "./DeliveryForm";
 import PaymentMethods, { type PaymentId } from "./PaymentMethods";
@@ -12,66 +17,95 @@ import CheckoutSummary from "./CheckoutSummary";
 import ConfirmModal from "./ConfirmModal";
 
 export default function CheckoutView() {
+  const router = useRouter();
   const cart = useCart();
   const [payment, setPayment] = useState<PaymentId | null>(null);
+  const [deliveryDetails, setDeliveryDetails] = useState<{
+    receiverName: string;
+    receiverPhone: string;
+    deliveryAddress: string;
+  } | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<OrderReceipt | null>(null);
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null);
+  const [paymentIdempotencyKey, setPaymentIdempotencyKey] = useState<string | null>(
+    null,
+  );
 
   const canSubmit = agreed && !!payment && cart.items.length > 0;
 
   const placeOrder = async () => {
+    const token = getAccessToken();
+    if (!token) {
+      setError("Vui lòng đăng nhập tài khoản khách hàng trước khi thanh toán.");
+      setConfirming(false);
+      return;
+    }
+
+    if (!deliveryDetails) {
+      setError("Vui lòng nhập thông tin giao hàng.");
+      setConfirming(false);
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
-      const createdOrder = await createOrder({
-        items: cart.items.map(({ productId, size, qty }) => ({
-          productId,
-          size,
-          qty,
-        })),
-      });
-      setReceipt(createdOrder);
-      cart.clear();
-      setConfirming(false);
+      let orderId = pendingOrderId;
+      if (!orderId) {
+        const order = await createOrder({
+          items: cart.items.map(({ productId, size, qty }) => ({
+            productId,
+            size,
+            qty,
+            toppingIds: [],
+          })),
+          ...deliveryDetails,
+        });
+        orderId = order.id;
+        setPendingOrderId(orderId);
+      }
+
+      const idempotencyKey =
+        paymentIdempotencyKey ?? `PAY-${Date.now()}`;
+      setPaymentIdempotencyKey(idempotencyKey);
+      const paymentResult = await createPayment({ orderId }, idempotencyKey);
+
+      sessionStorage.setItem(PENDING_PAYMENT_ORDER_KEY, orderId);
+
+      if (paymentResult.status === "SUCCEEDED") {
+        router.replace(
+          `/payment/result?status=success&orderId=${encodeURIComponent(orderId)}`,
+        );
+        return;
+      }
+
+      if (!paymentResult.paymentUrl) {
+        throw new ApiError(
+          "Backend không trả về đường dẫn thanh toán VNPay.",
+          502,
+        );
+      }
+
+      const paymentUrl = new URL(paymentResult.paymentUrl);
+      if (paymentUrl.protocol !== "https:") {
+        throw new ApiError("Đường dẫn thanh toán VNPay không hợp lệ.", 502);
+      }
+
+      window.location.assign(paymentUrl.toString());
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Không thể tạo đơn hàng.",
+        cause instanceof Error
+          ? cause.message
+          : "Không thể khởi tạo thanh toán VNPay.",
       );
       setConfirming(false);
     } finally {
       setSubmitting(false);
     }
   };
-
-  if (receipt) {
-    return (
-      <section
-        role="status"
-        className="mt-8 rounded-[18px] border border-[#E7E1DA] bg-white p-6 sm:p-8"
-      >
-        <p className="text-xs uppercase tracking-wide text-[#41705A]">
-          Đã tạo đơn hàng
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold">
-          Mã đơn: {receipt.id.slice(-8).toUpperCase()}
-        </h2>
-        <p className="mt-3 text-sm text-[#82776E]">
-          Đơn đang ở trạng thái {receipt.status}. Backend hiện chưa xử lý thanh
-          toán hoặc lưu thông tin giao hàng, nên đơn chưa được thanh toán.
-        </p>
-        <p className="mt-4 font-semibold">Tạm tính theo API: {money(receipt.total)}</p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex rounded-xl bg-[#39281F] px-5 py-3 text-sm font-semibold text-white"
-        >
-          Quay lại menu
-        </Link>
-      </section>
-    );
-  }
 
   return (
     <>
@@ -88,7 +122,15 @@ export default function CheckoutView() {
         className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_466px] lg:gap-10"
         onSubmit={(e) => {
           e.preventDefault();
-          if (canSubmit) setConfirming(true);
+          if (!canSubmit) return;
+          const formData = new FormData(e.currentTarget);
+          setDeliveryDetails({
+            receiverName: String(formData.get("receiverName") ?? "").trim(),
+            receiverPhone: String(formData.get("receiverPhone") ?? "").trim(),
+            deliveryAddress: String(formData.get("deliveryAddress") ?? "").trim(),
+          });
+          setError(null);
+          setConfirming(true);
         }}
       >
         <div className="flex flex-col gap-5">

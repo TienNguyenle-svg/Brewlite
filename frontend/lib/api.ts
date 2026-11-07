@@ -1,9 +1,18 @@
-import type { Product } from "./types";
+import type { ApiProduct, ApiTopping, Product } from "./types";
 
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
-).replace(/\/+$/, "");
+// Hàm tự động chọn URL phù hợp với môi trường
+const getApiUrl = () => {
+  if (typeof window === "undefined") {
+    // Đang chạy trên Server (Docker) -> Gọi qua tên service nội bộ
+    return process.env.API_URL_INTERNAL || "http://localhost:3001";
+  }
+  // Đang chạy trên Trình duyệt -> Gọi qua cổng localhost
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+};
+
+const API_URL = getApiUrl().replace(/\/+$/, "");
 export const TOKEN_KEY = "accessToken";
+export const PENDING_PAYMENT_ORDER_KEY = "brewlite-pending-payment-order";
 
 export class ApiError extends Error {
   constructor(
@@ -20,7 +29,11 @@ export type CreateOrderInput = {
     productId: string;
     size: "S" | "M" | "L";
     qty: number;
+    toppingIds: string[];
   }>;
+  receiverName: string;
+  receiverPhone: string;
+  deliveryAddress: string;
 };
 
 export type OrderReceipt = {
@@ -28,6 +41,50 @@ export type OrderReceipt = {
   status: string;
   total: number;
 };
+
+export type CustomerOrder = {
+  id: string;
+  status:
+    | "PENDING"
+    | "PAID"
+    | "PAYMENT_FAILED"
+    | "PREPARING"
+    | "READY"
+    | "COMPLETED"
+    | "CANCELLED";
+  createdAt: string;
+  total: number;
+  items: Array<{
+    id: string;
+    size: string;
+    qty: number;
+    lineTotal: number;
+    productId: string;
+    toppings: Array<{
+      id: string;
+      orderItemId: string;
+      toppingId: string;
+      price: number;
+    }>;
+  }>;
+};
+
+export type CreatePaymentInput = {
+  orderId: string;
+};
+
+export type PaymentReceipt = {
+  paymentId: string;
+  orderId: string;
+  amount: number;
+  currency: string;
+  status: string;
+  expiresAt?: string;
+  paymentUrl: string | null;
+};
+
+export const getAccessToken = () =>
+  typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
 
 export async function request<T>(
   path: string,
@@ -38,8 +95,7 @@ export async function request<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+  const token = getAccessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   let response: Response;
@@ -79,10 +135,45 @@ export async function request<T>(
   return response.json() as Promise<T>;
 }
 
-export const getProducts = () => request<Product[]>("/products");
+type ProductResponse = Omit<Product, "imageUrl"> & {
+  imageUrl: string | null;
+  isAvailable?: boolean;
+  toppings?: ApiTopping[];
+};
+
+function normalizeProduct(product: ProductResponse): ApiProduct {
+  return {
+    ...product,
+    imageUrl: product.imageUrl ?? "/window.svg",
+  };
+}
+
+export async function getProducts(): Promise<ApiProduct[]> {
+  const products = await request<ProductResponse[]>("/products");
+  return products.map(normalizeProduct);
+}
+
+export async function getProduct(id: string): Promise<ApiProduct> {
+  const product = await request<ProductResponse>(
+    `/products/${encodeURIComponent(id)}`,
+  );
+  return normalizeProduct(product);
+}
 
 export const createOrder = (input: CreateOrderInput) =>
   request<OrderReceipt>("/orders", {
     method: "POST",
+    body: JSON.stringify(input),
+  });
+
+export const getMyOrders = () => request<CustomerOrder[]>("/orders/me");
+
+export const createPayment = (
+  input: CreatePaymentInput,
+  idempotencyKey: string,
+) =>
+  request<PaymentReceipt>("/payments", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
     body: JSON.stringify(input),
   });

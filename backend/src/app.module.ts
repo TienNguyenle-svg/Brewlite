@@ -1,25 +1,31 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-// import { ScheduleModule } from '@nestjs/schedule';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
 import { AuthModule } from './auth/auth.module';
-// import { PaymentsModule } from './payments/payments.module';
+import { PaymentsModule } from './payments/payments.module';
 import { BaristaModule } from './barista/barista.module';
+import { AdminModule } from './admin/admin.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
+import { CheckoutModule } from './checkout/checkout.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    // ScheduleModule.forRoot(),
+    ScheduleModule.forRoot(),
     PrismaModule,
-    ProductsModule,
-    OrdersModule,
     AuthModule,
-    // PaymentsModule,
+    ProductsModule,
+    CheckoutModule,
+    OrdersModule,
+    PaymentsModule,
+    LoyaltyModule,
     BaristaModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

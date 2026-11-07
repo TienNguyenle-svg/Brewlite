@@ -12,7 +12,7 @@ async function main() {
   await prisma.orderItem.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.order.deleteMany();
-  await prisma.recipe.deleteMany(); // Xóa Recipe trước Ingredient
+  await prisma.recipe.deleteMany();
   await prisma.ingredient.deleteMany();
   await prisma.topping.deleteMany();
   await prisma.product.deleteMany();
@@ -53,26 +53,33 @@ async function main() {
 
   // 4. Tạo 20 món nước
   const productsData = [
-    { name: 'Cà phê đen đá', price: 25000, imageUrl: '/images/ca-phe-den.jpg' },
-    { name: 'Cà phê sữa đá', price: 30000, imageUrl: '/images/ca-phe-sua.jpg' },
-    { name: 'Bạc xỉu', price: 35000, imageUrl: '/images/bac-xiu.jpg' },
-    { name: 'Cà phê muối', price: 35000, imageUrl: '/images/ca-phe-muoi.jpg' },
-    { name: 'Espresso', price: 30000, imageUrl: '/images/espresso.jpg' },
-    { name: 'Americano', price: 35000, imageUrl: '/images/americano.jpg' },
-    { name: 'Latte', price: 45000, imageUrl: '/images/latte.jpg' },
-    { name: 'Cappuccino', price: 45000, imageUrl: '/images/cappuccino.jpg' },
-    { name: 'Mocha', price: 50000, imageUrl: '/images/mocha.jpg' },
-    { name: 'Caramel Macchiato', price: 55000, imageUrl: '/images/macchiato.jpg' },
-    { name: 'Trà đào cam sả', price: 45000, imageUrl: '/images/tra-dao.jpg' },
-    { name: 'Trà sữa trân châu', price: 45000, imageUrl: '/images/tra-sua.jpg' },
-    { name: 'Trà xanh matcha', price: 40000, imageUrl: '/images/matcha.jpg' },
-    { name: 'Trà vải', price: 40000, imageUrl: '/images/tra-vai.jpg' },
-    { name: 'Trà chanh', price: 25000, imageUrl: '/images/tra-chanh.jpg' },
-    { name: 'Matcha đá xay', price: 55000, imageUrl: '/images/matcha-da-xay.jpg' },
-    { name: 'Cookie đá xay', price: 55000, imageUrl: '/images/cookie-da-xay.jpg' },
-    { name: 'Sinh tố bơ', price: 45000, imageUrl: '/images/sinh-to-bo.jpg' },
-    { name: 'Sữa tươi trân châu đường đen', price: 50000, imageUrl: '/images/sua-tuoi.jpg' },
-    { name: 'Nước ép cam', price: 35000, imageUrl: '/images/nuoc-cam.jpg' },
+    // --- Cà phê ---
+    { name: 'Cà phê đen đá', price: 25000, imageUrl: '/images/ca-phe-den.jpg', category: 'Cà phê' },
+    { name: 'Cà phê sữa đá', price: 30000, imageUrl: '/images/ca-phe-sua.jpg', category: 'Cà phê' },
+    { name: 'Bạc xỉu', price: 35000, imageUrl: '/images/bac-xiu.jpg', category: 'Cà phê' },
+    { name: 'Cà phê muối', price: 35000, imageUrl: '/images/ca-phe-muoi.jpg', category: 'Cà phê' },
+    { name: 'Espresso', price: 30000, imageUrl: '/images/espresso.jpg', category: 'Cà phê' },
+    { name: 'Americano', price: 35000, imageUrl: '/images/americano.jpg', category: 'Cà phê' },
+    { name: 'Latte', price: 45000, imageUrl: '/images/latte.jpg', category: 'Cà phê' },
+    { name: 'Cappuccino', price: 45000, imageUrl: '/images/cappuccino.jpg', category: 'Cà phê' },
+    { name: 'Mocha', price: 50000, imageUrl: '/images/mocha.jpg', category: 'Cà phê' },
+    { name: 'Caramel Macchiato', price: 55000, imageUrl: '/images/macchiato.jpg', category: 'Cà phê' },
+
+    // --- Trà ---
+    { name: 'Trà đào cam sả', price: 45000, imageUrl: '/images/tra-dao.jpg', category: 'Trà' },
+    { name: 'Trà sữa trân châu', price: 45000, imageUrl: '/images/tra-sua.jpg', category: 'Trà' },
+    { name: 'Trà xanh matcha', price: 40000, imageUrl: '/images/matcha.jpg', category: 'Trà' },
+    { name: 'Trà vải', price: 40000, imageUrl: '/images/tra-vai.jpg', category: 'Trà' },
+    { name: 'Trà chanh', price: 25000, imageUrl: '/images/tra-chanh.jpg', category: 'Trà' },
+
+    // --- Sinh tố ---
+    { name: 'Matcha đá xay', price: 55000, imageUrl: '/images/matcha-da-xay.jpg', category: 'Sinh tố' },
+    { name: 'Cookie đá xay', price: 55000, imageUrl: '/images/cookie-da-xay.jpg', category: 'Sinh tố' },
+    { name: 'Sinh tố bơ', price: 45000, imageUrl: '/images/sinh-to-bo.jpg', category: 'Sinh tố' },
+
+    // --- Khác ---
+    { name: 'Sữa tươi trân châu đường đen', price: 50000, imageUrl: '/images/sua-tuoi.jpg', category: 'Khác' },
+    { name: 'Nước ép cam', price: 35000, imageUrl: '/images/nuoc-cam.jpg', category: 'Khác' },
   ];
 
   const createdProducts: Record<string, string> = {};
@@ -85,13 +92,13 @@ async function main() {
   // 5. Tạo Topping
   await prisma.topping.createMany({
     data: [
-      { name: 'Trân châu đen', price: 5000 },
-      { name: 'Trân châu trắng', price: 5000 },
-      { name: 'Kem phô mai', price: 10000 },
-      { name: 'Kem trứng khè', price: 10000 },
-      { name: 'Thạch trái cây', price: 5000 },
-      { name: 'Pudding trứng', price: 8000 },
-      { name: 'Thạch dừa', price: 5000 },
+      { name: 'Trân châu đen', price: 5000, stock: 100 },
+      { name: 'Trân châu trắng', price: 5000, stock: 100 },
+      { name: 'Kem phô mai', price: 10000, stock: 50 },
+      { name: 'Kem trứng khè', price: 10000, stock: 50 },
+      { name: 'Thạch trái cây', price: 5000, stock: 100 },
+      { name: 'Pudding trứng', price: 8000, stock: 80 },
+      { name: 'Thạch dừa', price: 5000, stock: 100 },
     ],
   });
   console.log('- Đã tạo 7 loại topping');
@@ -150,6 +157,9 @@ async function main() {
       userId: customer.id,
       status: 'PENDING',
       total: 30000,
+      receiverName: 'Nguyen Van A',
+      receiverPhone: '0901234567',
+      deliveryAddress: '123 Nguyen Trai, Quan 1',
       items: { create: { productId: caPheSuaId, size: 'M', qty: 1, unitPrice: 30000, lineTotal: 30000 } },
       payments: { create: { idempotencyKey: 'seed-payment-001', amount: 30000, method: 'VNPAY', status: 'PENDING' } },
     },
@@ -161,6 +171,9 @@ async function main() {
       userId: customer.id,
       status: 'PAID',
       total: 45000,
+      receiverName: 'Tran Thi B',
+      receiverPhone: '0912345678',
+      deliveryAddress: '456 Le Loi, Quan 3',
       items: { create: { productId: traDaoId, size: 'L', qty: 1, unitPrice: 45000, lineTotal: 45000 } },
     },
   });
@@ -171,6 +184,9 @@ async function main() {
       userId: customer.id,
       status: 'PREPARING',
       total: 35000,
+      receiverName: 'Le Van C',
+      receiverPhone: '0923456789',
+      deliveryAddress: '789 Hai Ba Trung, Quan 1',
       items: { create: { productId: bacXiuId, size: 'M', qty: 1, unitPrice: 35000, lineTotal: 35000 } },
     },
   });
@@ -181,11 +197,14 @@ async function main() {
       userId: customer.id,
       status: 'READY',
       total: 40000,
+      receiverName: 'Pham Thi D',
+      receiverPhone: '0934567890',
+      deliveryAddress: '321 Vo Van Tan, Quan 3',
       items: { create: { productId: matchaId, size: 'S', qty: 1, unitPrice: 40000, lineTotal: 40000 } },
     },
   });
 
-  console.log('- Đã tạo mã WELCOME10 và 4 đơn hàng mẫu (PENDING, PAID, PREPARING, READY)');
+  console.log('- Đã tạo mã WELCOME10 và 4 đơn hàng mẫu (PENDING, PAID, PREPARING, READY) kèm thông tin người nhận');
   console.log('===== SEED HOÀN TẤT =====');
 }
 

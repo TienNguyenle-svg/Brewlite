@@ -7,8 +7,8 @@ export class ProductsService {
 
   async findAll(sort?: string) {
     // Mặc định sắp xếp bán chạy
-    let orderBy: any = { soldCount: 'desc' }; 
-    
+    let orderBy: any = { soldCount: 'desc' };
+
     if (sort === 'price_asc') {
       orderBy = { price: 'asc' };
     } else if (sort === 'price_desc') {
@@ -22,8 +22,9 @@ export class ProductsService {
       orderBy,
       include: {
         recipes: {
-          include: { ingredient: true }, 
+          include: { ingredient: true },
         },
+        toppings: true,
       },
     });
 
@@ -33,7 +34,9 @@ export class ProductsService {
       let maxServings = 9999;
 
       for (const recipe of product.recipes) {
-        const possibleServings = Math.floor(recipe.ingredient.stock / recipe.amount);
+        const possibleServings = Math.floor(
+          recipe.ingredient.stock / recipe.amount,
+        );
         if (possibleServings < maxServings) {
           maxServings = possibleServings;
         }
@@ -43,7 +46,7 @@ export class ProductsService {
 
       return {
         ...product,
-        isAvailable, 
+        isAvailable,
         // soldCount đã tự động có trong ...product do lấy từ DB
       };
     });
@@ -52,9 +55,15 @@ export class ProductsService {
   async findOne(id: string) {
     const product = await this.prisma.product.findUnique({
       where: { id },
-      include: { toppings: true, recipes: { include: { ingredient: true } } },
+      include: { recipes: { include: { ingredient: true } } },
     });
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-    return product;
+
+    // Luôn trả toàn bộ topping, không phụ thuộc món nào
+    const toppings = await this.prisma.topping.findMany({
+      orderBy: { name: 'asc' },
+    });
+
+    return { ...product, toppings };
   }
 }
