@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAccessToken, getMyOrders, type CustomerOrder } from "@/lib/api";
+import {
+  getAccessToken,
+  getMyOrders,
+  getProduct,
+  getProducts,
+  type CustomerOrder,
+} from "@/lib/api";
+import { formatOrderCode } from "@/lib/order-code";
+import type { ApiProduct } from "@/lib/types";
 
 // ===== KIỂU DỮ LIỆU CỦA GIAO DIỆN =====
 // Sau này API trả về dữ liệu dạng khác thì chỉ cần đổi sang dạng này
@@ -317,19 +325,25 @@ function UsualCard({ item }: { item: OrderItemView }) {
   );
 }
 
-function toOrderView(order: CustomerOrder): OrderView {
+function toOrderView(
+  order: CustomerOrder,
+  productsById: Map<string, ApiProduct>,
+  toppingsById: Map<string, string>,
+): OrderView {
   return {
     id: order.id,
-    code: order.id.slice(0, 8).toUpperCase(),
+    code: formatOrderCode(order.id),
     createdAt: order.createdAt,
     status: order.status,
     items: order.items.map((item) => ({
       id: item.id,
-      name: item.product.name,
-      imageUrl: item.product.imageUrl ?? "/window.svg",
+      name: productsById.get(item.productId)?.name ?? "Sản phẩm",
+      imageUrl: productsById.get(item.productId)?.imageUrl ?? "/window.svg",
       qty: item.qty,
       size: item.size,
-      toppings: item.toppings.map(({ topping }) => topping.name),
+      toppings: item.toppings.map(
+        ({ toppingId }) => toppingsById.get(toppingId) ?? "Topping",
+      ),
       lineTotal: item.lineTotal,
     })),
     total: order.total,
@@ -354,8 +368,41 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
       }
 
       try {
-        const customerOrders = await getMyOrders();
-        if (active) setOrders(customerOrders.map(toOrderView));
+        const [customerOrders, products] = await Promise.all([
+          getMyOrders(),
+          getProducts(),
+        ]);
+        if (!active) return;
+
+        const productsById = new Map(
+          products.map((product) => [product.id, product]),
+        );
+        const toppingsById = new Map(
+          products.flatMap((product) =>
+            (product.toppings ?? []).map(
+              (topping) => [topping.id, topping.name] as const,
+            ),
+          ),
+        );
+        const firstItemWithToppings = customerOrders
+          .flatMap((order) => order.items)
+          .find((item) => item.toppings.length > 0);
+
+        if (firstItemWithToppings) {
+          const productWithToppings = await getProduct(
+            firstItemWithToppings.productId,
+          );
+          if (!active) return;
+          for (const topping of productWithToppings.toppings ?? []) {
+            toppingsById.set(topping.id, topping.name);
+          }
+        }
+
+        setOrders(
+          customerOrders.map((order) =>
+            toOrderView(order, productsById, toppingsById),
+          ),
+        );
       } catch (cause) {
         if (active) {
           setError(

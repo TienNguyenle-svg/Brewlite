@@ -199,14 +199,7 @@ export class OrdersService {
   async findMyOrders(userId: string) {
     return this.prisma.order.findMany({
       where: { userId: userId },
-      include: {
-        items: {
-          include: {
-            product: true,
-            toppings: { include: { topping: true } },
-          },
-        },
-      },
+      include: { items: { include: { toppings: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }

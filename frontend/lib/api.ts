@@ -1,8 +1,16 @@
-import type { ApiProduct, Product } from "./types";
+import type { ApiProduct, ApiTopping, Product } from "./types";
 
-const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"
-).replace(/\/+$/, "");
+// Hàm tự động chọn URL phù hợp với môi trường
+const getApiUrl = () => {
+  if (typeof window === "undefined") {
+    // Đang chạy trên Server (Docker) -> Gọi qua tên service nội bộ
+    return process.env.API_URL_INTERNAL || "http://localhost:3001";
+  }
+  // Đang chạy trên Trình duyệt -> Gọi qua cổng localhost
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+};
+
+const API_URL = getApiUrl().replace(/\/+$/, "");
 export const TOKEN_KEY = "accessToken";
 export const PENDING_PAYMENT_ORDER_KEY = "brewlite-pending-payment-order";
 
@@ -51,14 +59,12 @@ export type CustomerOrder = {
     size: string;
     qty: number;
     lineTotal: number;
-    product: {
-      name: string;
-      imageUrl: string | null;
-    };
+    productId: string;
     toppings: Array<{
-      topping: {
-        name: string;
-      };
+      id: string;
+      orderItemId: string;
+      toppingId: string;
+      price: number;
     }>;
   }>;
 };
@@ -132,14 +138,26 @@ export async function request<T>(
 type ProductResponse = Omit<Product, "imageUrl"> & {
   imageUrl: string | null;
   isAvailable?: boolean;
+  toppings?: ApiTopping[];
 };
+
+function normalizeProduct(product: ProductResponse): ApiProduct {
+  return {
+    ...product,
+    imageUrl: product.imageUrl ?? "/window.svg",
+  };
+}
 
 export async function getProducts(): Promise<ApiProduct[]> {
   const products = await request<ProductResponse[]>("/products");
-  return products.map((product) => ({
-    ...product,
-    imageUrl: product.imageUrl ?? "/window.svg",
-  }));
+  return products.map(normalizeProduct);
+}
+
+export async function getProduct(id: string): Promise<ApiProduct> {
+  const product = await request<ProductResponse>(
+    `/products/${encodeURIComponent(id)}`,
+  );
+  return normalizeProduct(product);
 }
 
 export const createOrder = (input: CreateOrderInput) =>

@@ -184,3 +184,42 @@ git push -u origin feature/<tên-chức-năng>
 ```
 
 Lưu ý: Sau khi push code xong thì vào github và pull request ngay!!!
+
+# ==========================================
+# CÁC LỆNH DOCKER CẦN THIẾT CHO BREWLITE
+# ==========================================
+
+# 1. Chạy lần đầu (hoặc khi clone code mới về)
+docker-compose up --build
+
+# 2. Chạy lại hàng ngày (code không đổi)
+docker-compose up
+
+# 3. Vừa sửa code FE/BE (cần build lại)
+docker-compose up --build
+
+# 4. Vừa pull code mới từ Git (kèm cập nhật thư viện)
+git pull origin main
+cd frontend && pnpm install && cd ..
+cd backend && pnpm install && cd ..
+docker-compose up --build
+
+# 5. "Thần dược" khi gặp mọi lỗi (Reset sạch DB & Build lại)
+docker-compose down -v
+docker-compose up --build
+
+# ==========================================
+# LỆNH KIỂM TRA & DỌN DẸP
+# ==========================================
+docker-compose down           # Tắt hệ thống (giữ DB)
+docker-compose down -v        # Tắt và XÓA SẠCH DB
+docker-compose logs -f frontend # Xem log FE
+docker-compose logs -f backend  # Xem log BE
+
+# ==========================================
+# ĐỊA CHỈ TRUY CẬP
+# ==========================================
+# Web: http://localhost:3000
+# API: http://localhost:3001
+# Swagger: http://localhost:3001/api
+# DB: localhost:5432

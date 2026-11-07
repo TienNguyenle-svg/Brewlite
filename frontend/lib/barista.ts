@@ -1,3 +1,5 @@
+import { formatOrderCode } from './order-code';
+
 export type OrderStatus = 'PAID' | 'PREPARING' | 'READY' | 'COMPLETED';
 export type BaristaOrderStatus = Exclude<OrderStatus, 'PAID'>;
 
@@ -12,7 +14,6 @@ export type BaristaOrderItem = {
 
 export type BaristaOrder = {
   id: string;
-  code?: string | null;
   status: OrderStatus;
   createdAt: string;
   updatedAt?: string | null;
@@ -114,8 +115,7 @@ export const COLUMN_ORDER = ['PAID', 'PREPARING', 'READY'] as const;
 
 export const LATE_AFTER_MINUTES = 10;
 
-export const orderCode = (o: BaristaOrder) =>
-  o.code ?? o.id.slice(-6).toUpperCase();
+export const orderCode = (o: BaristaOrder) => formatOrderCode(o.id);
 
 export const minutesSince = (iso: string) =>
   Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
