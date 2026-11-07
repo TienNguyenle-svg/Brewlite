@@ -25,6 +25,10 @@ const config: Config = {
   ],
   coverageDirectory: './coverage',
   testEnvironment: 'node',
+  // THÊM DÒNG NÀY ĐỂ SỬA LỖI ESM
+  transformIgnorePatterns: [
+    'node_modules/(?!(@nestjs)/)',
+  ],
 };
 
 export default config;
