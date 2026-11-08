@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import CartHydration from "@/components/cart/CartHydration";
+import SiteChrome from "@/components/layout/SiteChrome";
 
 const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
@@ -21,9 +22,9 @@ export default function RootLayout({
     <html lang="vi">
       <body className={`${inter.className} bg-[#F8F5F0] antialiased`}>
         <CartHydration />
-        <Header />
-        {children}
-        <Footer />
+        <SiteChrome header={<Header />} footer={<Footer />}>
+          {children}
+        </SiteChrome>
       </body>
     </html>
   );
