@@ -20,7 +20,6 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className={`${inter.className} bg-[#F8F5F0] antialiased`}>
-        <CartHydration />
         <Header />
         {children}
         <Footer />
