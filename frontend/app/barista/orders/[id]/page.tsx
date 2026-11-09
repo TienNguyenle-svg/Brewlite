@@ -41,8 +41,7 @@ function OrderDetail() {
   }, [id]);
 
   useEffect(() => {
-    // Bỏ qua cảnh báo setState trong effect vì việc gọi API là bất đồng bộ
-    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
 
