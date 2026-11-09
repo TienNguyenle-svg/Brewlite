@@ -234,3 +234,47 @@ export const formatDateTime = (iso: string) =>
 
 /** Mã đơn rút gọn để hiển thị (tạm thời, sau này có thể dùng formatOrderCode có sẵn) */
 export const shortOrderCode = (id: string) => `#${id.slice(0, 6).toUpperCase()}`;
+
+// ===== NGÀY THÁNG, PHẦN TRĂM, XUẤT CSV =====
+export const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** yyyy-mm-dd theo giờ địa phương */
+export const dateKey = (d: Date) =>
+  `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+export const parseDateKey = (key: string) => {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
+export const addDays = (d: Date, n: number) => {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+};
+
+/** dd/mm/yyyy */
+export const formatDate = (d: Date) =>
+  d.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+
+/** 12,5% */
+export const formatPercent = (n: number) =>
+  `${n.toLocaleString('vi-VN', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+
+/** Tải file CSV (có BOM để Excel đọc đúng tiếng Việt) */
+export function downloadCsv(filename: string, rows: (string | number)[][]) {
+  const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = '\uFEFF' + rows.map((r) => r.map(escape).join(',')).join('\r\n');
+  const url = URL.createObjectURL(
+    new Blob([csv], { type: 'text/csv;charset=utf-8;' }),
+  );
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
