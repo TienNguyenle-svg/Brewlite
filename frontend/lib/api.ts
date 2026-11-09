@@ -2,12 +2,18 @@ import type { ApiProduct, ApiTopping, Product } from "./types";
 
 // Hàm tự động chọn URL phù hợp với môi trường
 const getApiUrl = () => {
-  if (typeof window === "undefined") {
-    // Đang chạy trên Server (Docker) -> Gọi qua tên service nội bộ
-    return process.env.API_URL_INTERNAL || "http://localhost:3001";
+  // Ưu tiên lấy biến NEXT_PUBLIC_API_URL (dùng chung cho cả Server và Browser trên Render)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
   }
-  // Đang chạy trên Trình duyệt -> Gọi qua cổng localhost
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  
+  // Fallback cho môi trường Docker trên máy local (nếu có biến API_URL_INTERNAL)
+  if (typeof window === "undefined" && process.env.API_URL_INTERNAL) {
+    return process.env.API_URL_INTERNAL;
+  }
+
+  // Mặc định cho máy local
+  return "http://localhost:3001";
 };
 
 const API_URL = getApiUrl().replace(/\/+$/, "");
