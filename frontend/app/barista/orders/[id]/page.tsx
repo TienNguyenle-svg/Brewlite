@@ -41,7 +41,7 @@ function OrderDetail() {
   }, [id]);
 
   useEffect(() => {
-    // Tắt cảnh báo ESLint cho dòng này vì setState bên trong đã là async
+    // Bỏ qua cảnh báo setState trong effect vì việc gọi API là bất đồng bộ
     // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
