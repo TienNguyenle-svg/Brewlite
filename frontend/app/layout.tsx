@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -22,9 +23,11 @@ export default function RootLayout({
     <html lang="vi">
       <body className={`${inter.className} bg-[#F8F5F0] antialiased`}>
         <CartHydration />
-        <SiteChrome header={<Header />} footer={<Footer />}>
-          {children}
-        </SiteChrome>
+        <Suspense fallback={<>{children}</>}>
+          <SiteChrome header={<Header />} footer={<Footer />}>
+            {children}
+          </SiteChrome>
+        </Suspense>
       </body>
     </html>
   );

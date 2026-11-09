@@ -20,12 +20,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20 # Nên dùng 20 cho đồng bộ, hoặc 22 nếu backend bắt buộc
           cache: 'pnpm'
           cache-dependency-path: './backend/pnpm-lock.yaml'
 
