@@ -37,6 +37,8 @@ export default function BaristaOrdersPage() {
   }, []);
 
   useEffect(() => {
+    // Tắt cảnh báo ESLint cho setState trong effect vì đây là gọi API async
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     const t = setInterval(load, POLL_MS);
     return () => clearInterval(t);

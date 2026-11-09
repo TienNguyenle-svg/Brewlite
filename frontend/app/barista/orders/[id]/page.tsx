@@ -1,8 +1,8 @@
 'use client';
 
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
 import {
   BaristaOrder,
   STATUS_CONFIG,
@@ -20,7 +20,7 @@ const STEPS = [
   { key: 'COMPLETED', label: 'Hoàn thành' },
 ] as const;
 
-export default function BaristaOrderDetailPage() {
+function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [order, setOrder] = useState<BaristaOrder | null>(null);
@@ -28,8 +28,7 @@ export default function BaristaOrderDetailPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // API chưa có GET /barista/orders/:id → lấy danh sách rồi tìm theo id
-  const load = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       const list = await fetchOrders();
       setOrder(list.find((o) => o.id === id) ?? null);
@@ -42,8 +41,9 @@ export default function BaristaOrderDetailPage() {
   }, [id]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadData();
+  }, [loadData]);
 
   const advance = async () => {
     if (!order || order.status === 'COMPLETED') return;
@@ -52,11 +52,14 @@ export default function BaristaOrderDetailPage() {
     setBusy(true);
     try {
       await updateOrderStatus(order.id, next);
-      if (next === 'COMPLETED') router.replace('/barista/orders');
-      else await load();
+      if (next === 'COMPLETED') {
+        router.replace('/barista/orders');
+      } else {
+        await loadData();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không cập nhật được đơn');
-      await load();
+      await loadData();
     } finally {
       setBusy(false);
     }
@@ -160,5 +163,13 @@ export default function BaristaOrderDetailPage() {
         </button>
       </article>
     </div>
+  );
+}
+
+export default function BaristaOrderDetailPage() {
+  return (
+    <Suspense fallback={<p className="py-16 text-center text-sm text-[#82776E]">Đang tải…</p>}>
+      <OrderDetail />
+    </Suspense>
   );
 }

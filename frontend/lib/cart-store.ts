@@ -24,18 +24,21 @@ export interface CartItem {
   imageUrl: string; // ảnh nằm trong frontend/public/images
 }
 
+// Tùy chọn khi thêm món từ trang chi tiết (size đã có tham số riêng)
+export interface AddItemOptions {
+  qty?: number;
+  unitPrice?: number; // giá 1 ly đã gồm size + topping
+  toppings?: { id: string; name: string; price: number }[];
+  note?: string;
+}
+
 interface CartState {
   items: CartItem[];
   promo: Promotion | null;
   addItem: (
     product: Product,
     size?: CartItem["size"],
-    options?: {
-      qty?: number;
-      unitPrice?: number;
-      toppings?: { id: string; name: string; price: number }[];
-      note?: string;
-    },
+    options?: AddItemOptions,
   ) => void;
   setQty: (id: string, qty: number) => void;
   applyPromo: (code: string) => PromoResult;
@@ -58,7 +61,10 @@ export const useCartStore = create<CartState>()(
         const unitPrice = options?.unitPrice ?? sizePrice(product.price, size);
 
         // Cùng món + size + topping + ghi chú thì gộp vào một dòng
-        const toppingKey = toppings.map((t) => t.id).sort().join(",");
+        const toppingKey = toppings
+          .map((t) => t.id)
+          .sort()
+          .join(",");
         const id = `${product.id}:${size}:${toppingKey}:${note}`;
 
         const customization = [

@@ -48,4 +48,11 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   promotionCode?: string;
+
+
+  @ApiProperty({ example: 50, required: false, description: 'Số điểm muốn sử dụng' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  pointsToUse?: number;
 }

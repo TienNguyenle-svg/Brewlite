@@ -21,4 +21,4 @@ async function bootstrap() {
   console.log('Backend running at http://localhost:3001');
   console.log('Swagger UI at http://localhost:3001/api');
 }
-bootstrap();
+void bootstrap();
