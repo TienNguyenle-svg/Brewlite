@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Product as StoreProduct } from "@/lib/types";
 import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
+import { sizePrice, type SizeId } from "@/lib/pricing";
 
 export type Topping = {
   id: string;
@@ -22,11 +23,12 @@ export type Product = {
   toppings?: Topping[];
 };
 
-// Danh sách size (tạm, backend chưa có bảng size)
-const SIZES = [
-  { id: "S", label: "Small", extra: 0 },
-  { id: "M", label: "Medium", extra: 10000 },
-  { id: "L", label: "Large", extra: 15000 },
+// Danh sách size (tạm, backend chưa có bảng size).
+// Giá từng size = giá gốc x hệ số, xem lib/pricing.ts
+const SIZES: { id: SizeId; label: string }[] = [
+  { id: "S", label: "S" },
+  { id: "M", label: "M" },
+  { id: "L", label: "L" },
 ];
 
 const NOTE_MAX = 200;
@@ -55,9 +57,9 @@ function formatVND(n: number) {
   return n.toLocaleString("vi-VN") + "₫";
 }
 
-// 10000 -> "10k"
+// 10000 -> "10k"; số không tròn nghìn (39200) -> "39.200₫"
 function formatK(n: number) {
-  return n / 1000 + "k";
+  return n % 1000 === 0 ? n / 1000 + "k" : formatVND(n);
 }
 
 export default function ProductDetailView({ product }: { product: Product }) {
@@ -66,7 +68,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
   // Topping thật lấy từ backend (không có thì là danh sách rỗng)
   const toppings = product.toppings ?? [];
 
-  const [sizeId, setSizeId] = useState("M");
+  const [sizeId, setSizeId] = useState<SizeId>("M");
   const [toppingIds, setToppingIds] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -78,19 +80,17 @@ export default function ProductDetailView({ product }: { product: Product }) {
     );
   }
 
-  // ----- Tính tiền (không cần ô nhớ riêng) -----
+  // ----- Tính tiền (giống backend: giá size làm tròn rồi mới cộng topping) -----
   const size = SIZES.find((s) => s.id === sizeId)!;
+  const sizeUnitPrice = sizePrice(product.price, size.id);
   const selectedToppings = toppings.filter((t) => toppingIds.includes(t.id));
   const unitPrice =
-    product.price +
-    size.extra +
-    selectedToppings.reduce((sum, t) => sum + t.price, 0);
+    sizeUnitPrice + selectedToppings.reduce((sum, t) => sum + t.price, 0);
   const total = unitPrice * quantity;
 
-  // Dòng giải thích: "Base 25k + Medium 10k + Trân châu 5k"
+  // Dòng giải thích: "Size M 30k + Trân châu 5k"
   const breakdown = [
-    `Base ${formatK(product.price)}`,
-    `${size.label} ${formatK(size.extra)}`,
+    `Size ${size.label} ${formatK(sizeUnitPrice)}`,
     ...selectedToppings.map((t) => `${t.name} ${formatK(t.price)}`),
   ].join(" + ");
 
@@ -102,7 +102,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
     await ensureCartHydrated();
     useCartStore
       .getState()
-      .addItem(product as unknown as StoreProduct, size.id as "S" | "M" | "L", {
+      .addItem(product as unknown as StoreProduct, size.id, {
         qty: quantity,
         unitPrice,
         toppings: selectedToppings.map((t) => ({
@@ -216,26 +216,15 @@ export default function ProductDetailView({ product }: { product: Product }) {
                     key={s.id}
                     type="button"
                     onClick={() => setSizeId(s.id)}
-                    className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm transition ${
+                    className={`flex flex-col items-center justify-center gap-1 rounded-xl border px-4 py-3 text-center transition ${
                       isSelected
-                        ? "border-orange-600 bg-orange-50 font-medium text-gray-900"
+                        ? "border-orange-600 bg-orange-50 text-gray-900"
                         : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
                     }`}
                   >
-                    <span className="flex items-center gap-2">
-                      <span
-                        className={`flex h-4 w-4 items-center justify-center rounded-full border ${
-                          isSelected ? "border-orange-600" : "border-gray-300"
-                        }`}
-                      >
-                        {isSelected && (
-                          <span className="h-2 w-2 rounded-full bg-orange-600" />
-                        )}
-                      </span>
-                      {s.label}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      +{formatK(s.extra)}
+                    <span className="text-sm">{s.label}</span>
+                    <span className="text-base font-bold text-gray-900">
+                      {formatVND(sizePrice(product.price, s.id))}
                     </span>
                   </button>
                 );

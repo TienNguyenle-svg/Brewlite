@@ -1,5 +1,5 @@
 "use client";
-
+import { sizePrice } from "@/lib/pricing";
 import { useMemo } from "react";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
@@ -52,73 +52,69 @@ export const DELIVERY_FEE = 15000;
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
-  items: [],
-  promo: null,
-  addItem: (product, size = "M", options = {}) => {
-    const {
-      qty = 1,
-      unitPrice = product.price,
-      toppings = [],
-      note = "",
-    } = options;
+      items: [],
+      promo: null,
+      addItem: (product, size = "M", options) => {
+        const qty = options?.qty ?? 1;
+        const toppings = options?.toppings ?? [];
+        const note = options?.note?.trim() ?? "";
+        const unitPrice = options?.unitPrice ?? sizePrice(product.price, size);
 
-    const cleanNote = note.trim();
-    const toppingKey = toppings
-      .map((t) => t.id)
-      .sort()
-      .join(",");
-    // cùng món + size + topping + ghi chú thì mới gộp thành một dòng
-    const id = `${product.id}:${size}:${toppingKey}:${cleanNote}`;
+        // Cùng món + size + topping + ghi chú thì gộp vào một dòng
+        const toppingKey = toppings
+          .map((t) => t.id)
+          .sort()
+          .join(",");
+        const id = `${product.id}:${size}:${toppingKey}:${note}`;
 
-    const toppingText = toppings.map((t) => t.name).join(", ");
-    const customization = toppingText
-      ? `Size ${size} · ${toppingText}`
-      : `Size ${size}`;
-    const summaryNote = cleanNote
-      ? `${customization} · ${cleanNote}`
-      : customization;
+        const customization = [
+          `Size ${size}`,
+          ...toppings.map((t) => t.name),
+        ].join(" · ");
 
-    const currentItem = get().items.find((item) => item.id === id);
-    const item: CartItem = currentItem
-      ? { ...currentItem, qty: currentItem.qty + qty }
-      : {
-          id,
-          productId: product.id,
-          name: product.name,
-          customization,
-          summaryNote,
-          category: "BREWLITE MENU",
-          price: unitPrice,
-          qty,
-          size,
-          imageUrl: product.imageUrl ?? "/window.svg",
-        };
-    set({
-      items: currentItem
-        ? get().items.map((existing) => (existing.id === id ? item : existing))
-        : [...get().items, item],
-    });
-  },
-  setQty: (id, qty) => {
-    const items = get()
-      .items.map((i) => (i.id === id ? { ...i, qty } : i))
-      .filter((i) => i.qty > 0);
-    // Nếu tạm tính tụt dưới mức tối thiểu của mã đang áp dụng thì gỡ mã.
-    const subtotal = items.reduce((n, i) => n + i.price * i.qty, 0);
-    const promo = get().promo;
-    set({
-      items,
-      promo: promo && subtotal >= promo.minOrder ? promo : null,
-    });
-  },
-  applyPromo: (code) => {
-    const subtotal = get().items.reduce((n, i) => n + i.price * i.qty, 0);
-    const result = validatePromo(code, subtotal);
-    if (result.ok) set({ promo: result.promo });
-    return result;
-  },
-  removePromo: () => set({ promo: null }),
-  clear: () => set({ items: [], promo: null }),
+        const currentItem = get().items.find((item) => item.id === id);
+        const item: CartItem = currentItem
+          ? { ...currentItem, qty: currentItem.qty + qty }
+          : {
+              id,
+              productId: product.id,
+              name: product.name,
+              customization,
+              summaryNote: note,
+              category: "BREWLITE MENU",
+              price: unitPrice,
+              qty,
+              size,
+              imageUrl: product.imageUrl ?? "/window.svg",
+            };
+        set({
+          items: currentItem
+            ? get().items.map((existing) =>
+                existing.id === id ? item : existing,
+              )
+            : [...get().items, item],
+        });
+      },
+      setQty: (id, qty) => {
+        const items = get()
+          .items.map((i) => (i.id === id ? { ...i, qty } : i))
+          .filter((i) => i.qty > 0);
+        // Nếu tạm tính tụt dưới mức tối thiểu của mã đang áp dụng thì gỡ mã.
+        const subtotal = items.reduce((n, i) => n + i.price * i.qty, 0);
+        const promo = get().promo;
+        set({
+          items,
+          promo: promo && subtotal >= promo.minOrder ? promo : null,
+        });
+      },
+      applyPromo: (code) => {
+        const subtotal = get().items.reduce((n, i) => n + i.price * i.qty, 0);
+        const result = validatePromo(code, subtotal);
+        if (result.ok) set({ promo: result.promo });
+        return result;
+      },
+      removePromo: () => set({ promo: null }),
+      clear: () => set({ items: [], promo: null }),
     }),
     {
       name: "brewlite-cart",
