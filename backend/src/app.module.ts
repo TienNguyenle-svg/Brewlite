@@ -12,6 +12,7 @@ import { BaristaModule } from './barista/barista.module';
 import { AdminModule } from './admin/admin.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { CheckoutModule } from './checkout/checkout.module';
+import { PromotionsModule } from './promotions/promotions.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CheckoutModule } from './checkout/checkout.module';
     LoyaltyModule,
     BaristaModule,
     AdminModule,
+    PromotionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -39,11 +39,12 @@ model Product {
 }
 
 model Ingredient {
-  id        String   @id @default(uuid())
-  name      String
-  stock     Float
-  unit      String   @default("gram")
-  recipes   Recipe[]
+  id              String   @id @default(uuid())
+  name            String
+  stock           Float
+  reservedQuantity Float   @default(0)
+  unit            String   @default("gram")
+  recipes         Recipe[]
 }
 
 model Recipe {
@@ -60,20 +61,23 @@ model Topping {
   name              String
   price             Int                @default(0)
   stock             Int                @default(50)
+  reservedQuantity  Int                @default(0)
   productId         String?
   product           Product?           @relation(fields: [productId], references: [id])
   orderItemToppings OrderItemTopping[]
 }
 
 model User {
-  id            String  @id @default(uuid())
-  email         String  @unique
-  passwordHash  String
-  loyaltyPoints Int     @default(0)
-  role          String  @default("CUSTOMER") // CUSTOMER, BARISTA, ADMIN
-  tokenVersion  Int     @default(0) // Từ phần của main (Auth)
-  orders        Order[]
-  loyaltyTransactions LoyaltyTransaction[] // Từ phần của main
+  id                   String  @id @default(uuid())
+  email                String  @unique
+  passwordHash         String
+  loyaltyPoints        Int     @default(0)
+  reservedPoints       Int     @default(0)
+  pointsOwed           Int     @default(0)
+  role                 String  @default("CUSTOMER") // CUSTOMER, BARISTA, ADMIN
+  tokenVersion         Int     @default(0) // Từ phần của main (Auth)
+  orders               Order[]
+  loyaltyTransactions  LoyaltyTransaction[] // Từ phần của main
 }
 
 model Order {
@@ -137,15 +141,32 @@ model Payment {
 }
 
 model Promotion {
-  id          String   @id @default(uuid())
-  code        String   @unique
+  id          String    @id @default(uuid())
+  code        String    @unique
   discount    Int
-  type        String   @default("PERCENT")
-  minOrder    Int      @default(0)
-  expiredAt   DateTime?
-  active      Boolean  @default(true)
+  type        String    @default("PERCENT")
+  minOrder    Int       @default(0)
+  startAt     DateTime?  //null = có hiệu lực ngay
+  expiredAt   DateTime? //  null = không hết hạn
+  usageLimit  Int?      // tổng số lượt dùng toàn hệ thống, null = không giới hạn
+  active      Boolean   @default(true) // false = đã xóa mềm / tắt mã
   orders      Order[]
+  usages      PromotionUsage[]
 }
+
+/// Ghi nhận lượt dùng mã khi đơn lên PAID. Không bị xóa khi đơn bị hủy/hoàn tiền.
+model PromotionUsage {
+  id          String    @id @default(uuid())
+  promotionId String
+  promotion   Promotion @relation(fields: [promotionId], references: [id])
+  userId      String
+  orderId     String    @unique
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, promotionId]) // 1 tài khoản chỉ dùng 1 mã 1 lần
+  @@index([promotionId])
+}
+
 
 model LoyaltyTransaction {
   id        String   @id @default(uuid())
