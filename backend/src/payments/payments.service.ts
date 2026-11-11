@@ -725,7 +725,7 @@ export class PaymentsService {
       vnp_OrderType: 'other',
       vnp_Locale: 'vn',
       vnp_ReturnUrl: returnUrl,
-      vnp_IpAddr: this.normalizeIp(ipAddress),
+      vnp_IpAddr: '127.0.0.1', // Hardcode IP cho VNPay Sandbox để tránh lỗi IPv6
       vnp_CreateDate: this.formatVnpDate(createdAt),
       vnp_ExpireDate: this.formatVnpDate(expiresAt),
     };
@@ -824,12 +824,6 @@ export class PaymentsService {
     const seconds = String(vnTime.getUTCSeconds()).padStart(2, '0');
 
     return `${year}${month}${day}${hours}${minutes}${seconds}`;
-  }
-
-  private normalizeIp(ip: string): string {
-    const normalized = (ip || '127.0.0.1').replace(/^::ffff:/, '');
-
-    return normalized.length <= 45 ? normalized : '127.0.0.1';
   }
 
   private toUuid(value: string): string {
