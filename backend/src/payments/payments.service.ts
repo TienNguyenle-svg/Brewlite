@@ -812,12 +812,18 @@ export class PaymentsService {
   }
 
   private formatVnpDate(date: Date): string {
-    const vietnamTime = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+    // Cộng 7 tiếng để ra giờ Việt Nam
+    const vnTime = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+    
+    // Lấy từng thành phần và ghép lại thành chuỗi yyyyMMddHHmmss chuẩn xác
+    const year = vnTime.getUTCFullYear();
+    const month = String(vnTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(vnTime.getUTCDate()).padStart(2, '0');
+    const hours = String(vnTime.getUTCHours()).padStart(2, '0');
+    const minutes = String(vnTime.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(vnTime.getUTCSeconds()).padStart(2, '0');
 
-    return vietnamTime
-      .toISOString()
-      .replace(/[-:TZ.]/g, '')
-      .slice(0, 14);
+    return `${year}${month}${day}${hours}${minutes}${seconds}`;
   }
 
   private normalizeIp(ip: string): string {
