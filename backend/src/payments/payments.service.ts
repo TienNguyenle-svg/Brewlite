@@ -799,12 +799,7 @@ export class PaymentsService {
   }
 
   private encodeVnpValue(value: string): string {
-    return encodeURIComponent(value)
-      .replace(/%20/g, '+')
-      .replace(
-        /[!'()*]/g,
-        (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
-      );
+    return encodeURIComponent(value);
   }
 
   private hmacSha512(data: string, secret: string): string {
