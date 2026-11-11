@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -11,6 +12,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { DiscountsService } from '../discounts/discounts.service';
+import { InventoryService } from '../inventory/inventory.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   IDEMPOTENCY_KEY_PATTERN,
@@ -30,6 +32,7 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly discounts: DiscountsService,
+    private readonly inventory: InventoryService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -367,8 +370,158 @@ export class PaymentsService {
   }
 
   // ---------------------------------------------------------------------------
-  // VNPay trả kết quả về
+  // VNPay IPN / callback trả kết quả về
   // ---------------------------------------------------------------------------
+
+  async processVnpayIpn(query: VnpayQuery) {
+    try {
+      const params = this.normalizeQuery(query);
+      const receivedHash = params.vnp_SecureHash;
+
+      if (!receivedHash || !this.isValidSignature(params, receivedHash)) {
+        return { RspCode: '97', Message: 'Chữ ký VNPay không hợp lệ' };
+      }
+
+      const tmnCode = this.config.get<string>('VNPAY_TMN_CODE');
+      if (!tmnCode || params.vnp_TmnCode !== tmnCode) {
+        return { RspCode: '97', Message: 'Mã website VNPay không hợp lệ' };
+      }
+
+      const txnRef = params.vnp_TxnRef;
+      if (!txnRef || !/^[a-fA-F0-9]{32}$/.test(txnRef)) {
+        return {
+          RspCode: '01',
+          Message: 'Mã tham chiếu thanh toán không hợp lệ',
+        };
+      }
+
+      const paymentId = this.toUuid(txnRef);
+      const payment = await this.prisma.payment.findUnique({
+        where: { id: paymentId },
+      });
+
+      if (!payment) {
+        return {
+          RspCode: '01',
+          Message: 'Không tìm thấy giao dịch thanh toán',
+        };
+      }
+
+      const returnedAmount = Number(params.vnp_Amount);
+      if (
+        !Number.isSafeInteger(returnedAmount) ||
+        returnedAmount !== payment.amount * 100
+      ) {
+        return { RspCode: '04', Message: 'Số tiền VNPay trả về không khớp' };
+      }
+
+      const success =
+        params.vnp_ResponseCode === '00' &&
+        params.vnp_TransactionStatus === '00';
+
+      if (!success) {
+        await this.prisma.$transaction((tx) =>
+          this.markPaymentFailed(tx, payment.id, new Date()),
+        );
+        return { RspCode: '00', Message: 'Confirm Success' };
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        const currentPayment = await tx.payment.findUnique({
+          where: { id: payment.id },
+        });
+
+        const currentOrder = await tx.order.findUnique({
+          where: { id: payment.orderId },
+        });
+
+        if (!currentPayment || !currentOrder) {
+          throw new NotFoundException('Không tìm thấy giao dịch hoặc đơn hàng');
+        }
+
+        if (currentPayment.status === 'SUCCEEDED') {
+          return;
+        }
+
+        if (currentOrder.status === 'CANCELLED') {
+          throw new ConflictException(
+            'Giao dịch có thể đã thành công nhưng đơn hàng đã bị hủy; cần đối soát',
+          );
+        }
+
+        if (['PREPARING', 'READY', 'COMPLETED'].includes(currentOrder.status)) {
+          throw new ConflictException(
+            'Đơn hàng đã được xử lý; cần đối soát giao dịch',
+          );
+        }
+
+        const anotherSuccessfulPayment = await tx.payment.findFirst({
+          where: {
+            orderId: currentOrder.id,
+            status: 'SUCCEEDED',
+            id: { not: currentPayment.id },
+          },
+        });
+
+        if (anotherSuccessfulPayment) {
+          throw new ConflictException(
+            'Đơn hàng đã có giao dịch thành công khác; cần đối soát',
+          );
+        }
+
+        await tx.payment.update({
+          where: { id: currentPayment.id },
+          data: { status: 'SUCCEEDED' },
+        });
+
+        if (currentOrder.status === 'PAYMENT_FAILED') {
+          const back = await this.moveOrder(
+            tx,
+            currentOrder.id,
+            'PAYMENT_FAILED',
+            'PENDING',
+            { lateSuccessfulPayment: true },
+          );
+
+          if (!back) {
+            throw new ConflictException(
+              'Trạng thái đơn hàng đã thay đổi; cần đối soát giao dịch',
+            );
+          }
+        }
+
+        if (currentOrder.status !== 'PAID') {
+          const paid = await this.moveOrder(
+            tx,
+            currentOrder.id,
+            'PENDING',
+            'PAID',
+            { lateSuccessfulPayment: currentOrder.status === 'PAYMENT_FAILED' },
+          );
+
+          if (!paid) {
+            throw new ConflictException(
+              'Trạng thái đơn hàng đã thay đổi; cần đối soát giao dịch',
+            );
+          }
+
+          await this.discounts.settlePaidOrder(tx, {
+            id: currentOrder.id,
+            userId: currentOrder.userId,
+            pointsUsed: currentOrder.pointsUsed,
+            amountPaid: currentPayment.amount,
+          });
+        }
+      });
+
+      return { RspCode: '00', Message: 'Confirm Success' };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        return { RspCode: '99', Message: error.message };
+      }
+      return { RspCode: '99', Message: 'Unknown error' };
+    }
+  }
 
   async processVnpayReturn(query: VnpayQuery) {
     const params = this.normalizeQuery(query);
@@ -471,6 +624,7 @@ export class PaymentsService {
             currentOrder.id,
             'PAYMENT_FAILED',
             'PENDING',
+            { lateSuccessfulPayment: true },
           );
 
           if (!back) {
@@ -486,6 +640,7 @@ export class PaymentsService {
             currentOrder.id,
             'PENDING',
             'PAID',
+            { lateSuccessfulPayment: currentOrder.status === 'PAYMENT_FAILED' },
           );
 
           if (!paid) {
@@ -562,6 +717,49 @@ export class PaymentsService {
     return cancelled;
   }
 
+  /** Release reservations for orders abandoned before a payment attempt was created. */
+  async cancelStaleOrdersWithoutPayment(now = new Date()): Promise<number> {
+    const cutoff = new Date(now.getTime() - PAYMENT_TIMEOUT_MS);
+    const orders = await this.prisma.order.findMany({
+      where: {
+        status: 'PENDING',
+        createdAt: { lte: cutoff },
+        payments: { none: {} },
+      },
+      select: { id: true },
+    });
+
+    let cancelled = 0;
+
+    for (const item of orders) {
+      const moved = await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Order" WHERE "id" = ${item.id} FOR UPDATE`;
+
+        const order = await tx.order.findUnique({
+          where: { id: item.id },
+          select: { id: true, status: true, createdAt: true },
+        });
+        if (!order || order.status !== 'PENDING' || order.createdAt > cutoff) {
+          return false;
+        }
+
+        const payment = await tx.payment.findFirst({
+          where: { orderId: item.id },
+          select: { id: true },
+        });
+        if (payment) {
+          return false;
+        }
+
+        return this.moveOrder(tx, item.id, 'PENDING', 'CANCELLED');
+      });
+
+      if (moved) cancelled += 1;
+    }
+
+    return cancelled;
+  }
+
   /**
    * Đánh dấu lượt PENDING là FAILED và cập nhật đơn:
    *  - còn lượt PENDING khác còn hạn: giữ nguyên đơn
@@ -623,10 +821,11 @@ export class PaymentsService {
    * Trả về false nếu đơn đã bị đổi trạng thái bởi nơi khác.
    */
   private async moveOrder(
-    client: { order: Prisma.TransactionClient['order'] },
+    client: Prisma.TransactionClient,
     orderId: string,
     from: OrderStatus,
     to: OrderStatus,
+    options: { lateSuccessfulPayment?: boolean } = {},
   ): Promise<boolean> {
     if (!isAllowedOrderTransition(from, to)) {
       throw new ConflictException(
@@ -639,7 +838,54 @@ export class PaymentsService {
       data: { status: to },
     });
 
-    return result.count > 0;
+    if (result.count > 0) {
+      await this.applyOrderTransitionHooks(client, orderId, from, to, options);
+      return true;
+    }
+
+    return false;
+  }
+
+  private async applyOrderTransitionHooks(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+    from: OrderStatus,
+    to: OrderStatus,
+    options: { lateSuccessfulPayment?: boolean },
+  ): Promise<void> {
+    if (from === 'PENDING' && to === 'PAID') {
+      await this.inventory.settleOrder(
+        tx,
+        orderId,
+        options.lateSuccessfulPayment,
+      );
+      if (!options.lateSuccessfulPayment) {
+        await this.discounts?.releasePendingPoints?.(tx, orderId);
+      }
+      return;
+    }
+
+    if (
+      (from === 'PENDING' && to === 'PAYMENT_FAILED') ||
+      (from === 'PENDING' && to === 'CANCELLED')
+    ) {
+      await this.inventory.releaseOrder(tx, orderId);
+      await this.discounts?.releasePendingPoints?.(tx, orderId);
+      return;
+    }
+
+    if (from === 'PAYMENT_FAILED' && to === 'PENDING') {
+      if (!options.lateSuccessfulPayment) {
+        await this.inventory.reserveOrder(tx, orderId);
+        await this.discounts?.reservePendingPoints?.(tx, orderId);
+      }
+      return;
+    }
+
+    if (from === 'PAID' && to === 'CANCELLED') {
+      await this.inventory.refundOrder(tx, orderId);
+      await this.discounts?.refundUsedPoints?.(tx, orderId);
+    }
   }
 
   // Hủy đơn PAYMENT_FAILED nếu quá 10 phút kể từ lần thất bại gần nhất.

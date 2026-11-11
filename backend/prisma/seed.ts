@@ -7,7 +7,8 @@ async function main() {
   console.log('Bắt đầu seed dữ liệu...');
 
   // 1. Xóa data cũ (theo thứ tự khóa ngoại)
-  await prisma.loyaltyTransaction.deleteMany(); 
+  await prisma.loyaltyTransaction.deleteMany();
+  await prisma.promotionUsage.deleteMany();
   await prisma.orderItemTopping.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.payment.deleteMany();

@@ -15,6 +15,6 @@ export class LoyaltyController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Xem số điểm thưởng và lịch sử điểm' })
   getLoyalty(@Req() req: AuthenticatedRequest) {
-    return this.discounts.getLoyalty(getUserId(req, false));
+    return this.discounts.getLoyalty(getUserId(req));
   }
 }

@@ -88,6 +88,14 @@ export class PaymentsController {
     return this.paymentsService.cancelOrder(userId, orderId);
   }
 
+  @Get('vnpay-ipn')
+  @ApiOperation({
+    summary: 'VNPay IPN callback để xác nhận thanh toán bất đồng bộ',
+  })
+  async vnpayIpn(@Query() query: Record<string, string | string[]>) {
+    return this.paymentsService.processVnpayIpn(query);
+  }
+
   @Get('vnpay-return')
   @ApiOperation({
     summary: 'Xác minh kết quả thanh toán trả về từ VNPay',
