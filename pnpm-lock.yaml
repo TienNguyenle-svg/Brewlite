@@ -6,4 +6,24 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    dependencies:
+      vnpay:
+        specifier: ^2.5.2
+        version: 2.5.2
+
+packages:
+
+  dayjs@1.11.23:
+    resolution: {integrity: sha512-QDTCU0M0MxR3hQfnlDJfwekQiaanm1ubOD231u73WBckQ/fsamwRLiE2GBz6D3a/xF1NgfiDLJjXBa1hYOYTtQ==}
+
+  vnpay@2.5.2:
+    resolution: {integrity: sha512-wrHAt6rNTvDU7VjBXcJ7VbTCiw7ai671T0A+KWryoqvYzyO4TcTyFazRaLA/6hk7XaZ1h5S08mPDdsepgdEv5A==}
+
+snapshots:
+
+  dayjs@1.11.23: {}
+
+  vnpay@2.5.2:
+    dependencies:
+      dayjs: 1.11.23
