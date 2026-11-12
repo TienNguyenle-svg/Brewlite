@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Product as StoreProduct } from "@/lib/types";
@@ -74,6 +74,16 @@ export default function ProductDetailView({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
 
+  // Reset nút khi quay lại trang bằng Back (trình duyệt khôi phục từ bfcache)
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setAdding(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
+
+  
   function toggleTopping(id: string) {
     setToppingIds((prev) =>
       prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
@@ -99,21 +109,26 @@ export default function ProductDetailView({ product }: { product: Product }) {
     if (adding) return;
     setAdding(true);
 
-    await ensureCartHydrated();
-    useCartStore
-      .getState()
-      .addItem(product as unknown as StoreProduct, size.id, {
-        qty: quantity,
-        unitPrice,
-        toppings: selectedToppings.map((t) => ({
-          id: t.id,
-          name: t.name,
-          price: t.price,
-        })),
-        note,
-      });
+    try {
+      await ensureCartHydrated();
+      useCartStore
+        .getState()
+        .addItem(product as unknown as StoreProduct, size.id, {
+          qty: quantity,
+          unitPrice,
+          toppings: selectedToppings.map((t) => ({
+            id: t.id,
+            name: t.name,
+            price: t.price,
+          })),
+          note,
+        });
 
-    router.push("/checkout");
+      router.push("/checkout");
+    } catch (err) {
+      console.error("Thêm vào giỏ thất bại:", err);
+      setAdding(false); // lỗi thì mở lại nút để bấm lại
+    }
   }
 
   return (
