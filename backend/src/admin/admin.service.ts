@@ -101,31 +101,30 @@ export class AdminService {
     return { ingredients, toppings };
   }
 
-  // ===== BÁO CÁO DOANH THU =====
+// ===== BÁO CÁO DOANH THU =====
   async getRevenueReport() {
-    const orders = await this.prisma.order.findMany({
-      where: { status: { in: ['COMPLETED'] as any } },
-    });
-    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-    return { totalRevenue, totalOrders: orders.length };
-  }
-  // ===== QUẢN LÝ ĐƠN HÀNG =====
-  async getAllOrders() {
-    return this.prisma.order.findMany({
-      include: {
-        items: {
-          include: {
-            product: { select: { name: true } }, 
-            toppings: { include: { topping: true } }, 
-          },
-        },
-        payments: {
-          select: { status: true, method: true, amount: true }
-        }
+    // 1. Lấy thống kê cho các đơn COMPLETED
+    const completedStats = await this.prisma.order.aggregate({
+      where: { status: 'COMPLETED' },
+      _sum: {
+        total: true,      // Doanh thu thực tế (đã trừ mã giảm, điểm thưởng)
+        subtotal: true,   // Doanh thu gốc (trước khi trừ giảm giá)
       },
-      orderBy: {
-        createdAt: 'desc', 
+      _count: {
+        id: true,         // Tổng số đơn COMPLETED
       },
     });
+
+    // 2. Lấy thống kê tổng đơn CANCELLED
+    const totalCancelledOrders = await this.prisma.order.count({
+      where: { status: 'CANCELLED' },
+    });
+
+    return {
+      totalOrders: completedStats._count.id || 0,
+      totalRevenue: completedStats._sum.total || 0,
+      originalRevenue: completedStats._sum.subtotal || 0, // Thống kê: Doanh thu gốc
+      totalCancelledOrders,                               // Thống kê: Tổng đơn bị hủy
+    };
   }
 }

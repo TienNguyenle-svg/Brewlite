@@ -85,6 +85,7 @@ model Order {
   userId      String
   user        User         @relation(fields: [userId], references: [id])
   status      OrderStatus  @default(PENDING)
+  subtotal    Int          @default(0)
   total       Int          // Tổng tiền cuối cùng khách phải trả
   shippingFee Int          @default(15000) // Phí ship
   discountAmount Int       @default(0)     // Số tiền được giảm
