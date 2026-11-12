@@ -1,10 +1,15 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { InventoryService } from '../inventory/inventory.service';
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private inventoryService: InventoryService
+  ) {}
 
   private getSizeMultiplier(size: string) {
     if (size === 'S') return 0.8;
@@ -19,23 +24,14 @@ export class OrdersService {
     let subTotal = 0;
     const orderItems: any[] = [];
 
-    // 1. Tính tiền món (GIỮ NGUYÊN)
+    // 1. Tính tiền món
     for (const item of dto.items) {
       const product = await this.prisma.product.findUnique({
         where: { id: item.productId },
-        include: { recipes: true },
       });
       if (!product) throw new BadRequestException('Sản phẩm không tồn tại');
 
       const multiplier = this.getSizeMultiplier(item.size);
-
-      for (const recipe of product.recipes) {
-        const ingredient = await this.prisma.ingredient.findUnique({ where: { id: recipe.ingredientId } });
-        const neededAmount = recipe.amount * multiplier * item.qty;
-        if (!ingredient || ingredient.stock < neededAmount) {
-          throw new BadRequestException(`Hết nguyên liệu làm món ${product.name} (Size ${item.size})`);
-        }
-      }
 
       let toppingPriceTotal = 0;
       const itemToppingsData: any[] = [];
@@ -47,89 +43,81 @@ export class OrdersService {
         }
       }
 
-      const finalProductPrice = Math.round(product.price * multiplier); 
-      const lineTotal = (finalProductPrice + toppingPriceTotal) * item.qty;
+      const finalProductPrice = Math.round(product.price * multiplier);
+      const lineTotal = (finalProductPrice * item.qty) + toppingPriceTotal;
       subTotal += lineTotal;
-      
-      orderItems.push({ 
-        productId: item.productId, size: item.size, qty: item.qty, 
+
+      orderItems.push({
+        productId: item.productId, size: item.size, qty: item.qty,
         unitPrice: finalProductPrice, lineTotal,
         toppings: { create: itemToppingsData }
       });
     }
 
-    // 2. Xử lý mã khuyến mãi (GIỮ NGUYÊN)
+    // 2. Xác thực mã khuyến mãi
     let discountAmount = 0;
     let promotionId = null;
 
     if (dto.promotionCode) {
-      const promo = await this.prisma.promotion.findUnique({
-        where: { code: dto.promotionCode },
-      });
-
+      const promo = await this.prisma.promotion.findUnique({ where: { code: dto.promotionCode } });
       if (!promo || !promo.active || (promo.expiredAt && promo.expiredAt < new Date())) {
-        throw new BadRequestException('Mã khuyến mãi không hợp lệ hoặc đã hết hạn');
+        throw new BadRequestException('Mã không hợp lệ hoặc đã hết hạn');
       }
       if (subTotal < promo.minOrder) {
-        throw new BadRequestException(`Đơn hàng chưa đạt giá trị tối thiểu ${promo.minOrder}đ để dùng mã này`);
+        throw new BadRequestException(`Đơn hàng chưa đạt tối thiểu ${promo.minOrder}đ`);
       }
-
-      if (promo.type === 'PERCENT') {
-        discountAmount = Math.round((subTotal * promo.discount) / 100);
-      } else {
-        discountAmount = promo.discount;
-      }
+      discountAmount = promo.type === 'PERCENT' ? Math.round((subTotal * promo.discount) / 100) : promo.discount;
       promotionId = promo.id;
     }
 
-    // 3. XỬ LÝ ĐIỂM THƯỞNG (MỚI)
+    // 3. XỬ LÝ ĐIỂM THƯỞNG THEO LOGIC MỚI (usePoints như Shopee)
     let pointsDiscount = 0;
     let pointsUsed = 0;
-    if (dto.pointsToUse && dto.pointsToUse > 0) {
-      if (user.loyaltyPoints < dto.pointsToUse) {
-        throw new BadRequestException('Bạn không đủ điểm thưởng');
+    if (dto.usePoints === true) {
+      if (user.loyaltyPoints < 100) {
+        throw new BadRequestException('Cần tối thiểu 100 điểm thưởng để sử dụng tính năng này');
       }
-      pointsUsed = dto.pointsToUse;
-      pointsDiscount = pointsUsed * 1000; // Quy ước 1 điểm = 1000 VNĐ
-      if (pointsDiscount > subTotal) pointsDiscount = subTotal;
+      // Dùng hết điểm có thể để giảm giá, tối đa bằng subTotal
+      const maxPointsNeeded = Math.ceil(subTotal / 1000);
+      pointsUsed = Math.min(user.loyaltyPoints, maxPointsNeeded);
+      pointsDiscount = pointsUsed * 1000;
     }
 
-    // 4. Tính phí ship và tổng tiền (Cập nhật lại)
     const shippingFee = subTotal >= 100000 ? 0 : 15000;
     const finalTotal = subTotal - discountAmount - pointsDiscount + shippingFee;
 
-    // 5. Tạo đơn hàng (Cập nhật lại data)
-    return this.prisma.$transaction(async (prisma) => {
-      const newOrder = await prisma.order.create({
-        data: { 
-          userId: user.id, 
+    // 4. TRANSACTION: TẠO ĐƠN, GIỮ KHO VÀ GIỮ ĐIỂM
+    return this.prisma.$transaction(async (tx) => {
+      const newOrder = await tx.order.create({
+        data: {
+          userId: user.id,
+          subtotal: subTotal, 
           total: finalTotal,
           shippingFee: shippingFee,
-          discountAmount: discountAmount + pointsDiscount, // Cộng dồn giảm giá
-          status: 'PENDING', 
+          discountAmount: discountAmount + pointsDiscount,
+          pointsUsed: pointsUsed, 
+          pointsDiscount: pointsDiscount,
+          status: 'PENDING',
           items: { create: orderItems },
-          receiverName: dto.receiverName, 
-          receiverPhone: dto.receiverPhone, 
+          receiverName: dto.receiverName,
+          receiverPhone: dto.receiverPhone,
           deliveryAddress: dto.deliveryAddress,
           promotionId: promotionId,
         },
         include: { items: { include: { toppings: true } } },
       });
 
-      // Trừ điểm user ngay lập tức
+      // Giữ kho
+      await this.inventoryService.reserveOrder(tx, newOrder.id);
+
+      // Giữ điểm thưởng
       if (pointsUsed > 0) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { loyaltyPoints: { decrement: pointsUsed } },
-        });
-        await prisma.loyaltyTransaction.create({
-          data: {
-            userId: user.id,
-            points: -pointsUsed,
-            reason: `Dùng điểm cho đơn ${newOrder.id}`,
-            orderId: newOrder.id,
-          }
-        });
+        const updated = await tx.$executeRaw`
+          UPDATE "User"
+          SET "reservedPoints" = "reservedPoints" + ${pointsUsed}
+          WHERE "id" = ${user.id} AND "loyaltyPoints" - "reservedPoints" >= ${pointsUsed}
+        `;
+        if (updated === 0) throw new BadRequestException('Không đủ điểm thưởng khả dụng.');
       }
 
       return newOrder;
@@ -137,102 +125,185 @@ export class OrdersService {
   }
 
   async markAsPaid(orderId: string) {
-    // GIỮ NGUYÊN CODE CŨ CỦA BẠN
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: { include: { product: { include: { recipes: true } } } } }
+      include: { items: true }
     });
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
     if (order.status !== 'PENDING') throw new BadRequestException('Đơn hàng không ở trạng thái chờ thanh toán');
 
-    return this.prisma.$transaction(async (prisma) => {
-      const updatedOrder = await prisma.order.update({
+    return this.prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: { status: 'PAID' },
       });
+
+      await this.inventoryService.settleOrder(tx, orderId);
+
       for (const item of order.items) {
-        const multiplier = this.getSizeMultiplier(item.size);
-        for (const recipe of item.product.recipes) {
-          const amountToSubtract = recipe.amount * multiplier * item.qty;
-          await prisma.ingredient.update({
-            where: { id: recipe.ingredientId },
-            data: { stock: { decrement: amountToSubtract } },
-          });
-        }
-        await prisma.product.update({
+        await tx.product.update({
           where: { id: item.productId },
           data: { soldCount: { increment: item.qty } },
         });
       }
-      return updatedOrder;
-    });
-  }
 
-  // API Hủy đơn (Đã cập nhật thêm hoàn điểm)
-  async cancelOrder(orderId: string) {
-    const order = await this.prisma.order.findUnique({ 
-      where: { id: orderId },
-      include: { items: { include: { product: { include: { recipes: true } } } }, payments: true } 
-    });
-    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
-    if (order.status !== 'PAID') throw new BadRequestException('Chỉ có thể hủy đơn hàng khi đã thanh toán (PAID).');
-
-    return this.prisma.$transaction(async (prisma) => {
-      // 1. Hoàn kho (GIỮ NGUYÊN)
-      for (const item of order.items) {
-        const multiplier = this.getSizeMultiplier(item.size);
-        for (const recipe of item.product.recipes) {
-          const amountToRefund = recipe.amount * multiplier * item.qty;
-          await prisma.ingredient.update({
-            where: { id: recipe.ingredientId },
-            data: { stock: { increment: amountToRefund } },
-          });
-        }
-        await prisma.product.update({
-          where: { id: item.productId },
-          data: { soldCount: { decrement: item.qty } },
-        });
-      }
-
-      // 2. Hoàn điểm (MỚI)
-      const pointTrans = await prisma.loyaltyTransaction.findFirst({
-        where: { orderId: order.id, points: { lt: 0 } }
-      });
-      if (pointTrans) {
-        const refundPoints = Math.abs(pointTrans.points);
-        await prisma.user.update({
+      if (order.pointsUsed > 0) {
+        await tx.user.update({
           where: { id: order.userId },
-          data: { loyaltyPoints: { increment: refundPoints } },
+          data: { 
+            loyaltyPoints: { decrement: order.pointsUsed },
+            reservedPoints: { decrement: order.pointsUsed }
+          },
         });
-        await prisma.loyaltyTransaction.create({
+        await tx.loyaltyTransaction.create({
           data: {
             userId: order.userId,
-            points: refundPoints,
-            reason: `Hoàn điểm do hủy đơn ${order.id}`,
+            points: -order.pointsUsed,
+            reason: `Dùng điểm cho đơn ${order.id}`,
             orderId: order.id,
           }
         });
       }
 
-      // 3. Hoàn tiền (GIỮ NGUYÊN)
-      const payment = order.payments[0];
-      if (payment) {
-        await prisma.payment.update({
-          where: { id: payment.id },
-          data: { status: 'REFUNDED' } 
-        });
+      return updatedOrder;
+    });
+  }
+
+  async cancelOrder(orderId: string) {
+    const order = await this.prisma.order.findUnique({ 
+      where: { id: orderId },
+      include: { items: true, payments: true } 
+    });
+    
+    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+    
+    if (order.status !== 'PAID' && order.status !== 'PENDING') {
+      throw new BadRequestException('Chỉ có thể hủy đơn PENDING hoặc PAID.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      if (order.status === 'PAID') {
+        await this.inventoryService.refundOrder(tx, orderId);
+
+        for (const item of order.items) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { soldCount: { decrement: item.qty } },
+          });
+        }
+
+        const users = await tx.$queryRaw<any[]>`SELECT "loyaltyPoints", "pointsOwed" FROM "User" WHERE "id" = ${order.userId} FOR UPDATE`;
+        
+        if (users.length > 0) {
+          let currentPoints = users[0].loyaltyPoints;
+          let currentOwed = users[0].pointsOwed;
+
+          const transactions = await tx.loyaltyTransaction.findMany({
+            where: { orderId: order.id }
+          });
+
+          let totalRedeem = 0;
+          let totalEarn = 0;
+
+          transactions.forEach(t => {
+            const reason = t.reason.toUpperCase();
+            if (reason.includes('DÙNG ĐIỂM') || reason.includes('REDEEM')) {
+              totalRedeem += t.points;
+            } 
+            else if (reason.includes('CỘNG ĐIỂM') || reason.includes('EARN')) {
+              totalEarn += t.points;
+            }
+          });
+
+          const pointsToRefund = -totalRedeem; 
+          if (pointsToRefund > 0) {
+            currentPoints += pointsToRefund;
+            await tx.loyaltyTransaction.create({
+              data: {
+                userId: order.userId,
+                points: pointsToRefund,
+                reason: `REDEEM_REFUND: Hoàn điểm đã dùng cho đơn ${order.id}`,
+                orderId: order.id,
+              }
+            });
+          }
+
+          const pointsToRevoke = totalEarn; 
+          if (pointsToRevoke > 0) {
+            const actualRevoke = Math.min(pointsToRevoke, currentPoints);
+            const debt = pointsToRevoke - actualRevoke; 
+
+            currentPoints -= actualRevoke;
+            currentOwed += debt;
+
+            if (actualRevoke > 0) {
+              await tx.loyaltyTransaction.create({
+                data: {
+                  userId: order.userId,
+                  points: -actualRevoke,
+                  reason: `EARN_REVOKE: Thu hồi điểm cộng từ đơn ${order.id}`,
+                  orderId: order.id,
+                }
+              });
+            }
+          }
+
+          await tx.user.update({
+            where: { id: order.userId },
+            data: { 
+              loyaltyPoints: currentPoints,
+              pointsOwed: currentOwed 
+            },
+          });
+        }
+
+        const payment = order.payments[0];
+        if (payment) {
+          await tx.payment.update({
+            where: { id: payment.id },
+            data: { status: 'REFUNDED' } 
+          });
+        }
+      } 
+      else if (order.status === 'PENDING') {
+        await this.inventoryService.releaseOrder(tx, orderId);
+
+        if (order.pointsUsed > 0) {
+          await tx.user.update({
+            where: { id: order.userId },
+            data: { reservedPoints: { decrement: order.pointsUsed } }, 
+          });
+        }
       }
 
-      // 4. Đổi trạng thái
-      return prisma.order.update({
+      return tx.order.update({
         where: { id: orderId },
         data: { status: 'CANCELLED' },
       });
     });
   }
 
+  @Cron(CronExpression.EVERY_MINUTE)
+  async handleTimeoutPendingOrders() {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    
+    const expiredOrders = await this.prisma.order.findMany({
+      where: {
+        status: 'PENDING',
+        createdAt: { lt: tenMinutesAgo },
+      },
+    });
+
+    for (const order of expiredOrders) {
+      try {
+        await this.cancelOrder(order.id); 
+      } catch (error) {
+        console.error(`[Cronjob] Lỗi khi hủy đơn timeout ${order.id}:`, error);
+      }
+    }
+  }
+
   async findMyOrders(userId: string) {
-    // GIỮ NGUYÊN
     return this.prisma.order.findMany({
       where: { userId: userId },
       include: { items: { include: { toppings: true } } },
