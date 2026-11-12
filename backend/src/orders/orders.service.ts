@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -70,24 +71,23 @@ export class OrdersService {
       promotionId = promo.id;
     }
 
-    // 3. XỬ LÝ ĐIỂM THƯỞNG THEO LOGIC MỚI (usePoints như Shopee)
+    // 3. XỬ LÝ ĐIỂM THƯỞNG: 1 điểm = 1đ, tối thiểu 100 điểm mới được dùng
     let pointsDiscount = 0;
     let pointsUsed = 0;
     if (dto.usePoints === true) {
       if (user.loyaltyPoints < 100) {
         throw new BadRequestException('Cần tối thiểu 100 điểm thưởng để sử dụng tính năng này');
       }
-      // Dùng hết điểm có thể để giảm giá, tối đa bằng subTotal
-      const maxPointsNeeded = Math.ceil(subTotal / 1000);
-      pointsUsed = Math.min(user.loyaltyPoints, maxPointsNeeded);
-      pointsDiscount = pointsUsed * 1000;
+      const maxAllowedDiscount = subTotal - discountAmount;
+      pointsUsed = Math.min(user.loyaltyPoints, maxAllowedDiscount);
+      pointsDiscount = pointsUsed; // 1 điểm = 1 VNĐ
     }
 
     const shippingFee = subTotal >= 100000 ? 0 : 15000;
     const finalTotal = subTotal - discountAmount - pointsDiscount + shippingFee;
 
     // 4. TRANSACTION: TẠO ĐƠN, GIỮ KHO VÀ GIỮ ĐIỂM
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const newOrder = await tx.order.create({
         data: {
           userId: user.id,
@@ -115,7 +115,7 @@ export class OrdersService {
         const updated = await tx.$executeRaw`
           UPDATE "User"
           SET "reservedPoints" = "reservedPoints" + ${pointsUsed}
-          WHERE "id" = ${user.id} AND "loyaltyPoints" - "reservedPoints" >= ${pointsUsed}
+          WHERE "id" = ${user.id} AND ("loyaltyPoints" - "reservedPoints") >= ${pointsUsed}
         `;
         if (updated === 0) throw new BadRequestException('Không đủ điểm thưởng khả dụng.');
       }
@@ -132,7 +132,7 @@ export class OrdersService {
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
     if (order.status !== 'PENDING') throw new BadRequestException('Đơn hàng không ở trạng thái chờ thanh toán');
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: { status: 'PAID' },
@@ -147,6 +147,7 @@ export class OrdersService {
         });
       }
 
+      // Trừ điểm đã dùng (nếu có)
       if (order.pointsUsed > 0) {
         await tx.user.update({
           where: { id: order.userId },
@@ -160,6 +161,25 @@ export class OrdersService {
             userId: order.userId,
             points: -order.pointsUsed,
             reason: `Dùng điểm cho đơn ${order.id}`,
+            orderId: order.id,
+          }
+        });
+      }
+
+      // CỘNG ĐIỂM THƯỞNG KHI THANH TOÁN THÀNH CÔNG: 1.000đ = 1 điểm
+      const earnedPoints = Math.floor(order.subtotal / 1000);
+      if (earnedPoints > 0) {
+        await tx.user.update({
+          where: { id: order.userId },
+          data: {
+            loyaltyPoints: { increment: earnedPoints }
+          }
+        });
+        await tx.loyaltyTransaction.create({
+          data: {
+            userId: order.userId,
+            points: earnedPoints,
+            reason: `Cộng điểm tích lũy từ đơn ${order.id}`,
             orderId: order.id,
           }
         });
@@ -181,7 +201,7 @@ export class OrdersService {
       throw new BadRequestException('Chỉ có thể hủy đơn PENDING hoặc PAID.');
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       if (order.status === 'PAID') {
         await this.inventoryService.refundOrder(tx, orderId);
 
@@ -210,11 +230,12 @@ export class OrdersService {
             if (reason.includes('DÙNG ĐIỂM') || reason.includes('REDEEM')) {
               totalRedeem += t.points;
             } 
-            else if (reason.includes('CỘNG ĐIỂM') || reason.includes('EARN')) {
+            else if (reason.includes('CỘNG ĐIỂM') || reason.includes('EARN') || reason.includes('TÍCH LŨY')) {
               totalEarn += t.points;
             }
           });
 
+          // Hoàn lại điểm khách đã dùng lúc đặt hàng
           const pointsToRefund = -totalRedeem; 
           if (pointsToRefund > 0) {
             currentPoints += pointsToRefund;
@@ -228,6 +249,7 @@ export class OrdersService {
             });
           }
 
+          // Thu hồi lại điểm đã cộng khi thanh toán thành công (nếu user không đủ điểm sẽ ghi nhận vào pointsOwed)
           const pointsToRevoke = totalEarn; 
           if (pointsToRevoke > 0) {
             const actualRevoke = Math.min(pointsToRevoke, currentPoints);
