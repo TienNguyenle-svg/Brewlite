@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Promotion, PromoResult } from "@/lib/promotions";
+import type { PromotionQuote, PromoResult } from "@/lib/promotions";
 
 /**
  * Ô nhập mã giảm giá. Dùng <div> thay vì <form> để có thể đặt bên trong
@@ -13,18 +13,25 @@ export default function PromoForm({
   onRemove,
   className = "mt-[34px]",
 }: {
-  applied: Promotion | null;
-  onApply: (code: string) => PromoResult;
+  applied: PromotionQuote | null;
+  onApply: (code: string) => Promise<PromoResult>;
   onRemove: () => void;
   className?: string;
 }) {
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const apply = () => {
-    const result = onApply(value);
-    setError(result.ok ? null : result.message);
-    if (result.ok) setValue("");
+  const apply = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const result = await onApply(value);
+      setError(result.ok ? null : result.message);
+      if (result.ok) setValue("");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -36,7 +43,7 @@ export default function PromoForm({
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
-              apply();
+              void apply();
             }
           }}
           placeholder="Nhập mã giảm giá..."
@@ -45,10 +52,11 @@ export default function PromoForm({
         />
         <button
           type="button"
-          onClick={apply}
+          onClick={() => void apply()}
+          disabled={busy}
           className="h-12 w-[116px] shrink-0 rounded-xl border border-[#E3DACF] bg-white text-sm font-semibold"
         >
-          Áp dụng
+          {busy ? "Đang kiểm tra…" : "Áp dụng"}
         </button>
       </div>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}

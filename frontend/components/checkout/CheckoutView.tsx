@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ApiError,
+  PENDING_PAYMENT_IDEMPOTENCY_KEY,
   PENDING_PAYMENT_ORDER_KEY,
   createOrder,
   createPayment,
@@ -55,25 +56,48 @@ export default function CheckoutView() {
     try {
       let orderId = pendingOrderId;
       if (!orderId) {
+        const retryOrderId = new URLSearchParams(window.location.search).get(
+          "retryOrderId",
+        );
+        if (retryOrderId) {
+          const expectedOrderId = sessionStorage.getItem(
+            PENDING_PAYMENT_ORDER_KEY,
+          );
+          if (retryOrderId !== expectedOrderId) {
+            throw new ApiError(
+              "Không thể tiếp tục thanh toán lại đơn hàng này.",
+              400,
+            );
+          }
+          orderId = retryOrderId;
+        }
+      }
+
+      if (!orderId) {
         const order = await createOrder({
-          items: cart.items.map(({ productId, size, qty }) => ({
+          items: cart.items.map(({ productId, size, qty, toppingIds }) => ({
             productId,
             size,
             qty,
-            toppingIds: [],
+            toppingIds,
           })),
           ...deliveryDetails,
+          promotionCode: cart.promo?.code,
+          usePoints: cart.usePoints,
         });
         orderId = order.id;
         setPendingOrderId(orderId);
+        sessionStorage.setItem(PENDING_PAYMENT_ORDER_KEY, orderId);
       }
 
       const idempotencyKey =
-        paymentIdempotencyKey ?? `PAY-${Date.now()}`;
+        paymentIdempotencyKey ??
+        sessionStorage.getItem(PENDING_PAYMENT_IDEMPOTENCY_KEY) ??
+        `PAY-${Date.now()}`;
       setPaymentIdempotencyKey(idempotencyKey);
-      const paymentResult = await createPayment({ orderId }, idempotencyKey);
-
       sessionStorage.setItem(PENDING_PAYMENT_ORDER_KEY, orderId);
+      sessionStorage.setItem(PENDING_PAYMENT_IDEMPOTENCY_KEY, idempotencyKey);
+      const paymentResult = await createPayment({ orderId }, idempotencyKey);
 
       if (paymentResult.status === "SUCCEEDED") {
         router.replace(

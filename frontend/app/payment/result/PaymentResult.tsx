@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { PENDING_PAYMENT_ORDER_KEY } from "@/lib/api";
+import {
+  PENDING_PAYMENT_IDEMPOTENCY_KEY,
+  PENDING_PAYMENT_ORDER_KEY,
+} from "@/lib/api";
 import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 
 type PaymentResultStatus = "loading" | "success" | "failed" | "invalid";
@@ -19,28 +22,33 @@ export default function PaymentResult() {
   useEffect(() => {
     let active = true;
 
-    ensureCartHydrated().then(() => {
-      if (!active) return;
+    ensureCartHydrated()
+      .then(() => {
+        if (!active) return;
 
-      const expectedOrderId = sessionStorage.getItem(
-        PENDING_PAYMENT_ORDER_KEY,
-      );
-      if (!orderId || expectedOrderId !== orderId) {
-        setResult("invalid");
-        return;
-      }
+        const expectedOrderId = sessionStorage.getItem(
+          PENDING_PAYMENT_ORDER_KEY,
+        );
+        if (!orderId || expectedOrderId !== orderId) {
+          setResult("invalid");
+          return;
+        }
 
-      if (status === "success") {
-        useCartStore.getState().clear();
-        setResult("success");
-      } else if (status === "failed") {
-        setResult("failed");
-      } else {
-        setResult("invalid");
-      }
-
-      sessionStorage.removeItem(PENDING_PAYMENT_ORDER_KEY);
-    });
+        if (status === "success") {
+          useCartStore.getState().clear();
+          sessionStorage.removeItem(PENDING_PAYMENT_ORDER_KEY);
+          sessionStorage.removeItem(PENDING_PAYMENT_IDEMPOTENCY_KEY);
+          setResult("success");
+        } else if (status === "failed") {
+          sessionStorage.removeItem(PENDING_PAYMENT_IDEMPOTENCY_KEY);
+          setResult("failed");
+        } else {
+          setResult("invalid");
+        }
+      })
+      .catch(() => {
+        if (active) setResult("invalid");
+      });
 
     return () => {
       active = false;
@@ -48,7 +56,15 @@ export default function PaymentResult() {
   }, [orderId, status]);
 
   if (result === "loading") {
-    return <p className="py-16 text-center text-sm text-[#82776E]">Đang xác nhận kết quả thanh toán…</p>;
+    return (
+      <p
+        role="status"
+        aria-live="polite"
+        className="py-16 text-center text-sm text-[#82776E]"
+      >
+        Đang xác nhận kết quả thanh toán…
+      </p>
+    );
   }
 
   const successful = result === "success";
@@ -80,7 +96,7 @@ export default function PaymentResult() {
         {successful
           ? "VNPay đã xác nhận giao dịch. Đơn hàng của bạn đang được xử lý."
           : result === "failed"
-            ? "Giỏ hàng vẫn được giữ lại. Bạn có thể quay lại giỏ để thử thanh toán lần nữa."
+            ? "Giỏ hàng và đơn hàng được giữ lại. Bạn có thể thử thanh toán lại trong vòng 10 phút."
             : "Liên kết kết quả không khớp với lượt thanh toán hiện tại. Giỏ hàng được giữ nguyên."}
       </p>
       {orderId && (
@@ -89,6 +105,14 @@ export default function PaymentResult() {
         </p>
       )}
       <div className="mt-6 flex flex-wrap gap-3">
+        {result === "failed" && orderId && (
+          <Link
+            href={`/checkout?retryOrderId=${encodeURIComponent(orderId)}`}
+            className="inline-flex rounded-xl bg-[#39281F] px-5 py-3 text-sm font-semibold text-white"
+          >
+            Thử thanh toán lại
+          </Link>
+        )}
         {!successful && (
           <Link
             href="/cart"

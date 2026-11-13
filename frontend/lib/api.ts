@@ -17,6 +17,8 @@ const getApiUrl = () => {
 const API_URL = getApiUrl().replace(/\/+$/, "");
 export const TOKEN_KEY = "accessToken";
 export const PENDING_PAYMENT_ORDER_KEY = "brewlite-pending-payment-order";
+export const PENDING_PAYMENT_IDEMPOTENCY_KEY =
+  "brewlite-pending-payment-idempotency-key";
 
 export class ApiError extends Error {
   constructor(
@@ -38,6 +40,8 @@ export type CreateOrderInput = {
   receiverName: string;
   receiverPhone: string;
   deliveryAddress: string;
+  promotionCode?: string;
+  usePoints?: boolean;
 };
 
 export type OrderReceipt = {
@@ -77,6 +81,27 @@ export type CreatePaymentInput = {
   orderId: string;
 };
 
+export type CheckoutPreviewInput = {
+  items: Array<{
+    productId: string;
+    size: "S" | "M" | "L";
+    qty: number;
+    toppingIds: string[];
+  }>;
+  promotionCode?: string;
+  usePoints: boolean;
+};
+
+export type CheckoutPreviewReceipt = {
+  promotionCode: string | null;
+  subtotal: number;
+  discountAmount: number;
+  pointsUsed: number;
+  pointsDiscount: number;
+  shippingFee: number;
+  total: number;
+};
+
 export type PaymentReceipt = {
   paymentId: string;
   orderId: string;
@@ -85,6 +110,24 @@ export type PaymentReceipt = {
   status: string;
   expiresAt?: string;
   paymentUrl: string | null;
+};
+
+export type LoyaltySummary = {
+  points: number;
+  availablePoints: number;
+  reservedPoints: number;
+  pointsOwed: number;
+  pointValueVnd: number;
+  earnRule: string;
+  transactions: Array<{
+    id: string;
+    type: string;
+    points: number;
+    amount?: number | null;
+    description?: string | null;
+    orderId?: string | null;
+    createdAt: string;
+  }>;
 };
 
 export const getAccessToken = () =>
@@ -148,7 +191,7 @@ type ProductResponse = Omit<Product, "imageUrl"> & {
 function normalizeProduct(product: ProductResponse): ApiProduct {
   return {
     ...product,
-    imageUrl: product.imageUrl ?? "/window.svg",
+    imageUrl: product.imageUrl ?? "/images/hero-1.jpg",
   };
 }
 
@@ -170,7 +213,15 @@ export const createOrder = (input: CreateOrderInput) =>
     body: JSON.stringify(input),
   });
 
+export const previewCheckout = (input: CheckoutPreviewInput) =>
+  request<CheckoutPreviewReceipt>("/checkout/preview", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
 export const getMyOrders = () => request<CustomerOrder[]>("/orders/me");
+
+export const getLoyalty = () => request<LoyaltySummary>("/users/me/loyalty");
 
 export const createPayment = (
   input: CreatePaymentInput,

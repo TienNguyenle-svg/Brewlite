@@ -137,7 +137,7 @@ function OrderDetail() {
               <li key={item.id} className="flex items-center gap-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.product.imageUrl ?? '/placeholder-drink.png'}
+                  src={item.product.imageUrl ?? '/images/hero-1.jpg'}
                   alt={item.product.name}
                   className="h-16 w-16 rounded-[10px] bg-[#F1EDE7] object-cover"
                 />
