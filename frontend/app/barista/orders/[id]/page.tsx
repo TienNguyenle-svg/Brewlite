@@ -70,8 +70,23 @@ function OrderDetail() {
   if (!order) {
     return (
       <div className="flex flex-col items-center gap-4 py-16 text-sm text-[#82776E]">
-        <p>Không tìm thấy đơn này trong hàng đợi (có thể đã hoàn thành).</p>
-        {error && <p className="text-[#A6564F]">{error}</p>}
+        {error ? (
+          <>
+            <p role="alert" className="text-[#A6564F]">{error}</p>
+            <button
+              type="button"
+              onClick={async () => {
+                setLoading(true);
+                await loadData();
+              }}
+              className="font-semibold text-[#B9672B]"
+            >
+              Thử tải lại
+            </button>
+          </>
+        ) : (
+          <p>Không tìm thấy đơn này trong hàng đợi (có thể đã hoàn thành).</p>
+        )}
         <Link href="/barista/orders" className="font-semibold text-[#B9672B]">
           ← Về hàng đợi đơn
         </Link>

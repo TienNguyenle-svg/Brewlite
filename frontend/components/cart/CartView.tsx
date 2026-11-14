@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getLoyalty } from "@/lib/api";
-import { getToken, getUser, saveSession } from "@/lib/auth";
+import { getToken, saveSession, useUser } from "@/lib/auth";
 import { useCart } from "@/lib/cart-store";
 import { money } from "@/lib/format";
 import CartItemRow from "./CartItemRow";
@@ -11,12 +11,17 @@ import PromoForm from "./PromoForm";
 
 export default function CartView() {
   const cart = useCart();
-  const [availablePoints, setAvailablePoints] = useState<number>(
-    getUser()?.loyaltyPoints ?? 0,
-  );
+  const user = useUser();
+  const [loyalty, setLoyalty] = useState<{
+    userId: string;
+    points: number;
+  } | null>(null);
+  const [loyaltyError, setLoyaltyError] = useState<{
+    userId: string;
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
-    const user = getUser();
     if (!user) return;
 
     let active = true;
@@ -24,22 +29,39 @@ export default function CartView() {
       try {
         const summary = await getLoyalty();
         if (!active) return;
-        const nextPoints = summary.availablePoints;
-        setAvailablePoints(nextPoints);
+        setLoyalty({ userId: user.id, points: summary.availablePoints });
         const token = getToken();
         if (token) {
-          saveSession(token, { ...user, loyaltyPoints: nextPoints });
+          saveSession(token, { ...user, loyaltyPoints: summary.availablePoints });
         }
-      } catch {
-        setAvailablePoints(user.loyaltyPoints ?? 0);
+      } catch (error) {
+        if (active) {
+          setLoyaltyError(
+            {
+              userId: user.id,
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Không thể tải điểm thưởng.",
+            },
+          );
+        }
       }
     })();
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [user]);
 
+  const loyaltyErrorMessage =
+    user && loyaltyError?.userId === user.id ? loyaltyError.message : null;
+  const availablePoints =
+    user && loyalty?.userId === user.id
+      ? loyalty.points
+      : (user?.loyaltyPoints ?? 0);
+  const loyaltyLoading =
+    !!user && loyalty?.userId !== user.id && !loyaltyErrorMessage;
   const canRedeemPoints = availablePoints >= 100;
 
   return (
@@ -68,7 +90,7 @@ export default function CartView() {
         <h2 className="text-[21px] font-semibold leading-[25px]">
           Đơn hàng
         </h2>
-        {getUser() && (
+        {user && (
           <div className="mt-[24px] rounded-xl border border-[#E7E1DA] bg-[#F7F2ED] p-3.5">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -76,7 +98,9 @@ export default function CartView() {
                   Điểm thưởng
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[#39281F]">
-                  {availablePoints} điểm khả dụng
+                  {loyaltyLoading
+                    ? "Đang tải điểm thưởng…"
+                    : `${availablePoints} điểm khả dụng`}
                 </p>
               </div>
               <label className="inline-flex cursor-pointer items-center gap-2 text-[12px] font-medium text-[#39281F]">
@@ -90,6 +114,11 @@ export default function CartView() {
                 Dùng điểm
               </label>
             </div>
+            {loyaltyErrorMessage && (
+              <p role="alert" className="mt-2 text-[10px] text-[#A6564F]">
+                Không thể cập nhật điểm thưởng: {loyaltyErrorMessage}
+              </p>
+            )}
             {!canRedeemPoints && (
               <p className="mt-2 text-[10px] text-[#82776E]">
                 Cần tối thiểu 100 điểm để đổi thưởng.

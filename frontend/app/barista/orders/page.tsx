@@ -140,7 +140,7 @@ export default function BaristaOrdersPage() {
 
       {loading ? (
         <p className="py-16 text-center text-sm text-[#82776E]">Đang tải đơn hàng…</p>
-      ) : orders.length === 0 ? (
+      ) : !error && orders.length === 0 ? (
         <p className="py-16 text-center text-sm text-[#82776E]">
           Hiện chưa có đơn nào cần pha chế ☕
         </p>
