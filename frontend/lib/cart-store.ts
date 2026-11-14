@@ -22,6 +22,7 @@ export interface CartItem {
   qty: number;
   size: "S" | "M" | "L";
   imageUrl: string; // ảnh nằm trong frontend/public/images
+  toppingIds: string[];
 }
 
 // Tùy chọn khi thêm món từ trang chi tiết (size đã có tham số riêng)
@@ -86,6 +87,7 @@ export const useCartStore = create<CartState>()(
               qty,
               size,
               imageUrl: product.imageUrl ?? "/window.svg",
+              toppingIds: toppings.map((t) => t.id), 
             };
         set({
           items: currentItem
