@@ -1,0 +1,91 @@
+@startuml
+!theme plain
+skinparam ParticipantPadding 10
+skinparam BoxPadding 10
+
+title Sequence Diagram: Đặt và Thanh toán Đơn hàng
+
+actor Customer as "Khách hàng"
+participant NextUI as "Next.js UI"
+participant NestAPI as "NestJS API"
+database Database as "Database"
+participant PaymentSvc as "Payment Service"
+
+Customer -> NextUI: 1. Chọn món, thêm vào giỏ hàng
+activate NextUI
+NextUI -> NextUI: 2. Hiển thị giỏ hàng và form đặt hàng
+Customer -> NextUI: 3. Nhập thông tin giao hàng & nhấn "Đặt hàng"
+
+group Transaction boundary (Bắt đầu)
+    NextUI -> NestAPI: 4. Gửi đơn hàng (POST /orders, chứa thông tin thanh toán)
+    activate NestAPI
+
+    note right of NestAPI: Yêu cầu phải chứa JWT trong header\nđể xác thực Customer
+
+    NestAPI -> Database: 5. Bắt đầu Transaction\n5a. Kiểm tra inventory & tạo đơn hàng (status: Pending)
+    activate Database
+    Database --> NestAPI: 5b. Xác nhận tạo đơn hàng thành công
+
+    alt Xử lý thanh toán
+
+        NestAPI -> NestAPI: 6. Tạo idempotency key cho giao dịch
+        note right of NestAPI: Key được tạo từ orderId + timestamp\nđể đảm bảo không gọi payment service trùng lặp
+
+        NestAPI -> PaymentSvc: 7. Khởi tạo thanh toán (Request payment, bao gồm idempotency key)
+        activate PaymentSvc
+
+            alt Nếu Payment Service xử lý thành công
+                PaymentSvc --> NestAPI: 7a. Trả về URL thanh toán / Mã QR thành công
+                deactivate PaymentSvc
+
+                NestAPI -> Database: 8a. Commit Transaction\nCập nhật trạng thái đơn hàng: Awaiting Payment
+                Database --> NestAPI: 8b. Xác nhận commit thành công
+
+                NestAPI --> NextUI: 9. Trả về thông tin thanh toán (Payment URL)
+                deactivate NestAPI
+                NextUI --> Customer: 10. Hiển thị trang thanh toán (redirect hoặc QR code)
+
+                ... Quá trình thanh toán thực tế tại cổng thanh toán ...
+
+                PaymentSvc -> NestAPI: 11. Webhook: Thông báo kết quả thanh toán (SUCCESS)
+                activate NestAPI
+                note right of NestAPI: Nhận thông báo bất đồng bộ. Xác thực lại idempotency key.
+
+                NestAPI -> Database: 12. Bắt đầu Transaction\n12a. Cập nhật trạng thái đơn hàng: PAID
+                Database --> NestAPI: 12b. Xác nhận commit thành công
+
+                NestAPI --> PaymentSvc: 13. Phản hồi webhook (OK)
+                deactivate NestAPI
+            else Nếu Payment Service trả về lỗi (ví dụ: số dư không đủ)
+                PaymentSvc --> NestAPI: 7b. Trả về mã lỗi thanh toán
+                deactivate PaymentSvc
+
+                NestAPI -> Database: 8b. Rollback Transaction\nHủy đơn hàng (status: Cancelled)
+                Database --> NestAPI: 8c. Xác nhận rollback thành công
+
+                NestAPI --> NextUI: 9. Trả về thông báo lỗi thanh toán
+                deactivate NestAPI
+                NextUI --> Customer: 10. Hiển thị thông báo lỗi, cho phép thử lại
+            end
+
+        else Hết thời gian chờ thanh toán (Timeout)
+
+            note right of NestAPI: Giả lập quy trình timeout,\nví dụ cron job quét các đơn hàng quá hạn
+
+            NestAPI -> Database: Bắt đầu Transaction\nTìm các đơn hàng Awaiting Payment quá hạn
+            Database --> NestAPI
+
+            NestAPI -> PaymentSvc: 7c. Kiểm tra trạng thái thanh toán (Query Payment Status)
+            activate PaymentSvc
+            PaymentSvc --> NestAPI: 7c. Trả về trạng thái: UNPAID
+            deactivate PaymentSvc
+
+            NestAPI -> Database: 8d. Rollback Transaction\nHủy đơn hàng (status: PAYMENT_FAILED)
+            Database --> NestAPI: Xác nhận rollback thành công
+
+    end
+end
+
+deactivate NextUI
+
+@enduml
