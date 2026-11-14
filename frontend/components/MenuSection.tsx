@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Product } from "@/lib/types";
 import ProductCard from "@/components/ProductCard";
 
-const CATEGORIES = ["Tất cả", "Cà phê", "Trà sữa", "Bánh ngọt", "Trà trái cây"];
+const CATEGORIES = ["Tất cả", "Cà phê", "Trà sữa", "Trà trái cây"];
 
 type SortKey = "popular" | "price-asc" | "price-desc" | "name";
 
