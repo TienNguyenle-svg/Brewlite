@@ -1,0 +1,96 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam monochrome true
+skinparam packageStyle rectangle
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 14
+skinparam nodesep 14
+skinparam ranksep 110
+skinparam usecase {
+  BackgroundColor White
+  BorderColor Black
+}
+skinparam ArrowColor Black
+
+title <b>USE CASE – HỆ THỐNG BÁN ĐỒ UỐNG BREWLITE</b>
+
+actor "Khách hàng\n(CUSTOMER)" as KH
+actor "Quản trị viên\n(ADMIN)" as AD
+actor "Nhân viên pha chế\n(BARISTA)" as BR
+
+rectangle "<b>Hệ thống Brewlite</b>" {
+
+  package "Chức năng chung\n(đăng nhập phân quyền theo vai trò)" as PG {
+    usecase "Đăng nhập" as UC_DN
+    usecase "Đăng xuất" as UC_DX
+    usecase "Xác thực & phân quyền\ntheo vai trò" as UC_PQ
+    usecase "Từ chối truy cập\n(trang 403)" as UC_403
+  }
+
+  package "Chức năng dành cho Khách hàng" as PKH {
+    usecase "Đăng ký tài khoản" as UC_DK
+    usecase "Xem menu sản phẩm" as UC_MENU
+    usecase "Xem chi tiết sản phẩm\n(chọn size, topping)" as UC_CT
+    usecase "Quản lý giỏ hàng" as UC_GH
+    usecase "Đặt hàng & thanh toán" as UC_DH
+    usecase "Xem lịch sử đơn hàng" as UC_LS
+  }
+
+  package "Chức năng dành cho Quản trị viên" as PAD {
+    usecase "Quản lý sản phẩm\n(thêm / sửa / xóa)" as UC_AD1
+    usecase "Quản lý kho nguyên liệu" as UC_AD2
+    usecase "Quản lý đơn hàng" as UC_AD3
+    usecase "Xem thống kê doanh thu" as UC_AD4
+    usecase "Quản lý khuyến mãi" as UC_AD5
+  }
+
+  package "Chức năng dành cho Barista" as PBR {
+    usecase "Xem danh sách đơn cần pha chế" as UC_BR1
+    usecase "Cập nhật trạng thái đơn hàng" as UC_BR2
+  }
+}
+
+UC_DN .> UC_PQ : <<include>>
+UC_403 .> UC_PQ : <<extend>>
+
+' ===== Khách hàng (bên TRÁI) =====
+KH -- UC_DN
+KH -- UC_DX
+KH -- UC_DK
+KH -- UC_MENU
+KH -- UC_CT
+KH -- UC_GH
+KH -- UC_DH
+KH -- UC_LS
+
+' ===== Đẩy khung Admin & Barista sang cột bên PHẢI =====
+UC_CT -[hidden]--> UC_AD1
+UC_CT -[hidden]--> UC_AD2
+UC_CT -[hidden]--> UC_AD3
+UC_CT -[hidden]--> UC_AD4
+UC_CT -[hidden]--> UC_AD5
+UC_CT -[hidden]--> UC_BR1
+UC_CT -[hidden]--> UC_BR2
+UC_AD5 -[hidden]-> UC_BR1
+
+' ===== Admin & Barista (bên PHẢI) =====
+UC_AD1 -- AD
+UC_AD2 -- AD
+UC_AD3 -- AD
+UC_AD4 -- AD
+UC_AD5 -- AD
+UC_BR1 -- BR
+UC_BR2 -- BR
+
+' ===== Admin & Barista dùng chung Đăng nhập / Đăng xuất =====
+UC_DN -- AD
+UC_DX -- AD
+UC_DN -- BR
+UC_DX -- BR
+
+legend bottom
+  Mỗi tài khoản có 1 vai trò (CUSTOMER / BARISTA / ADMIN), cùng đăng nhập qua một trang chung.
+  Sau khi đăng nhập, hệ thống chỉ cho truy cập chức năng đúng vai trò.
+endlegend
+@enduml
