@@ -14,7 +14,7 @@ describe('CheckoutController', () => {
   });
 
   it('xem trước tổng checkout bằng một request', async () => {
-    const items = [{ productId: 'product-1', size: 'M', qty: 1 }];
+    const items = [{ productId: 'product-1', size: 'M' as const, qty: 1 }];
     const preview = { subtotal: 100000, total: 85000 };
     discounts.previewCheckout.mockResolvedValue(preview);
 

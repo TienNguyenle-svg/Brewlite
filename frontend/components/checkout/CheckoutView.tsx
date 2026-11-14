@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ApiError,
+  PENDING_ORDER_IDEMPOTENCY_KEY,
+  PENDING_ORDER_REQUEST_FINGERPRINT,
   PENDING_PAYMENT_ORDER_KEY,
   createOrder,
   createPayment,
@@ -55,7 +57,7 @@ export default function CheckoutView() {
     try {
       let orderId = pendingOrderId;
       if (!orderId) {
-        const order = await createOrder({
+        const orderInput = {
           items: cart.items.map(({ productId, size, qty }) => ({
             productId,
             size,
@@ -63,7 +65,29 @@ export default function CheckoutView() {
             toppingIds: [],
           })),
           ...deliveryDetails,
-        });
+        };
+        const requestFingerprint = JSON.stringify(orderInput);
+        let orderIdempotencyKey = sessionStorage.getItem(
+          PENDING_ORDER_IDEMPOTENCY_KEY,
+        );
+        if (
+          !orderIdempotencyKey ||
+          sessionStorage.getItem(PENDING_ORDER_REQUEST_FINGERPRINT) !==
+            requestFingerprint
+        ) {
+          const randomDigits = crypto.getRandomValues(new Uint32Array(1))[0];
+          orderIdempotencyKey = `ORD-${Date.now()}${randomDigits}`;
+          sessionStorage.setItem(
+            PENDING_ORDER_IDEMPOTENCY_KEY,
+            orderIdempotencyKey,
+          );
+          sessionStorage.setItem(
+            PENDING_ORDER_REQUEST_FINGERPRINT,
+            requestFingerprint,
+          );
+        }
+
+        const order = await createOrder(orderInput, orderIdempotencyKey);
         orderId = order.id;
         setPendingOrderId(orderId);
       }
@@ -76,6 +100,8 @@ export default function CheckoutView() {
       sessionStorage.setItem(PENDING_PAYMENT_ORDER_KEY, orderId);
 
       if (paymentResult.status === "SUCCEEDED") {
+        sessionStorage.removeItem(PENDING_ORDER_IDEMPOTENCY_KEY);
+        sessionStorage.removeItem(PENDING_ORDER_REQUEST_FINGERPRINT);
         router.replace(
           `/payment/result?status=success&orderId=${encodeURIComponent(orderId)}`,
         );
@@ -94,6 +120,8 @@ export default function CheckoutView() {
         throw new ApiError("Đường dẫn thanh toán VNPay không hợp lệ.", 502);
       }
 
+      sessionStorage.removeItem(PENDING_ORDER_IDEMPOTENCY_KEY);
+      sessionStorage.removeItem(PENDING_ORDER_REQUEST_FINGERPRINT);
       window.location.assign(paymentUrl.toString());
     } catch (cause) {
       setError(
