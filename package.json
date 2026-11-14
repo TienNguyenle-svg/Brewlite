@@ -4,12 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:integration": "pnpm --dir backend run test:integration:workspace",
+    "test:e2e": "playwright test --config playwright.config.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "vnpay": "^2.5.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
   }
 }

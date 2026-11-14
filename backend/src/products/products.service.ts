@@ -22,9 +22,28 @@ export class ProductsService {
       orderBy,
       include: {
         recipes: {
-          include: { ingredient: true },
+          include: {
+            ingredient: {
+              select: {
+                id: true,
+                name: true,
+                stock: true,
+                reservedQuantity: true,
+                unit: true,
+              },
+            },
+          },
         },
-        toppings: true,
+        toppings: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            stock: true,
+            reservedQuantity: true,
+            productId: true,
+          },
+        },
       },
     });
 
@@ -55,13 +74,35 @@ export class ProductsService {
   async findOne(id: string) {
     const product = await this.prisma.product.findUnique({
       where: { id },
-      include: { recipes: { include: { ingredient: true } } },
+      include: {
+        recipes: {
+          include: {
+            ingredient: {
+              select: {
+                id: true,
+                name: true,
+                stock: true,
+                reservedQuantity: true,
+                unit: true,
+              },
+            },
+          },
+        },
+      },
     });
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
 
     // Luôn trả toàn bộ topping, không phụ thuộc món nào
     const toppings = await this.prisma.topping.findMany({
       orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+        reservedQuantity: true,
+        productId: true,
+      },
     });
 
     return { ...product, toppings };

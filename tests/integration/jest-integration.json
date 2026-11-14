@@ -1,0 +1,17 @@
+{
+  "rootDir": "../..",
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "testEnvironment": "node",
+  "setupFiles": ["<rootDir>/tests/integration/test-env.cjs"],
+  "testMatch": ["<rootDir>/tests/integration/**/*.integration-spec.ts"],
+  "moduleDirectories": ["node_modules", "<rootDir>/backend/node_modules"],
+  "transform": {
+    "^.+\\.(t|j)s$": [
+      "<rootDir>/backend/node_modules/ts-jest",
+      {
+        "tsconfig": "<rootDir>/backend/tsconfig.json"
+      }
+    ]
+  },
+  "testTimeout": 60000
+}

@@ -1,15 +1,23 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { createHash } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InventoryService } from '../inventory/inventory.service';
+import { DiscountsService } from '../discounts/discounts.service';
 
 @Injectable()
 export class OrdersService {
   constructor(
     private prisma: PrismaService,
-    private inventoryService: InventoryService
+    private inventoryService: InventoryService,
+    private discountsService: DiscountsService,
   ) {}
 
   private getSizeMultiplier(size: string) {
@@ -18,9 +26,36 @@ export class OrdersService {
     return 1.0;
   }
 
-  async create(dto: CreateOrderDto, userId: string) {
+  async create(
+    dto: CreateOrderDto,
+    userId: string,
+    idempotencyKey: string,
+  ) {
+    if (
+      typeof idempotencyKey !== 'string' ||
+      !/^ORD-\d+$/.test(idempotencyKey)
+    ) {
+      throw new BadRequestException(
+        'Idempotency-Key phải có dạng ORD-<số>, ví dụ ORD-1',
+      );
+    }
+
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new BadRequestException('User không hợp lệ');
+
+    const requestHash = idempotencyKey
+      ? this.hashOrderRequest(dto)
+      : null;
+
+    if (idempotencyKey) {
+      const existingOrder = await this.findOrderByIdempotencyKey(
+        userId,
+        idempotencyKey,
+      );
+      if (existingOrder) {
+        return this.replayOrder(existingOrder, requestHash);
+      }
+    }
 
     let subTotal = 0;
     const orderItems: any[] = [];
@@ -87,41 +122,123 @@ export class OrdersService {
     const finalTotal = subTotal - discountAmount - pointsDiscount + shippingFee;
 
     // 4. TRANSACTION: TẠO ĐƠN, GIỮ KHO VÀ GIỮ ĐIỂM
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const newOrder = await tx.order.create({
-        data: {
-          userId: user.id,
-          subtotal: subTotal, 
-          total: finalTotal,
-          shippingFee: shippingFee,
-          discountAmount: discountAmount + pointsDiscount,
-          pointsUsed: pointsUsed, 
-          pointsDiscount: pointsDiscount,
-          status: 'PENDING',
-          items: { create: orderItems },
-          receiverName: dto.receiverName,
-          receiverPhone: dto.receiverPhone,
-          deliveryAddress: dto.deliveryAddress,
-          promotionId: promotionId,
+    try {
+      const newOrder = await this.prisma.$transaction(
+        async (tx: Prisma.TransactionClient) => {
+          const createdOrder = await tx.order.create({
+            data: {
+              userId: user.id,
+              subtotal: subTotal,
+              total: finalTotal,
+              shippingFee,
+              discountAmount: discountAmount + pointsDiscount,
+              pointsUsed,
+              pointsDiscount,
+              status: 'PENDING',
+              items: { create: orderItems },
+              receiverName: dto.receiverName,
+              receiverPhone: dto.receiverPhone,
+              deliveryAddress: dto.deliveryAddress,
+              promotionId,
+            },
+            include: { items: { include: { toppings: true } } },
+          });
+
+          await this.discountsService.validatePromotionForOrder(
+            tx,
+            createdOrder,
+          );
+
+          if (idempotencyKey && requestHash) {
+            await tx.orderIdempotency.create({
+              data: {
+                userId: user.id,
+                idempotencyKey,
+                requestHash,
+                orderId: createdOrder.id,
+              },
+            });
+          }
+
+          await this.inventoryService.reserveOrder(tx, createdOrder.id);
+
+          if (pointsUsed > 0) {
+            const updated = await tx.$executeRaw`
+              UPDATE "User"
+              SET "reservedPoints" = "reservedPoints" + ${pointsUsed}
+              WHERE "id" = ${user.id} AND ("loyaltyPoints" - "reservedPoints") >= ${pointsUsed}
+            `;
+            if (updated === 0) {
+              throw new BadRequestException(
+                'Không đủ điểm thưởng khả dụng.',
+              );
+            }
+          }
+
+          return createdOrder;
         },
-        include: { items: { include: { toppings: true } } },
-      });
-
-      // Giữ kho
-      await this.inventoryService.reserveOrder(tx, newOrder.id);
-
-      // Giữ điểm thưởng
-      if (pointsUsed > 0) {
-        const updated = await tx.$executeRaw`
-          UPDATE "User"
-          SET "reservedPoints" = "reservedPoints" + ${pointsUsed}
-          WHERE "id" = ${user.id} AND ("loyaltyPoints" - "reservedPoints") >= ${pointsUsed}
-        `;
-        if (updated === 0) throw new BadRequestException('Không đủ điểm thưởng khả dụng.');
-      }
+      );
 
       return newOrder;
+    } catch (error) {
+      if (
+        idempotencyKey &&
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const racedOrder = await this.findOrderByIdempotencyKey(
+          userId,
+          idempotencyKey,
+        );
+        if (racedOrder) {
+          return this.replayOrder(racedOrder, requestHash);
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  private hashOrderRequest(dto: CreateOrderDto): string {
+    const request = {
+      items: dto.items.map((item) => ({
+        productId: item.productId,
+        size: item.size,
+        qty: item.qty,
+        toppingIds: [...(item.toppingIds ?? [])].sort(),
+      })),
+      receiverName: dto.receiverName,
+      receiverPhone: dto.receiverPhone,
+      deliveryAddress: dto.deliveryAddress,
+      promotionCode: dto.promotionCode ?? null,
+      usePoints: dto.usePoints ?? false,
+    };
+
+    return createHash('sha256').update(JSON.stringify(request)).digest('hex');
+  }
+
+  private findOrderByIdempotencyKey(userId: string, idempotencyKey: string) {
+    return this.prisma.orderIdempotency.findUnique({
+      where: {
+        userId_idempotencyKey: { userId, idempotencyKey },
+      },
+      include: {
+        order: { include: { items: { include: { toppings: true } } } },
+      },
     });
+  }
+
+  private replayOrder<T extends { requestHash: string; order: unknown }>(
+    order: T,
+    requestHash: string | null,
+  ): T['order'] {
+    if (order.requestHash !== requestHash) {
+      throw new ConflictException(
+        'Idempotency-Key này đã được dùng cho nội dung đơn hàng khác',
+      );
+    }
+
+    return order.order;
   }
 
   async markAsPaid(orderId: string) {
