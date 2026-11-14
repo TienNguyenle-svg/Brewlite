@@ -1,0 +1,43 @@
+@startuml
+skinparam shadowing false
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam ArrowColor Black
+skinparam ActivityBackgroundColor White
+skinparam ActivityBorderColor Black
+
+title <b>Activity Diagram – Xử lý đơn hàng của Nhân viên (Barista)</b>
+
+|#DAE8FC|Barista|
+start
+:Đăng nhập;
+
+|#FFF2CC|NestJS (Backend)|
+:Xác thực tài khoản, cấp JWT;
+if (Có quyền BARISTA?) then ([không])
+  :Từ chối truy cập (trang 403);
+  stop
+else ([có])
+endif
+
+|#D5E8D4|Next.js (Giao diện)|
+:Hiển thị danh sách đơn đang chờ
+(trạng thái PAID);
+
+|#DAE8FC|Barista|
+:Chọn đơn và bấm [Nhận đơn];
+
+|#FFF2CC|NestJS (Backend)|
+:Cập nhật trạng thái đơn
+PAID → PREPARING (Đang pha chế);
+
+|#DAE8FC|Barista|
+:Pha chế xong, bấm [Hoàn thành];
+
+|#FFF2CC|NestJS (Backend)|
+:Cập nhật trạng thái đơn
+PREPARING → READY (Sẵn sàng);
+:Lưu toàn bộ lịch sử cập nhật
+vào Database;
+stop
+@enduml
