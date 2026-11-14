@@ -80,7 +80,7 @@ export class OrdersService {
       }
 
       const finalProductPrice = Math.round(product.price * multiplier);
-      const lineTotal = (finalProductPrice * item.qty) + toppingPriceTotal;
+      const lineTotal = (finalProductPrice + toppingPriceTotal) * item.qty;
       subTotal += lineTotal;
 
       orderItems.push({
@@ -255,7 +255,6 @@ export class OrdersService {
         data: { status: 'PAID' },
       });
 
-      await this.inventoryService.settleOrder(tx, orderId);
 
       for (const item of order.items) {
         await tx.product.update({

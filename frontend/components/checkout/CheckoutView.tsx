@@ -58,11 +58,11 @@ export default function CheckoutView() {
       let orderId = pendingOrderId;
       if (!orderId) {
         const orderInput = {
-          items: cart.items.map(({ productId, size, qty }) => ({
+          items: cart.items.map(({ productId, size, qty, toppingIds }) => ({
             productId,
             size,
             qty,
-            toppingIds: [],
+            toppingIds: toppingIds || [], // <--- Lấy toppingIds từ giỏ hàng
           })),
           ...deliveryDetails,
         };
