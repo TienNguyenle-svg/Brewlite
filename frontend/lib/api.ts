@@ -182,6 +182,12 @@ export const createOrder = (
 
 export const getMyOrders = () => request<CustomerOrder[]>("/orders/me");
 
+export const cancelMyOrder = (orderId: string) =>
+  request<{ id: string; status: string }>(
+    `/orders/${encodeURIComponent(orderId)}/cancel`,
+    { method: "PATCH" },
+  );
+
 export const createPayment = (
   input: CreatePaymentInput,
   idempotencyKey: string,

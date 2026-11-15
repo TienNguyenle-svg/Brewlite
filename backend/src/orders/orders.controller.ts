@@ -56,7 +56,11 @@ export class OrdersController {
 
   @Patch(':id/cancel')
   @ApiOperation({ summary: 'Khách hủy đơn (Chỉ khi PAID) và hoàn tiền, hoàn kho' })
-  cancelOrder(@Param('id') id: string) {
-    return this.ordersService.cancelOrder(id);
+  cancelOrder(@Param('id') id: string, @Request() req: any) {
+    if (req.user.role !== 'CUSTOMER') {
+      throw new ForbiddenException('Chỉ khách hàng mới có quyền hủy đơn');
+    }
+
+    return this.ordersService.cancelOrder(id, req.user.id);
   }
 }
