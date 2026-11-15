@@ -62,12 +62,22 @@ export default function CartView() {
           onRemove={cart.removePromo}
         />
 
-        <Link
-          href="/checkout"
-          className="mt-[22px] flex h-12 items-center justify-center rounded-xl bg-[#39281F] text-sm font-semibold text-white"
-        >
-          Đặt hàng
-        </Link>
+        {cart.items.length === 0 ? (
+          <button
+            type="button"
+            disabled
+            className="mt-[22px] flex h-12 w-full cursor-not-allowed items-center justify-center rounded-xl bg-[#39281F] text-sm font-semibold text-white opacity-50"
+          >
+            Đặt hàng
+          </button>
+        ) : (
+          <Link
+            href="/checkout"
+            className="mt-[22px] flex h-12 items-center justify-center rounded-xl bg-[#39281F] text-sm font-semibold text-white"
+          >
+            Đặt hàng
+          </Link>
+        )}
         <p className="mt-[21px] text-center text-[11px] text-[#82776E]">
           ♡ Freshly made · Secure checkout
         </p>

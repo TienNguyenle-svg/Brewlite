@@ -305,13 +305,17 @@ export class OrdersService {
     });
   }
 
-  async cancelOrder(orderId: string) {
+  async cancelOrder(orderId: string, requestingUserId?: string) {
     const order = await this.prisma.order.findUnique({ 
       where: { id: orderId },
       include: { items: true, payments: true } 
     });
     
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+
+    if (requestingUserId && order.userId !== requestingUserId) {
+      throw new NotFoundException('Không tìm thấy đơn hàng');
+    }
     
     if (order.status !== 'PAID' && order.status !== 'PENDING') {
       throw new BadRequestException('Chỉ có thể hủy đơn PENDING hoặc PAID.');
