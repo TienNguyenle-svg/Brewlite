@@ -54,34 +54,38 @@ export default function PaymentResult() {
   useEffect(() => {
     let active = true;
 
-    ensureCartHydrated().then(() => {
-      if (!active) return;
+    ensureCartHydrated()
+      .then(() => {
+        if (!active) return;
 
-      const expectedOrderId = sessionStorage.getItem(
-        PENDING_PAYMENT_ORDER_KEY,
-      );
-      if (!orderId || expectedOrderId !== orderId) {
-        setResult("invalid");
-        return;
-      }
-
-      if (status === "success") {
-        useCartStore.getState().clear();
-        sessionStorage.removeItem(PENDING_PAYMENT_ORDER_KEY);
-        clearRetryPaymentKey();
-        setResult("success");
-      } else if (status === "failed") {
-        setResult("failed");
-        if (
-          sessionStorage.getItem(RETRY_PAYMENT_ORDER_KEY) === orderId &&
-          sessionStorage.getItem(RETRY_PAYMENT_REDIRECTED_KEY) === "true"
-        ) {
-          clearRetryPaymentKey();
+        const expectedOrderId = sessionStorage.getItem(
+          PENDING_PAYMENT_ORDER_KEY,
+        );
+        if (!orderId || expectedOrderId !== orderId) {
+          setResult("invalid");
+          return;
         }
-      } else {
-        setResult("invalid");
-      }
-    });
+
+        if (status === "success") {
+          useCartStore.getState().clear();
+          sessionStorage.removeItem(PENDING_PAYMENT_ORDER_KEY);
+          clearRetryPaymentKey();
+          setResult("success");
+        } else if (status === "failed") {
+          setResult("failed");
+          if (
+            sessionStorage.getItem(RETRY_PAYMENT_ORDER_KEY) === orderId &&
+            sessionStorage.getItem(RETRY_PAYMENT_REDIRECTED_KEY) === "true"
+          ) {
+            clearRetryPaymentKey();
+          }
+        } else {
+          setResult("invalid");
+        }
+      })
+      .catch(() => {
+        if (active) setResult("invalid");
+      });
 
     return () => {
       active = false;
@@ -135,7 +139,15 @@ export default function PaymentResult() {
   };
 
   if (result === "loading") {
-    return <p className="py-16 text-center text-sm text-[#82776E]">Đang xác nhận kết quả thanh toán…</p>;
+    return (
+      <p
+        role="status"
+        aria-live="polite"
+        className="py-16 text-center text-sm text-[#82776E]"
+      >
+        Đang xác nhận kết quả thanh toán…
+      </p>
+    );
   }
 
   const successful = result === "success";

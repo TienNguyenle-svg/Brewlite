@@ -7,6 +7,7 @@ import {
   PENDING_ORDER_IDEMPOTENCY_KEY,
   PENDING_ORDER_REQUEST_FINGERPRINT,
   PENDING_PAYMENT_ORDER_KEY,
+  PENDING_PAYMENT_IDEMPOTENCY_KEY,
   createOrder,
   createPayment,
   getAccessToken,
@@ -56,16 +57,39 @@ export default function CheckoutView() {
     setError(null);
     try {
       let orderId = pendingOrderId;
+
+      if (!orderId) {
+        // Hỗ trợ thanh toán lại đơn đã tạo trước đó (từ trang kết quả thanh toán)
+        const retryOrderId = new URLSearchParams(window.location.search).get(
+          "retryOrderId",
+        );
+        if (retryOrderId) {
+          const expectedOrderId = sessionStorage.getItem(
+            PENDING_PAYMENT_ORDER_KEY,
+          );
+          if (retryOrderId !== expectedOrderId) {
+            throw new ApiError(
+              "Không thể tiếp tục thanh toán lại đơn hàng này.",
+              400,
+            );
+          }
+          orderId = retryOrderId;
+        }
+      }
+
       if (!orderId) {
         const orderInput = {
           items: cart.items.map(({ productId, size, qty, toppingIds }) => ({
             productId,
             size,
             qty,
-            toppingIds: toppingIds || [], // <--- Lấy toppingIds từ giỏ hàng
+            toppingIds: toppingIds || [], // Lấy toppingIds từ giỏ hàng
           })),
           ...deliveryDetails,
+          promotionCode: cart.promo?.code,
+          usePoints: cart.usePoints,
         };
+
         const requestFingerprint = JSON.stringify(orderInput);
         let orderIdempotencyKey = sessionStorage.getItem(
           PENDING_ORDER_IDEMPOTENCY_KEY,
@@ -90,14 +114,17 @@ export default function CheckoutView() {
         const order = await createOrder(orderInput, orderIdempotencyKey);
         orderId = order.id;
         setPendingOrderId(orderId);
+        sessionStorage.setItem(PENDING_PAYMENT_ORDER_KEY, orderId);
       }
 
       const idempotencyKey =
-        paymentIdempotencyKey ?? `PAY-${Date.now()}`;
+        paymentIdempotencyKey ??
+        sessionStorage.getItem(PENDING_PAYMENT_IDEMPOTENCY_KEY) ??
+        `PAY-${Date.now()}`;
       setPaymentIdempotencyKey(idempotencyKey);
-      const paymentResult = await createPayment({ orderId }, idempotencyKey);
-
       sessionStorage.setItem(PENDING_PAYMENT_ORDER_KEY, orderId);
+      sessionStorage.setItem(PENDING_PAYMENT_IDEMPOTENCY_KEY, idempotencyKey);
+      const paymentResult = await createPayment({ orderId }, idempotencyKey);
 
       if (paymentResult.status === "SUCCEEDED") {
         sessionStorage.removeItem(PENDING_ORDER_IDEMPOTENCY_KEY);

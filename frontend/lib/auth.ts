@@ -1,6 +1,7 @@
 // Dùng chung ApiError và khóa token ("accessToken") với lib/api.ts của nhóm,
 // để các trang khác (giỏ hàng, đơn hàng, barista) tự nhận token sau khi đăng nhập.
 import { ApiError, TOKEN_KEY } from "./api";
+import { useMemo, useSyncExternalStore } from "react";
 
 export { ApiError };
 
@@ -24,6 +25,29 @@ interface LoginResponse {
 }
 
 const USER_KEY = "brewlite_user";
+
+function subscribeToUser(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === USER_KEY || event.key === null) callback();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+}
+
+function getUserSnapshot() {
+  return typeof window === "undefined" ? null : localStorage.getItem(USER_KEY);
+}
+
+function parseUser(raw: string | null): AuthUser | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    return null;
+  }
+}
 
 // Trang đích sau khi đăng nhập, theo role.
 // CUSTOMER: sửa lại cho đúng đường dẫn trang Menu của nhóm nếu không phải "/".
@@ -108,13 +132,12 @@ export function getToken(): string | null {
 }
 
 export function getUser(): AuthUser | null {
-  const raw = localStorage.getItem(USER_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthUser;
-  } catch {
-    return null;
-  }
+  return parseUser(getUserSnapshot());
+}
+
+export function useUser(): AuthUser | null {
+  const raw = useSyncExternalStore(subscribeToUser, getUserSnapshot, () => null);
+  return useMemo(() => parseUser(raw), [raw]);
 }
 
 export function clearSession() {

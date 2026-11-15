@@ -52,7 +52,7 @@ export function OrderCard({ order, busy, onAdvance }: Props) {
             <li key={item.id} className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={item.product.imageUrl ?? '/placeholder-drink.png'}
+                src={item.product.imageUrl ?? '/images/hero-1.jpg'}
                 alt={item.product.name}
                 className="h-[52px] w-[52px] rounded-[10px] bg-[#F1EDE7] object-cover"
               />

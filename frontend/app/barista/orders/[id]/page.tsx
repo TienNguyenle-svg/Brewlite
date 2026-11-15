@@ -70,8 +70,23 @@ function OrderDetail() {
   if (!order) {
     return (
       <div className="flex flex-col items-center gap-4 py-16 text-sm text-[#82776E]">
-        <p>Không tìm thấy đơn này trong hàng đợi (có thể đã hoàn thành).</p>
-        {error && <p className="text-[#A6564F]">{error}</p>}
+        {error ? (
+          <>
+            <p role="alert" className="text-[#A6564F]">{error}</p>
+            <button
+              type="button"
+              onClick={async () => {
+                setLoading(true);
+                await loadData();
+              }}
+              className="font-semibold text-[#B9672B]"
+            >
+              Thử tải lại
+            </button>
+          </>
+        ) : (
+          <p>Không tìm thấy đơn này trong hàng đợi (có thể đã hoàn thành).</p>
+        )}
         <Link href="/barista/orders" className="font-semibold text-[#B9672B]">
           ← Về hàng đợi đơn
         </Link>
@@ -137,7 +152,7 @@ function OrderDetail() {
               <li key={item.id} className="flex items-center gap-4">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.product.imageUrl ?? '/placeholder-drink.png'}
+                  src={item.product.imageUrl ?? '/images/hero-1.jpg'}
                   alt={item.product.name}
                   className="h-16 w-16 rounded-[10px] bg-[#F1EDE7] object-cover"
                 />

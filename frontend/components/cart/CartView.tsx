@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { getLoyalty } from "@/lib/api";
+import { getToken, saveSession, useUser } from "@/lib/auth";
 import { useCart } from "@/lib/cart-store";
 import { money } from "@/lib/format";
 import CartItemRow from "./CartItemRow";
@@ -8,6 +11,58 @@ import PromoForm from "./PromoForm";
 
 export default function CartView() {
   const cart = useCart();
+  const user = useUser();
+  const [loyalty, setLoyalty] = useState<{
+    userId: string;
+    points: number;
+  } | null>(null);
+  const [loyaltyError, setLoyaltyError] = useState<{
+    userId: string;
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let active = true;
+    void (async () => {
+      try {
+        const summary = await getLoyalty();
+        if (!active) return;
+        setLoyalty({ userId: user.id, points: summary.availablePoints });
+        const token = getToken();
+        if (token) {
+          saveSession(token, { ...user, loyaltyPoints: summary.availablePoints });
+        }
+      } catch (error) {
+        if (active) {
+          setLoyaltyError(
+            {
+              userId: user.id,
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Không thể tải điểm thưởng.",
+            },
+          );
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
+
+  const loyaltyErrorMessage =
+    user && loyaltyError?.userId === user.id ? loyaltyError.message : null;
+  const availablePoints =
+    user && loyalty?.userId === user.id
+      ? loyalty.points
+      : (user?.loyaltyPoints ?? 0);
+  const loyaltyLoading =
+    !!user && loyalty?.userId !== user.id && !loyaltyErrorMessage;
+  const canRedeemPoints = availablePoints >= 100;
 
   return (
     <div className="mt-[42px] grid items-start gap-9 lg:grid-cols-[minmax(0,1fr)_440px]">
@@ -35,6 +90,43 @@ export default function CartView() {
         <h2 className="text-[21px] font-semibold leading-[25px]">
           Đơn hàng
         </h2>
+        {user && (
+          <div className="mt-[24px] rounded-xl border border-[#E7E1DA] bg-[#F7F2ED] p-3.5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.08em] text-[#82776E]">
+                  Điểm thưởng
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[#39281F]">
+                  {loyaltyLoading
+                    ? "Đang tải điểm thưởng…"
+                    : `${availablePoints} điểm khả dụng`}
+                </p>
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-2 text-[12px] font-medium text-[#39281F]">
+                <input
+                  type="checkbox"
+                  checked={cart.usePoints && canRedeemPoints}
+                  disabled={!canRedeemPoints}
+                  onChange={(e) => cart.setUsePoints(e.target.checked)}
+                  className="size-[15px] accent-[#B9672B]"
+                />
+                Dùng điểm
+              </label>
+            </div>
+            {loyaltyErrorMessage && (
+              <p role="alert" className="mt-2 text-[10px] text-[#A6564F]">
+                Không thể cập nhật điểm thưởng: {loyaltyErrorMessage}
+              </p>
+            )}
+            {!canRedeemPoints && (
+              <p className="mt-2 text-[10px] text-[#82776E]">
+                Cần tối thiểu 100 điểm để đổi thưởng.
+              </p>
+            )}
+          </div>
+        )}
+
         <dl className="mt-[33px] flex flex-col gap-[22px] text-sm">
           <div className="flex justify-between">
             <dt className="text-[#82776E]">Tổng cộng</dt>
@@ -48,6 +140,12 @@ export default function CartView() {
             <div className="flex justify-between text-[#406B4A]">
               <dt>Giảm giá ({cart.promo.code})</dt>
               <dd className="font-medium">−{money(cart.discount)}</dd>
+            </div>
+          )}
+          {cart.usePoints && cart.pointsDiscount > 0 && (
+            <div className="flex justify-between text-[#406B4A]">
+              <dt>Dùng điểm thưởng</dt>
+              <dd className="font-medium">−{money(cart.pointsDiscount)}</dd>
             </div>
           )}
         </dl>
