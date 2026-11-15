@@ -22,7 +22,9 @@
     "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./jest.config.ts --watch",
     "test:cov": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./jest.config.ts --coverage",
     "test:debug": "node --inspect-brk --experimental-vm-modules -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --config ./jest.config.ts --runInBand",
-    "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json"
+    "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-e2e.json",
+    "test:integration": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./test/jest-integration.json --runInBand",
+    "test:integration:workspace": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ../tests/integration/jest-integration.json --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -54,6 +56,7 @@
     "@types/node": "^24.0.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^7.0.0",
+    "dotenv": "^18.0.10",
     "jest": "^30.5.2",
     "oxlint": "^1.58.0",
     "oxlint-tsgolint": "^7.0.2001",

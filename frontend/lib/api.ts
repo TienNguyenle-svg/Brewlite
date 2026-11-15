@@ -19,6 +19,10 @@ export const TOKEN_KEY = "accessToken";
 export const PENDING_PAYMENT_ORDER_KEY = "brewlite-pending-payment-order";
 export const PENDING_PAYMENT_IDEMPOTENCY_KEY =
   "brewlite-pending-payment-idempotency-key";
+export const PENDING_ORDER_IDEMPOTENCY_KEY =
+  "brewlite-pending-order-idempotency-key";
+export const PENDING_ORDER_REQUEST_FINGERPRINT =
+  "brewlite-pending-order-request-fingerprint";
 
 export class ApiError extends Error {
   constructor(
@@ -207,9 +211,15 @@ export async function getProduct(id: string): Promise<ApiProduct> {
   return normalizeProduct(product);
 }
 
-export const createOrder = (input: CreateOrderInput) =>
+export const createOrder = (
+  input: CreateOrderInput,
+  idempotencyKey?: string,
+) =>
   request<OrderReceipt>("/orders", {
     method: "POST",
+    headers: idempotencyKey
+      ? { "Idempotency-Key": idempotencyKey }
+      : undefined,
     body: JSON.stringify(input),
   });
 
@@ -222,6 +232,12 @@ export const previewCheckout = (input: CheckoutPreviewInput) =>
 export const getMyOrders = () => request<CustomerOrder[]>("/orders/me");
 
 export const getLoyalty = () => request<LoyaltySummary>("/users/me/loyalty");
+
+export const cancelMyOrder = (orderId: string) =>
+  request<{ id: string; status: string }>(
+    `/orders/${encodeURIComponent(orderId)}/cancel`,
+    { method: "PATCH" },
+  );
 
 export const createPayment = (
   input: CreatePaymentInput,

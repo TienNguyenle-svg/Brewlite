@@ -43,6 +43,7 @@ model Ingredient {
   name            String
   stock           Float
   reservedQuantity Float   @default(0)
+  version         Int      @default(0)
   unit            String   @default("gram")
   recipes         Recipe[]
 }
@@ -62,6 +63,7 @@ model Topping {
   price             Int                @default(0)
   stock             Int                @default(50)
   reservedQuantity  Int                @default(0)
+  version           Int                @default(0)
   productId         String?
   product           Product?           @relation(fields: [productId], references: [id])
   orderItemToppings OrderItemTopping[]
@@ -99,6 +101,18 @@ model Order {
   receiverName    String?
   receiverPhone   String?
   deliveryAddress String?
+  idempotencyRecords OrderIdempotency[]
+}
+
+model OrderIdempotency {
+  id             String @id @default(uuid())
+  userId         String
+  idempotencyKey String
+  requestHash    String
+  orderId        String @unique
+  order          Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
 }
 
 model OrderItem {

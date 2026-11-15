@@ -69,7 +69,7 @@ export default function Hero() {
             Thức uống yêu thích
           </a>
           <span className="text-xs text-[#E4E8CF]">
-            Giảm 10% cho đơn đầu tiên · GUDMUD
+            Giảm 10% cho đơn đầu tiên · WELCOME10
           </span>
         </div>
       </div>

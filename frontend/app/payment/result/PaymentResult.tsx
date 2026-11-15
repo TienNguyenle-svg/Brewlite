@@ -1,23 +1,55 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-  PENDING_PAYMENT_IDEMPOTENCY_KEY,
+  ApiError,
+  createPayment,
   PENDING_PAYMENT_ORDER_KEY,
 } from "@/lib/api";
 import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 
 type PaymentResultStatus = "loading" | "success" | "failed" | "invalid";
 
+const RETRY_PAYMENT_KEY = "brewlite-payment-retry-key";
+const RETRY_PAYMENT_ORDER_KEY = "brewlite-payment-retry-order";
+const RETRY_PAYMENT_REDIRECTED_KEY = "brewlite-payment-retry-redirected";
+
+function getRetryPaymentKey(orderId: string): string {
+  const savedKey = sessionStorage.getItem(RETRY_PAYMENT_KEY);
+  const savedOrderId = sessionStorage.getItem(RETRY_PAYMENT_ORDER_KEY);
+  if (
+    savedOrderId === orderId &&
+    savedKey &&
+    /^PAY-\d{1,15}$/.test(savedKey)
+  ) {
+    return savedKey;
+  }
+
+  const randomDigits = crypto.getRandomValues(new Uint32Array(1))[0] % 100;
+  const key = `PAY-${Date.now()}${randomDigits.toString().padStart(2, "0")}`;
+  sessionStorage.setItem(RETRY_PAYMENT_KEY, key);
+  sessionStorage.setItem(RETRY_PAYMENT_ORDER_KEY, orderId);
+  return key;
+}
+
+function clearRetryPaymentKey() {
+  sessionStorage.removeItem(RETRY_PAYMENT_KEY);
+  sessionStorage.removeItem(RETRY_PAYMENT_ORDER_KEY);
+  sessionStorage.removeItem(RETRY_PAYMENT_REDIRECTED_KEY);
+}
+
 export default function PaymentResult() {
-  // Tự động lấy tham số từ URL ở phía Client
+  const router = useRouter();
   const searchParams = useSearchParams();
   const status = searchParams.get("status");
   const orderId = searchParams.get("orderId");
 
   const [result, setResult] = useState<PaymentResultStatus>("loading");
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const retryInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -37,11 +69,16 @@ export default function PaymentResult() {
         if (status === "success") {
           useCartStore.getState().clear();
           sessionStorage.removeItem(PENDING_PAYMENT_ORDER_KEY);
-          sessionStorage.removeItem(PENDING_PAYMENT_IDEMPOTENCY_KEY);
+          clearRetryPaymentKey();
           setResult("success");
         } else if (status === "failed") {
-          sessionStorage.removeItem(PENDING_PAYMENT_IDEMPOTENCY_KEY);
           setResult("failed");
+          if (
+            sessionStorage.getItem(RETRY_PAYMENT_ORDER_KEY) === orderId &&
+            sessionStorage.getItem(RETRY_PAYMENT_REDIRECTED_KEY) === "true"
+          ) {
+            clearRetryPaymentKey();
+          }
         } else {
           setResult("invalid");
         }
@@ -54,6 +91,52 @@ export default function PaymentResult() {
       active = false;
     };
   }, [orderId, status]);
+
+  const retryPayment = async () => {
+    if (!orderId || retryInFlight.current) return;
+
+    retryInFlight.current = true;
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const idempotencyKey = getRetryPaymentKey(orderId);
+      sessionStorage.setItem(RETRY_PAYMENT_REDIRECTED_KEY, "false");
+      const payment = await createPayment({ orderId }, idempotencyKey);
+
+      if (payment.status === "SUCCEEDED") {
+        clearRetryPaymentKey();
+        router.replace(
+          `/payment/result?status=success&orderId=${encodeURIComponent(orderId)}`,
+        );
+        return;
+      }
+
+      if (!payment.paymentUrl) {
+        throw new ApiError(
+          "Backend không trả về đường dẫn thanh toán VNPay.",
+          502,
+        );
+      }
+
+      const paymentUrl = new URL(payment.paymentUrl);
+      if (paymentUrl.protocol !== "https:") {
+        throw new ApiError("Đường dẫn thanh toán VNPay không hợp lệ.", 502);
+      }
+
+      sessionStorage.setItem(PENDING_PAYMENT_ORDER_KEY, orderId);
+      sessionStorage.setItem(RETRY_PAYMENT_REDIRECTED_KEY, "true");
+      window.location.assign(paymentUrl.toString());
+    } catch (cause) {
+      setRetryError(
+        cause instanceof Error
+          ? cause.message
+          : "Không thể khởi tạo lại thanh toán.",
+      );
+    } finally {
+      retryInFlight.current = false;
+      setRetrying(false);
+    }
+  };
 
   if (result === "loading") {
     return (
@@ -96,9 +179,14 @@ export default function PaymentResult() {
         {successful
           ? "VNPay đã xác nhận giao dịch. Đơn hàng của bạn đang được xử lý."
           : result === "failed"
-            ? "Giỏ hàng và đơn hàng được giữ lại. Bạn có thể thử thanh toán lại trong vòng 10 phút."
+            ? "Đơn hàng này vẫn được giữ để bạn thử thanh toán lại trong thời hạn cho phép. Bạn không cần tạo đơn mới."
             : "Liên kết kết quả không khớp với lượt thanh toán hiện tại. Giỏ hàng được giữ nguyên."}
       </p>
+      {retryError && (
+        <p role="alert" className="mt-3 text-sm text-[#A6564F]">
+          {retryError}
+        </p>
+      )}
       {orderId && (
         <p className="mt-4 text-sm">
           Mã đơn: <span className="font-semibold">{orderId}</span>
@@ -106,14 +194,16 @@ export default function PaymentResult() {
       )}
       <div className="mt-6 flex flex-wrap gap-3">
         {result === "failed" && orderId && (
-          <Link
-            href={`/checkout?retryOrderId=${encodeURIComponent(orderId)}`}
-            className="inline-flex rounded-xl bg-[#39281F] px-5 py-3 text-sm font-semibold text-white"
+          <button
+            type="button"
+            onClick={retryPayment}
+            disabled={retrying}
+            className="inline-flex rounded-xl bg-[#39281F] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
           >
-            Thử thanh toán lại
-          </Link>
+            {retrying ? "Đang kết nối VNPay…" : "Thanh toán lại đơn này"}
+          </button>
         )}
-        {!successful && (
+        {result === "invalid" && (
           <Link
             href="/cart"
             className="inline-flex rounded-xl bg-[#39281F] px-5 py-3 text-sm font-semibold text-white"

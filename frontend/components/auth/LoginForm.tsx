@@ -151,6 +151,8 @@ export default function LoginForm() {
           ? err.message
           : "Đã có lỗi xảy ra, vui lòng thử lại.",
       );
+    } finally {
+      // Luôn tắt loading, dù đăng nhập thành công hay lỗi
       setLoading(false);
     }
   }

@@ -3,6 +3,8 @@ import { Prisma } from '@prisma/client';
 
 type InventoryTransaction = Prisma.TransactionClient;
 
+const MAX_RESERVATION_ATTEMPTS = 3;
+
 @Injectable()
 export class InventoryService {
   async reserveOrder(tx: InventoryTransaction, orderId: string): Promise<void> {
@@ -12,30 +14,76 @@ export class InventoryService {
     for (const [ingredientId, required] of quantities.ingredients) {
       if (required <= 0) continue;
 
-      const updated = await tx.$executeRaw`
-        UPDATE "Ingredient"
-        SET "reservedQuantity" = "reservedQuantity" + ${required}
-        WHERE "id" = ${ingredientId}
-          AND "stock" - "reservedQuantity" >= ${required}
-      `;
+      let reserved = false;
+      for (let attempt = 0; attempt < MAX_RESERVATION_ATTEMPTS; attempt += 1) {
+        const ingredient = await tx.ingredient.findUnique({
+          where: { id: ingredientId },
+          select: { version: true, stock: true, reservedQuantity: true },
+        });
+        if (
+          !ingredient ||
+          ingredient.stock - ingredient.reservedQuantity < required
+        ) {
+          throw new ConflictException('Hết nguyên liệu khi giữ chỗ đơn hàng');
+        }
 
-      if (updated === 0) {
-        throw new ConflictException('Hết nguyên liệu khi giữ chỗ đơn hàng');
+        const updated = await tx.$executeRaw`
+          UPDATE "Ingredient"
+          SET "reservedQuantity" = "reservedQuantity" + ${required},
+              "version" = "version" + 1
+          WHERE "id" = ${ingredientId}
+            AND "version" = ${ingredient.version}
+            AND "stock" - "reservedQuantity" >= ${required}
+        `;
+
+        if (updated > 0) {
+          reserved = true;
+          break;
+        }
+      }
+
+      if (!reserved) {
+        throw new ConflictException(
+          'Tồn kho nguyên liệu đang thay đổi. Vui lòng thử lại',
+        );
       }
     }
 
     for (const [toppingId, required] of quantities.toppings) {
       if (required <= 0) continue;
 
-      const updated = await tx.$executeRaw`
-        UPDATE "Topping"
-        SET "reservedQuantity" = "reservedQuantity" + ${required}
-        WHERE "id" = ${toppingId}
-          AND "stock" - "reservedQuantity" >= ${required}
-      `;
+      let reserved = false;
+      for (let attempt = 0; attempt < MAX_RESERVATION_ATTEMPTS; attempt += 1) {
+        const topping = await tx.topping.findUnique({
+          where: { id: toppingId },
+          select: { version: true, stock: true, reservedQuantity: true },
+        });
+        if (
+          !topping ||
+          topping.stock - topping.reservedQuantity < required
+        ) {
+          throw new ConflictException('Hết topping khi giữ chỗ đơn hàng');
+        }
 
-      if (updated === 0) {
-        throw new ConflictException('Hết topping khi giữ chỗ đơn hàng');
+        const updated = await tx.$executeRaw`
+          UPDATE "Topping"
+          SET "reservedQuantity" = "reservedQuantity" + ${required},
+              "version" = "version" + 1
+          WHERE "id" = ${toppingId}
+            AND "version" = ${topping.version}
+            AND "stock" - "reservedQuantity" >= ${required}
+        `;
+
+        if (updated > 0) {
+          reserved = true;
+          break;
+        }
+      }
+
+      if (!reserved) {
+        throw new ConflictException(
+          'Tồn kho topping đang thay đổi. Vui lòng thử lại',
+        );
       }
     }
   }
@@ -48,7 +96,8 @@ export class InventoryService {
       if (required <= 0) continue;
       await tx.$executeRaw`
         UPDATE "Ingredient"
-        SET "reservedQuantity" = GREATEST("reservedQuantity" - ${required}, 0)
+        SET "reservedQuantity" = GREATEST("reservedQuantity" - ${required}, 0),
+            "version" = "version" + 1
         WHERE "id" = ${ingredientId}
       `;
     }
@@ -57,7 +106,8 @@ export class InventoryService {
       if (required <= 0) continue;
       await tx.$executeRaw`
         UPDATE "Topping"
-        SET "reservedQuantity" = GREATEST("reservedQuantity" - ${required}, 0)
+        SET "reservedQuantity" = GREATEST("reservedQuantity" - ${required}, 0),
+            "version" = "version" + 1
         WHERE "id" = ${toppingId}
       `;
     }
@@ -77,13 +127,15 @@ export class InventoryService {
       const updated = allowInsufficientStock
         ? await tx.$executeRaw`
             UPDATE "Ingredient"
-            SET "stock" = "stock" - ${required}
-            WHERE "id" = ${ingredientId}
-          `
+              SET "stock" = "stock" - ${required},
+                  "version" = "version" + 1
+              WHERE "id" = ${ingredientId}
+            `
         : await tx.$executeRaw`
             UPDATE "Ingredient"
             SET "stock" = "stock" - ${required},
-                "reservedQuantity" = GREATEST("reservedQuantity" - ${required}, 0)
+              "reservedQuantity" = GREATEST("reservedQuantity" - ${required}, 0),
+              "version" = "version" + 1
             WHERE "id" = ${ingredientId}
               AND "stock" >= ${required}
           `;
@@ -99,13 +151,15 @@ export class InventoryService {
       const updated = allowInsufficientStock
         ? await tx.$executeRaw`
             UPDATE "Topping"
-            SET "stock" = "stock" - ${required}
-            WHERE "id" = ${toppingId}
-          `
+              SET "stock" = "stock" - ${required},
+                  "version" = "version" + 1
+              WHERE "id" = ${toppingId}
+            `
         : await tx.$executeRaw`
             UPDATE "Topping"
             SET "stock" = "stock" - ${required},
-                "reservedQuantity" = GREATEST("reservedQuantity" - ${required}, 0)
+              "reservedQuantity" = GREATEST("reservedQuantity" - ${required}, 0),
+              "version" = "version" + 1
             WHERE "id" = ${toppingId}
               AND "stock" >= ${required}
           `;
@@ -124,7 +178,8 @@ export class InventoryService {
       if (required <= 0) continue;
       await tx.$executeRaw`
         UPDATE "Ingredient"
-        SET "stock" = "stock" + ${required}
+        SET "stock" = "stock" + ${required},
+            "version" = "version" + 1
         WHERE "id" = ${ingredientId}
       `;
     }
@@ -133,7 +188,8 @@ export class InventoryService {
       if (required <= 0) continue;
       await tx.$executeRaw`
         UPDATE "Topping"
-        SET "stock" = "stock" + ${required}
+        SET "stock" = "stock" + ${required},
+            "version" = "version" + 1
         WHERE "id" = ${toppingId}
       `;
     }
