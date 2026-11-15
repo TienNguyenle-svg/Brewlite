@@ -53,10 +53,7 @@ function BagIcon() {
 }
 
 export default function Header() {
-  // Tổng số ly trong giỏ, lấy từ store nên tự cập nhật khi thêm món
   const { count } = useCart();
-
-  // Đường dẫn hiện tại, dùng để biết mục nào đang được chọn
   const pathname = usePathname();
   const router = useRouter();
 
@@ -70,6 +67,7 @@ export default function Header() {
     () => null,
   );
 
+  // Header dành riêng cho Barista
   if (pathname.startsWith("/barista")) {
     const baristaNav = [
       { href: "/barista/orders", label: "Hàng đợi đơn" },
@@ -89,6 +87,7 @@ export default function Header() {
           <nav className="flex h-full items-center gap-4 text-sm md:gap-9">
             {baristaNav.map((item) => {
               const active = pathname.startsWith(item.href);
+
               return (
                 <Link
                   key={item.href}
@@ -111,9 +110,10 @@ export default function Header() {
               type="button"
               onClick={() => {
                 localStorage.removeItem(TOKEN_KEY);
+                window.dispatchEvent(new Event("storage"));
                 router.replace("/login");
               }}
-              className="rounded-[10px] bg-[#39281F] px-3.5 py-2.5 font-semibold text-white"
+              className="rounded-[10px] bg-[#39281F] px-3.5 py-2.5 font-semiboAld text-white"
             >
               Đăng xuất
             </button>
@@ -130,7 +130,6 @@ export default function Header() {
     {
       label: "Thực đơn",
       href: "/",
-      // trang chủ và trang chi tiết món đều thuộc "Thực đơn"
       active: pathname === "/" || pathname.startsWith("/products"),
     },
     {
