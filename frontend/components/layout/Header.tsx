@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-store";
 import { TOKEN_KEY } from "@/lib/barista";
 
-// Các trang không hiện tab điều hướng, giỏ hàng, nút đăng nhập/đăng xuất
 const AUTH_ROUTES = ["/login", "/register"];
+
+function subscribe(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
 
 function CupIcon() {
   return (
@@ -47,24 +51,19 @@ function BagIcon() {
 }
 
 export default function Header() {
-  // Tổng số ly trong giỏ, lấy từ store nên tự cập nhật khi thêm món
   const { count } = useCart();
-
-  // Đường dẫn hiện tại, dùng để biết mục nào đang được chọn
   const pathname = usePathname();
   const router = useRouter();
 
-  // Đang ở trang đăng nhập / đăng ký thì chỉ hiện logo + địa chỉ
   const isAuthPage = AUTH_ROUTES.includes(pathname);
 
-  // null = chưa biết (đang chờ đọc localStorage), true/false = đã biết
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+  const loggedIn = useSyncExternalStore<boolean | null>(
+    subscribe,
+    () => !!localStorage.getItem(TOKEN_KEY),
+    () => null,
+  );
 
-  // Đọc lại token mỗi khi đổi trang, để đăng nhập xong nút tự đổi
-  useEffect(() => {
-    setLoggedIn(!!localStorage.getItem(TOKEN_KEY));
-  }, [pathname]);
-
+  // Header dành riêng cho Barista
   if (pathname.startsWith("/barista")) {
     const baristaNav = [
       { href: "/barista/orders", label: "Hàng đợi đơn" },
@@ -84,6 +83,7 @@ export default function Header() {
           <nav className="flex h-full items-center gap-4 text-sm md:gap-9">
             {baristaNav.map((item) => {
               const active = pathname.startsWith(item.href);
+
               return (
                 <Link
                   key={item.href}
@@ -106,9 +106,10 @@ export default function Header() {
               type="button"
               onClick={() => {
                 localStorage.removeItem(TOKEN_KEY);
+                window.dispatchEvent(new Event("storage"));
                 router.replace("/login");
               }}
-              className="rounded-[10px] bg-[#39281F] px-3.5 py-2.5 font-semibold text-white"
+              className="rounded-[10px] bg-[#39281F] px-3.5 py-2.5 font-semiboAld text-white"
             >
               Đăng xuất
             </button>
@@ -125,7 +126,6 @@ export default function Header() {
     {
       label: "Thực đơn",
       href: "/",
-      // trang chủ và trang chi tiết món đều thuộc "Thực đơn"
       active: pathname === "/" || pathname.startsWith("/products"),
     },
     {
@@ -135,8 +135,8 @@ export default function Header() {
     },
     {
       label: "Về chúng tôi",
-      href: "#",
-      active: false,
+      href: "/about",
+      active: pathname.startsWith("/about"),
     },
   ];
 
@@ -151,7 +151,7 @@ export default function Header() {
           <span className="text-xl text-[#2B1F1A]">BrewLite.</span>
         </Link>
 
-        {/* Điều hướng giữa: ẩn ở trang đăng nhập / đăng ký */}
+        {/* Ẩn điều hướng tại trang đăng nhập / đăng ký */}
         {!isAuthPage && (
           <nav className="hidden h-full items-center gap-8 text-sm md:flex">
             {navItems.map((item) => (
@@ -197,13 +197,12 @@ export default function Header() {
                 </span>
               </Link>
 
-              {/* Đã đăng nhập: Đăng xuất. Chưa đăng nhập: Đăng nhập */}
               {loggedIn === true && (
                 <button
                   type="button"
                   onClick={() => {
                     localStorage.removeItem(TOKEN_KEY);
-                    setLoggedIn(false);
+                    window.dispatchEvent(new Event("storage"));
                     router.replace("/login");
                   }}
                   className="rounded-lg border border-[#2B1F1A] px-3.5 py-2 text-xs font-medium text-[#2B1F1A] hover:bg-[#EDE0D0]"
