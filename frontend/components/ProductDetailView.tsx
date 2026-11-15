@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { Product as StoreProduct } from "@/lib/types";
 import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 import { sizePrice, type SizeId } from "@/lib/pricing";
@@ -63,7 +62,6 @@ function formatK(n: number) {
 }
 
 export default function ProductDetailView({ product }: { product: Product }) {
-  const router = useRouter();
 
   // Topping thật lấy từ backend (không có thì là danh sách rỗng)
   const toppings = product.toppings ?? [];
@@ -96,7 +94,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
   const selectedToppings = toppings.filter((t) => toppingIds.includes(t.id));
   const unitPrice =
     sizeUnitPrice + selectedToppings.reduce((sum, t) => sum + t.price, 0);
-  const total = unitPrice * quantity;
+    const total = unitPrice * quantity;
 
   // Dòng giải thích: "Size M 30k + Trân châu 5k"
   const breakdown = [
@@ -104,16 +102,17 @@ export default function ProductDetailView({ product }: { product: Product }) {
     ...selectedToppings.map((t) => `${t.name} ${formatK(t.price)}`),
   ].join(" + ");
 
-  // Thêm vào giỏ rồi chuyển sang trang thanh toán
+  // Thêm sản phẩm đã tùy chỉnh vào giỏ hàng, không chuyển trang.
   async function handleAddToCart() {
     if (adding) return;
     setAdding(true);
 
     try {
       await ensureCartHydrated();
-      useCartStore
-        .getState()
-        .addItem(product as unknown as StoreProduct, size.id, {
+      useCartStore.getState().addItem(
+        product as unknown as StoreProduct,
+        size.id,
+        {
           qty: quantity,
           unitPrice,
           toppings: selectedToppings.map((t) => ({
@@ -122,12 +121,15 @@ export default function ProductDetailView({ product }: { product: Product }) {
             price: t.price,
           })),
           note,
-        });
+        }
+      );
 
-      router.push("/checkout");
+      window.alert("Đã thêm sản phẩm vào giỏ hàng thành công!");
     } catch (err) {
-      console.error("Thêm vào giỏ thất bại:", err);
-      setAdding(false); // lỗi thì mở lại nút để bấm lại
+      console.error("Thêm vào giỏ hàng thất bại:", err);
+      window.alert("Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.");
+    } finally {
+      setAdding(false);
     }
   }
 
@@ -153,9 +155,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
               src={product.imageUrl}
               alt={product.name}
               className="aspect-[7/8] w-full rounded-3xl bg-gray-200 object-cover"
-            />
-
-            {product.soldCount >= BEST_SELLER_MIN && (
+            /> {product.soldCount >= BEST_SELLER_MIN && (
               <span className="absolute left-4 top-4 rounded-full bg-orange-100 px-3 py-1 text-xs font-medium text-orange-700">
                 Bán chạy
               </span>
@@ -214,8 +214,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
           <p className="mt-3 border-b border-gray-200 pb-5 text-sm text-gray-500">
             Hương vị đậm đà, cân bằng. Pha ngay sau khi bạn gọi.
           </p>
-
-          {/* ===== CHỌN SIZE ===== */}
+{/* ===== CHỌN SIZE ===== */}
           <div className="mt-5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-gray-900">Size</h2>
@@ -296,8 +295,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
                   );
                 })}
               </div>
-            </div>
-          )}
+            </div> )}
 
           {/* ===== GHI CHÚ ===== */}
           <div className="mt-6">
@@ -365,7 +363,7 @@ export default function ProductDetailView({ product }: { product: Product }) {
               className="flex-1 rounded-xl bg-stone-800 px-6 py-3.5 text-sm font-medium text-white transition hover:bg-stone-900 disabled:opacity-60"
             >
               {adding
-                ? "Đang chuyển..."
+                ? "Đang thêm..."
                 : `Thêm vào giỏ hàng - ${formatVND(total)}`}
             </button>
           </div>
