@@ -6,8 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCart } from "@/lib/cart-store";
 import { TOKEN_KEY } from "@/lib/barista";
 
+// Các trang không hiện tab điều hướng, giỏ hàng, nút đăng nhập/đăng xuất
 const AUTH_ROUTES = ["/login", "/register"];
 
+// Để React biết khi nào localStorage đổi (ví dụ đăng xuất ở tab khác)
 function subscribe(callback: () => void) {
   window.addEventListener("storage", callback);
   return () => window.removeEventListener("storage", callback);
@@ -55,8 +57,10 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
+  // Đang ở trang đăng nhập / đăng ký thì chỉ hiện logo + địa chỉ
   const isAuthPage = AUTH_ROUTES.includes(pathname);
 
+  // null ở server / lần render đầu, sau đó là true/false tùy có token hay không
   const loggedIn = useSyncExternalStore<boolean | null>(
     subscribe,
     () => !!localStorage.getItem(TOKEN_KEY),
@@ -151,7 +155,7 @@ export default function Header() {
           <span className="text-xl text-[#2B1F1A]">BrewLite.</span>
         </Link>
 
-        {/* Ẩn điều hướng tại trang đăng nhập / đăng ký */}
+        {/* Điều hướng giữa: ẩn ở trang đăng nhập / đăng ký */}
         {!isAuthPage && (
           <nav className="hidden h-full items-center gap-8 text-sm md:flex">
             {navItems.map((item) => (
@@ -197,6 +201,7 @@ export default function Header() {
                 </span>
               </Link>
 
+              {/* Đã đăng nhập: Đăng xuất. Chưa đăng nhập: Đăng nhập */}
               {loggedIn === true && (
                 <button
                   type="button"
