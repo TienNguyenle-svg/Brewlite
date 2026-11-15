@@ -12,6 +12,8 @@ import { BaristaModule } from './barista/barista.module';
 import { AdminModule } from './admin/admin.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { CheckoutModule } from './checkout/checkout.module';
+import { PromotionsModule } from './promotions/promotions.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -26,8 +28,9 @@ import { CheckoutModule } from './checkout/checkout.module';
     LoyaltyModule,
     BaristaModule,
     AdminModule,
+    PromotionsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
   providers: [AppService],
 })
 export class AppModule {}

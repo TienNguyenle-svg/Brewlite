@@ -1,0 +1,103 @@
+
+@startuml
+left to right direction
+
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+skinparam actorStyle awesome
+skinparam linetype ortho
+
+skinparam usecase {
+  BackgroundColor #F0F7FF
+  BorderColor #3478B8
+  ArrowColor #555555
+}
+
+title USE CASE - DAT HANG VA THANH TOAN BREWLITE
+
+actor "Khách hàng" as Customer
+actor "VNPay" as VNPay
+
+rectangle "Hệ thống BrewLite" {
+
+  package "Tài khoản" {
+    usecase "Đăng nhập" as UC_Login
+  }
+
+  package "Đặt hàng" {
+    usecase "Chọn món, size\nvà topping" as UC_Select
+    usecase "Đặt hàng" as UC_Order
+    usecase "Áp dụng mã\ngiảm giá" as UC_Promo
+    usecase "Sử dụng\nđiểm thưởng" as UC_Points
+    usecase "Xem lịch sử\nđơn hàng" as UC_History
+  }
+
+  package "Thanh toán" {
+    usecase "Thanh toán\nqua VNPay" as UC_Payment
+    usecase "Xác nhận kết quả\nthanh toán" as UC_Confirm
+    usecase "Thanh toán lại" as UC_Retry
+  }
+
+  package "Hủy đơn hàng" {
+    usecase "Hủy đơn chưa\nthanh toán" as UC_CancelUnpaid
+    usecase "Hủy đơn đã\nthanh toán" as UC_CancelPaid
+    usecase "Hủy đơn\nquá hạn" as UC_Timeout
+  }
+}
+
+Customer -- UC_Login
+Customer -- UC_Select
+Customer -- UC_Order
+Customer -- UC_History
+Customer -- UC_Payment
+Customer -- UC_Retry
+Customer -- UC_CancelUnpaid
+Customer -- UC_CancelPaid
+
+VNPay -- UC_Payment
+VNPay -- UC_Confirm
+
+UC_Promo ..> UC_Order : <<extend>>
+UC_Points ..> UC_Order : <<extend>>
+UC_Retry ..> UC_Payment : <<extend>>
+
+note bottom of UC_Order
+  Đơn mới có trạng thái PENDING.
+  Size S = 0.8, M = 1.0, L = 1.2.
+  Tổng = tiền món - khuyến mãi
+       - giảm từ điểm + phí ship.
+  Ship: 15.000đ.
+  Miễn ship nếu subtotal >= 100.000đ.
+end note
+
+note bottom of UC_Payment
+  Chỉ CUSTOMER được thanh toán.
+  Đơn phải thuộc khách hàng.
+  Tạo URL thanh toán VNPay.
+  Không hỗ trợ thanh toán tiền mặt.
+end note
+
+note bottom of UC_CancelUnpaid
+  OrdersService:
+  Cho phép hủy PENDING.
+
+  PaymentsService:
+  Chỉ hủy khi thanh toán lỗi/hết hạn,
+  không còn lượt thanh toán còn hạn.
+end note
+
+note bottom of UC_CancelPaid
+  OrdersService:
+  Cho phép hủy PAID.
+  Xử lý hoàn kho, hoàn điểm
+  và đánh dấu payment REFUNDED.
+end note
+
+note bottom of UC_Timeout
+  Hệ thống tự động xử lý
+  đơn hoặc lượt thanh toán quá hạn.
+end note
+
+@enduml

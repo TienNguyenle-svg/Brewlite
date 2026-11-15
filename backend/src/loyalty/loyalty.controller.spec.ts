@@ -1,3 +1,4 @@
+import { ForbiddenException } from '@nestjs/common';
 import { DiscountsService } from '../discounts/discounts.service';
 import { LoyaltyController } from './loyalty.controller';
 
@@ -21,5 +22,15 @@ describe('LoyaltyController', () => {
 
     expect(discounts.getLoyalty).toHaveBeenCalledWith('user-1');
     expect(result).toEqual({ points: 100 });
+  });
+
+  it('chặn ADMIN truy cập loyalty', async () => {
+    expect(() =>
+      controller.getLoyalty({
+        user: { id: 'admin-1', role: 'ADMIN' },
+      } as never),
+    ).toThrow(ForbiddenException);
+
+    expect(discounts.getLoyalty).not.toHaveBeenCalled();
   });
 });

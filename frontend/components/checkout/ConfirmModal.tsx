@@ -23,7 +23,7 @@ export default function ConfirmModal({
         <p className="mt-3 text-sm text-[#82776E]">
           Tạo đơn gồm {count} món với tổng tiền dự kiến{" "}
           <span className="font-semibold text-[#39281F]">{money(total)}</span>.
-          Phương thức {PAYMENT_LABELS[payment]} chưa được kết nối thanh toán.
+          Bạn sẽ được chuyển tới {PAYMENT_LABELS[payment]} để hoàn tất thanh toán.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <button

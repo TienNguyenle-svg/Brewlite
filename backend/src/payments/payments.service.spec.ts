@@ -10,6 +10,7 @@ import { createHmac } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { isAllowedOrderTransition } from './payments.constants';
 import { DiscountsService } from '../discounts/discounts.service';
+import { InventoryService } from '../inventory/inventory.service';
 import { PaymentsService } from './payments.service';
 
 describe('PaymentsService', () => {
@@ -46,6 +47,15 @@ describe('PaymentsService', () => {
   const discounts = {
     validateBeforePayment: jest.fn(),
     settlePaidOrder: jest.fn(),
+    reservePendingPoints: jest.fn(),
+    releasePendingPoints: jest.fn(),
+    refundUsedPoints: jest.fn(),
+  };
+  const inventory = {
+    reserveOrder: jest.fn(),
+    releaseOrder: jest.fn(),
+    settleOrder: jest.fn(),
+    refundOrder: jest.fn(),
   };
 
   const order = {
@@ -109,11 +119,19 @@ describe('PaymentsService', () => {
 
     discounts.validateBeforePayment.mockResolvedValue(undefined);
     discounts.settlePaidOrder.mockResolvedValue(undefined);
+    discounts.reservePendingPoints.mockResolvedValue(undefined);
+    discounts.releasePendingPoints.mockResolvedValue(undefined);
+    discounts.refundUsedPoints.mockResolvedValue(undefined);
+    inventory.reserveOrder.mockResolvedValue(undefined);
+    inventory.releaseOrder.mockResolvedValue(undefined);
+    inventory.settleOrder.mockResolvedValue(undefined);
+    inventory.refundOrder.mockResolvedValue(undefined);
 
     service = new PaymentsService(
       prisma as unknown as PrismaService,
       config as unknown as ConfigService,
       discounts as unknown as DiscountsService,
+      inventory as unknown as InventoryService,
     );
   });
 
@@ -165,6 +183,8 @@ describe('PaymentsService', () => {
           expiresAt: expect.any(Date),
         }),
       });
+      expect(inventory.reserveOrder).not.toHaveBeenCalled();
+      expect(discounts.reservePendingPoints).not.toHaveBeenCalled();
 
       const expiresAt = prisma.payment.create.mock.calls[0][0].data
         .expiresAt as Date;
@@ -356,6 +376,11 @@ describe('PaymentsService', () => {
         where: { id: 'order-1', status: 'PAYMENT_FAILED' },
         data: { status: 'PENDING' },
       });
+      expect(discounts.reservePendingPoints).toHaveBeenCalledWith(
+        prisma,
+        'order-1',
+      );
+      expect(inventory.reserveOrder).toHaveBeenCalledWith(prisma, 'order-1');
     });
 
     it('không thử lại trong 10 phút sau khi thất bại: hủy đơn và từ chối tạo lượt mới', async () => {
@@ -677,6 +702,109 @@ describe('PaymentsService', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // processVnpayIpn
+  // ---------------------------------------------------------------------------
+  describe('processVnpayIpn', () => {
+    it('xác nhận thanh toán thành công và quyết toán điểm', async () => {
+      prisma.payment.findUnique.mockResolvedValue(payment);
+      prisma.order.findUnique.mockResolvedValue({
+        ...order,
+        pointsUsed: 20,
+      });
+      prisma.payment.findFirst.mockResolvedValue(null);
+
+      const result = await service.processVnpayIpn(createSignedQuery());
+
+      expect(result).toEqual({ RspCode: '00', Message: 'Confirm Success' });
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: payment.id },
+        data: { status: 'SUCCEEDED' },
+      });
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: 'order-1', status: 'PENDING' },
+        data: { status: 'PAID' },
+      });
+      expect(discounts.settlePaidOrder).toHaveBeenCalledWith(prisma, {
+        id: 'order-1',
+        userId: 'user-1',
+        pointsUsed: 20,
+        amountPaid: 35000,
+      });
+      expect(discounts.releasePendingPoints).toHaveBeenCalledWith(
+        prisma,
+        'order-1',
+      );
+    });
+
+    it('từ chối IPN có chữ ký không hợp lệ', async () => {
+      const result = await service.processVnpayIpn({
+        ...createSignedQuery(),
+        vnp_SecureHash: 'invalid',
+      });
+
+      expect(result).toEqual({
+        RspCode: '97',
+        Message: 'Chữ ký VNPay không hợp lệ',
+      });
+      expect(prisma.payment.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('IPN báo thất bại => payment FAILED và đơn PAYMENT_FAILED', async () => {
+      prisma.payment.findUnique.mockResolvedValue(payment);
+      prisma.order.findUnique.mockResolvedValue(order);
+      prisma.payment.findFirst.mockResolvedValue(null);
+      prisma.payment.count.mockResolvedValue(1);
+
+      const result = await service.processVnpayIpn(
+        createSignedQuery({
+          vnp_ResponseCode: '24',
+          vnp_TransactionStatus: '02',
+        }),
+      );
+
+      expect(result).toEqual({ RspCode: '00', Message: 'Confirm Success' });
+      expect(prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: payment.id },
+        data: { status: 'FAILED', failedAt: expect.any(Date) },
+      });
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: 'order-1', status: 'PENDING' },
+        data: { status: 'PAYMENT_FAILED' },
+      });
+      expect(discounts.releasePendingPoints).toHaveBeenCalledWith(
+        prisma,
+        'order-1',
+      );
+      expect(inventory.releaseOrder).toHaveBeenCalledWith(prisma, 'order-1');
+      expect(discounts.settlePaidOrder).not.toHaveBeenCalled();
+    });
+
+    it('IPN thất bại lần thứ ba => hủy đơn và giải phóng điểm giữ', async () => {
+      prisma.payment.findUnique.mockResolvedValue(payment);
+      prisma.order.findUnique.mockResolvedValue(order);
+      prisma.payment.findFirst.mockResolvedValue(null);
+      prisma.payment.count.mockResolvedValue(3);
+
+      const result = await service.processVnpayIpn(
+        createSignedQuery({
+          vnp_ResponseCode: '24',
+          vnp_TransactionStatus: '02',
+        }),
+      );
+
+      expect(result).toEqual({ RspCode: '00', Message: 'Confirm Success' });
+      expect(prisma.order.updateMany).toHaveBeenCalledWith({
+        where: { id: 'order-1', status: 'PENDING' },
+        data: { status: 'CANCELLED' },
+      });
+      expect(discounts.releasePendingPoints).toHaveBeenCalledWith(
+        prisma,
+        'order-1',
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // processVnpayReturn
   // ---------------------------------------------------------------------------
   describe('processVnpayReturn', () => {
@@ -747,6 +875,12 @@ describe('PaymentsService', () => {
         where: { id: 'order-1', status: 'PENDING' },
         data: { status: 'PAID' },
       });
+      expect(inventory.reserveOrder).not.toHaveBeenCalled();
+      expect(inventory.settleOrder).toHaveBeenCalledWith(
+        prisma,
+        'order-1',
+        true,
+      );
     });
 
     it('thành công nhưng đơn đã bị hủy: báo lỗi để đối soát', async () => {
@@ -787,6 +921,10 @@ describe('PaymentsService', () => {
         where: { id: 'order-1', status: 'PENDING' },
         data: { status: 'PAYMENT_FAILED' },
       });
+      expect(discounts.releasePendingPoints).toHaveBeenCalledWith(
+        prisma,
+        'order-1',
+      );
     });
 
     it('thất bại lần thứ 3: đơn CANCELLED, không bị ghi đè về PAYMENT_FAILED', async () => {
@@ -1050,6 +1188,53 @@ describe('PaymentsService', () => {
       ]);
 
       const count = await service.cancelStaleFailedOrders(new Date());
+
+      expect(count).toBe(0);
+      expect(prisma.order.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cancelStaleOrdersWithoutPayment', () => {
+    it('hủy đơn PENDING quá hạn chưa có payment và nhả reservation', async () => {
+      const now = new Date();
+      prisma.order.findMany.mockResolvedValue([{ id: 'order-1' }]);
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'order-1',
+        status: 'PENDING',
+        createdAt: new Date(now.getTime() - 11 * MIN),
+      });
+      prisma.payment.findFirst.mockResolvedValue(null);
+      prisma.order.updateMany.mockResolvedValue({ count: 1 });
+
+      const count = await service.cancelStaleOrdersWithoutPayment(now);
+
+      expect(count).toBe(1);
+      expect(prisma.order.findMany).toHaveBeenCalledWith({
+        where: {
+          status: 'PENDING',
+          createdAt: { lte: new Date(now.getTime() - 10 * MIN) },
+          payments: { none: {} },
+        },
+        select: { id: true },
+      });
+      expect(inventory.releaseOrder).toHaveBeenCalledWith(prisma, 'order-1');
+      expect(discounts.releasePendingPoints).toHaveBeenCalledWith(
+        prisma,
+        'order-1',
+      );
+    });
+
+    it('không hủy nếu payment đã được tạo sau lần quét ban đầu', async () => {
+      const now = new Date();
+      prisma.order.findMany.mockResolvedValue([{ id: 'order-1' }]);
+      prisma.order.findUnique.mockResolvedValue({
+        id: 'order-1',
+        status: 'PENDING',
+        createdAt: new Date(now.getTime() - 11 * MIN),
+      });
+      prisma.payment.findFirst.mockResolvedValue({ id: 'payment-1' });
+
+      const count = await service.cancelStaleOrdersWithoutPayment(now);
 
       expect(count).toBe(0);
       expect(prisma.order.updateMany).not.toHaveBeenCalled();

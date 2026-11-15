@@ -1,0 +1,202 @@
+@startuml
+title Class Diagram – BrewLite (mức domain)
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName Arial
+skinparam class {
+  BackgroundColor #DAE8FC
+  BorderColor #6C8EBF
+  HeaderBackgroundColor #DAE8FC
+}
+skinparam enum {
+  BackgroundColor #FFF2CC
+  BorderColor #D6B656
+}
+hide circle
+
+' ================= Enumerations =================
+enum OrderStatus <<enumeration>> {
+  PENDING
+  PAID
+  PAYMENT_FAILED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus <<enumeration>> {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+' ================= Classes =================
+class User {
+  - id : UUID
+  - email : String
+  - passwordHash : String
+  - role : String
+  - loyaltyPoints : Int
+  - reservedPoints : Int
+  - pointsOwed : Int
+  - tokenVersion : Int
+  --
+  + availablePoints() : Int
+  + reservePoints(points : Int)
+  + releasePoints(points : Int)
+  + earnPoints(amountPaid : Int)
+  + refundPoints(points : Int)
+}
+
+class LoyaltyTransaction {
+  - id : UUID
+  - points : Int
+  - reason : String
+  - createdAt : DateTime
+}
+
+class Promotion {
+  - id : UUID
+  - code : String
+  - discount : Int
+  - type : String
+  - minOrder : Int
+  - startAt : DateTime [0..1]
+  - expiredAt : DateTime [0..1]
+  - usageLimit : Int [0..1]
+  - active : Boolean
+  --
+  + isValid(now : DateTime) : Boolean
+  + calcDiscount(subtotal : Int) : Int
+}
+
+class PromotionUsage {
+  - id : UUID
+  - createdAt : DateTime
+}
+
+class Order {
+  - id : UUID
+  - status : OrderStatus
+  - total : Int
+  - shippingFee : Int
+  - discountAmount : Int
+  - pointsUsed : Int
+  - pointsDiscount : Int
+  - receiverName : String [0..1]
+  - receiverPhone : String [0..1]
+  - deliveryAddress : String [0..1]
+  - createdAt : DateTime
+  --
+  + calculateTotal() : Int
+  + applyPromotion(promotion : Promotion)
+  + applyPoints(points : Int)
+  + changeStatus(to : OrderStatus)
+  + cancel()
+}
+
+class Payment {
+  - id : UUID
+  - idempotencyKey : String
+  - amount : Int
+  - method : String
+  - status : PaymentStatus
+  - expiresAt : DateTime [0..1]
+  - failedAt : DateTime [0..1]
+  - createdAt : DateTime
+  --
+  + isExpired(now : DateTime) : Boolean
+  + markSucceeded()
+  + markFailed()
+  + refund()
+}
+
+class OrderItem {
+  - id : UUID
+  - size : String
+  - qty : Int
+  - unitPrice : Int
+  - lineTotal : Int
+  --
+  + calcLineTotal() : Int
+}
+
+class OrderItemTopping {
+  - id : UUID
+  - price : Int
+}
+
+class Product {
+  - id : UUID
+  - name : String
+  - price : Int
+  - imageUrl : String [0..1]
+  - category : String
+  - soldCount : Int
+  --
+  + calcPrice(size : String) : Int
+  + increaseSoldCount(qty : Int)
+}
+
+class Topping {
+  - id : UUID
+  - name : String
+  - price : Int
+  - stock : Int
+  - reservedQuantity : Int
+  --
+  + availableQuantity() : Int
+  + reserve(qty : Int)
+  + release(qty : Int)
+  + restock(qty : Int)
+}
+
+class Recipe {
+  - id : UUID
+  - amount : Float
+  --
+  + calcRequired(size : String, qty : Int) : Float
+}
+
+class Ingredient {
+  - id : UUID
+  - name : String
+  - stock : Float
+  - reservedQuantity : Float
+  - unit : String
+  --
+  + availableQuantity() : Float
+  + reserve(qty : Float)
+  + release(qty : Float)
+  + deduct(qty : Float)
+  + restock(qty : Float)
+}
+
+' ================= Relationships =================
+User "1" -- "0..*" Order
+User "1" -- "0..*" PromotionUsage
+User "1" -- "0..*" LoyaltyTransaction
+
+LoyaltyTransaction "0..*" -- "0..1" Order
+
+Promotion "1" -- "0..*" PromotionUsage
+Order "0..*" -- "0..1" Promotion
+Order "1" -- "0..1" PromotionUsage
+
+Order "1" -- "0..*" Payment
+
+Order "1" *-- "1..*" OrderItem
+OrderItem "0..*" -- "1" Product
+OrderItem "1" *-- "0..*" OrderItemTopping
+OrderItemTopping "0..*" -- "1" Topping
+
+Product "1" *-- "0..*" Recipe
+Recipe "0..*" -- "1" Ingredient
+Product "0..1" -- "0..*" Topping
+
+Order ..> OrderStatus
+Payment ..> PaymentStatus
+@enduml

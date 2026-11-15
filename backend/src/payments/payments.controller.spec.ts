@@ -1,4 +1,5 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, RequestMethod } from '@nestjs/common';
+import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { ConfigService } from '@nestjs/config';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
@@ -9,6 +10,7 @@ describe('PaymentsController', () => {
   const paymentsService = {
     createPayment: jest.fn(),
     cancelOrder: jest.fn(),
+    processVnpayIpn: jest.fn(),
     processVnpayReturn: jest.fn(),
   };
 
@@ -91,6 +93,28 @@ describe('PaymentsController', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(paymentsService.cancelOrder).not.toHaveBeenCalled();
+  });
+
+  it('nhận IPN VNPay qua GET query và chuyển tiếp đến service', async () => {
+    const query = {
+      vnp_TxnRef: 'transaction-1',
+      vnp_ResponseCode: '00',
+    };
+    const expected = { RspCode: '00', Message: 'Confirm Success' };
+    paymentsService.processVnpayIpn.mockResolvedValue(expected);
+
+    await expect(controller.vnpayIpn(query)).resolves.toEqual(expected);
+
+    expect(paymentsService.processVnpayIpn).toHaveBeenCalledWith(query);
+    expect(
+      Reflect.getMetadata(PATH_METADATA, PaymentsController.prototype.vnpayIpn),
+    ).toBe('vnpay-ipn');
+    expect(
+      Reflect.getMetadata(
+        METHOD_METADATA,
+        PaymentsController.prototype.vnpayIpn,
+      ),
+    ).toBe(RequestMethod.GET);
   });
 
   it('xác minh kết quả rồi chuyển hướng về frontend', async () => {

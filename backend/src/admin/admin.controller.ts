@@ -152,15 +152,17 @@ export class AdminController {
     return this.adminService.importTopping(id, amount);
   }
 
-  // ===== BÁO CÁO DOANH THU =====
-  @Get('reports/revenue')
-  @ApiOperation({ summary: 'Xem báo cáo doanh thu' })
-  getRevenueReport() {
-    return this.adminService.getRevenueReport();
-  }
+  // ===== QUẢN LÝ ĐƠN HÀNG =====
   @Get('orders')
-  @ApiOperation({ summary: 'Xem danh sách tất cả đơn hàng' })
+  @ApiOperation({ summary: 'Lấy danh sách tất cả đơn hàng (Dành cho Admin)' })
   getAllOrders() {
     return this.adminService.getAllOrders();
+  }
+
+  // ===== BÁO CÁO DOANH THU =====
+  @Get('reports/revenue')
+  @ApiOperation({ summary: 'Xem báo cáo doanh thu (Bao gồm doanh thu gốc và đơn hủy)' })
+  getRevenueReport() {
+    return this.adminService.getRevenueReport();
   }
 }

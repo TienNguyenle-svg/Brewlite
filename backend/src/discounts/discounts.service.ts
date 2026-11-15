@@ -16,6 +16,7 @@ import {
   EARN_BLOCK_VND,
   EARN_POINTS_PER_BLOCK,
   POINT_VALUE_VND,
+  PROMOTION_RESERVED_STATUSES,
   SUCCESSFUL_ORDER_STATUSES,
 } from './discounts.constants';
 import {
@@ -29,12 +30,14 @@ type DiscountOrder = Pick<
   Order,
   | 'id'
   | 'userId'
+  | 'status'
   | 'total'
   | 'promotionId'
   | 'discountAmount'
   | 'pointsUsed'
   | 'pointsDiscount'
   | 'shippingFee'
+  | 'createdAt'
 >;
 
 /** Preview endpoints are read-only; loyalty points are settled only after payment succeeds. */
@@ -71,14 +74,25 @@ export class DiscountsService {
     if (usePoints) {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: { loyaltyPoints: true },
+        select: {
+          loyaltyPoints: true,
+          reservedPoints: true,
+          pointsOwed: true,
+        },
       });
 
       if (!user) {
         throw new NotFoundException('Không tìm thấy người dùng');
       }
 
-      if (user.loyaltyPoints < MIN_REDEEM_POINTS) {
+      const availablePoints = Math.max(
+        0,
+        user.loyaltyPoints -
+          (user.reservedPoints ?? 0) -
+          (user.pointsOwed ?? 0),
+      );
+
+      if (availablePoints < MIN_REDEEM_POINTS) {
         throw new BadRequestException(
           `Cần có tối thiểu ${MIN_REDEEM_POINTS} điểm thưởng để áp dụng`,
         );
@@ -91,7 +105,7 @@ export class DiscountsService {
         );
       }
 
-      pointsUsed = Math.min(user.loyaltyPoints, maxPoints);
+      pointsUsed = Math.min(availablePoints, maxPoints);
     }
 
     const pointsDiscount = pointsUsed * POINT_VALUE_VND;
@@ -115,11 +129,32 @@ export class DiscountsService {
   async getLoyalty(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { loyaltyPoints: true },
+      select: {
+        loyaltyPoints: true,
+        reservedPoints: true,
+        pointsOwed: true,
+      },
     });
 
     if (!user) {
       throw new NotFoundException('Không tìm thấy người dùng');
+    }
+
+    const validOrderIds = new Set<string>();
+    const orderClient = this.prisma.order as
+      | { findMany?: (args: unknown) => Promise<Array<{ id: string }>> }
+      | undefined;
+    if (orderClient?.findMany) {
+      const paidOrderIds = await orderClient.findMany({
+        where: {
+          userId,
+          status: {
+            in: ['PAID', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'],
+          },
+        },
+        select: { id: true },
+      });
+      for (const order of paidOrderIds) validOrderIds.add(order.id);
     }
 
     const transactions = await this.prisma.loyaltyTransaction.findMany({
@@ -128,11 +163,26 @@ export class DiscountsService {
       take: 50,
     });
 
+    const visibleTransactions = transactions.filter(
+      (tx) =>
+        !tx.orderId ||
+        validOrderIds.size === 0 ||
+        validOrderIds.has(tx.orderId),
+    );
+
+    const availablePoints = Math.max(
+      0,
+      user.loyaltyPoints - (user.reservedPoints ?? 0) - (user.pointsOwed ?? 0),
+    );
+
     return {
       points: user.loyaltyPoints,
+      availablePoints,
+      reservedPoints: user.reservedPoints ?? 0,
+      pointsOwed: user.pointsOwed ?? 0,
       pointValueVnd: POINT_VALUE_VND,
       earnRule: `${EARN_BLOCK_VND} đồng = ${EARN_POINTS_PER_BLOCK} điểm`,
-      transactions,
+      transactions: visibleTransactions,
     };
   }
 
@@ -146,6 +196,49 @@ export class DiscountsService {
     order: DiscountOrder,
     now = new Date(),
   ): Promise<void> {
+    await this.validatePromotionForOrder(tx, order, now);
+
+    if (order.pointsUsed > 0) {
+      const user = await tx.user.findUnique({
+        where: { id: order.userId },
+        select: {
+          loyaltyPoints: true,
+          reservedPoints: true,
+          pointsOwed: true,
+        },
+      });
+
+      const ownReservation = order.status === 'PENDING' ? order.pointsUsed : 0;
+      const available = Math.max(
+        0,
+        (user?.loyaltyPoints ?? 0) -
+          (user?.reservedPoints ?? 0) -
+          (user?.pointsOwed ?? 0) +
+          ownReservation,
+      );
+      if (!user || available < order.pointsUsed) {
+        throw new ConflictException(
+          'Số điểm hiện có không đủ cho đơn này, hãy chọn lại số điểm',
+        );
+      }
+    }
+  }
+
+  async validatePromotionForOrder(
+    tx: Prisma.TransactionClient,
+    order: Pick<
+      DiscountOrder,
+      | 'id'
+      | 'userId'
+      | 'promotionId'
+      | 'createdAt'
+      | 'total'
+      | 'discountAmount'
+      | 'pointsDiscount'
+      | 'shippingFee'
+    >,
+    now = new Date(),
+  ): Promise<void> {
     if (order.promotionId) {
       const promotion = await tx.promotion.findUnique({
         where: { id: order.promotionId },
@@ -157,12 +250,15 @@ export class DiscountsService {
         );
       }
 
+      // Khóa dòng mã để các khách thanh toán cùng lúc được kiểm tra lần lượt.
+      await tx.$queryRaw`SELECT "id" FROM "Promotion" WHERE "id" = ${promotion.id} FOR UPDATE`;
+
       try {
         await this.assertPromotionUsable(
           tx,
           promotion,
           order.userId,
-          order.id,
+          { id: order.id, createdAt: order.createdAt },
           getSubtotal(order),
           now,
         );
@@ -175,24 +271,179 @@ export class DiscountsService {
         throw error;
       }
     }
+  }
 
-    if (order.pointsUsed > 0) {
-      const user = await tx.user.findUnique({
-        where: { id: order.userId },
-        select: { loyaltyPoints: true },
-      });
+  async reservePendingPoints(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+  ): Promise<void> {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      select: { userId: true, pointsUsed: true },
+    });
 
-      if (!user || user.loyaltyPoints < order.pointsUsed) {
-        throw new ConflictException(
-          'Số điểm hiện có không đủ cho đơn này, hãy chọn lại số điểm',
-        );
+    if (!order || order.pointsUsed <= 0) {
+      return;
+    }
+
+    const updated = await tx.$executeRaw`
+      UPDATE "User"
+      SET "reservedPoints" = "reservedPoints" + ${order.pointsUsed}
+      WHERE "id" = ${order.userId}
+        AND "loyaltyPoints" - "reservedPoints" - "pointsOwed" >= ${order.pointsUsed}
+    `;
+
+    if (updated === 0) {
+      throw new ConflictException(
+        'Số điểm hiện có không đủ cho đơn này, hãy chọn lại số điểm',
+      );
+    }
+  }
+
+  async releasePendingPoints(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+  ): Promise<void> {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      select: { userId: true, pointsUsed: true },
+    });
+
+    if (!order || order.pointsUsed <= 0) {
+      return;
+    }
+
+    await tx.$executeRaw`
+      UPDATE "User"
+      SET "reservedPoints" = GREATEST("reservedPoints" - ${order.pointsUsed}, 0)
+      WHERE "id" = ${order.userId}
+    `;
+  }
+
+  async refundUsedPoints(
+    tx: Prisma.TransactionClient,
+    orderId: string,
+  ): Promise<void> {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, userId: true },
+    });
+
+    if (!order) {
+      return;
+    }
+
+    await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${order.userId} FOR UPDATE`;
+
+    const user = await tx.user.findUnique({
+      where: { id: order.userId },
+      select: {
+        loyaltyPoints: true,
+        reservedPoints: true,
+        pointsOwed: true,
+      },
+    });
+
+    if (!user) {
+      return;
+    }
+
+    const transactions = await tx.loyaltyTransaction.findMany({
+      where: {
+        orderId: order.id,
+        reason: {
+          in: [
+            LOYALTY_REASON.REDEEM,
+            LOYALTY_REASON.REDEEM_REFUND,
+            LOYALTY_REASON.EARN,
+            LOYALTY_REASON.EARN_REVOKE,
+          ],
+        },
+      },
+      select: { points: true, reason: true },
+    });
+
+    const redeemed = transactions.reduce((sum, transaction) => {
+      if (transaction.reason === LOYALTY_REASON.REDEEM) {
+        return sum - transaction.points;
       }
+      if (transaction.reason === LOYALTY_REASON.REDEEM_REFUND) {
+        return sum - transaction.points;
+      }
+      return sum;
+    }, 0);
+    const refundable = Math.max(0, redeemed);
+    const earned = transactions.reduce((sum, transaction) => {
+      if (transaction.reason === LOYALTY_REASON.EARN) {
+        return sum + transaction.points;
+      }
+      if (transaction.reason === LOYALTY_REASON.EARN_REVOKE) {
+        return sum + transaction.points;
+      }
+      return sum;
+    }, 0);
+    const alreadyRevoked = transactions.some(
+      (transaction) => transaction.reason === LOYALTY_REASON.EARN_REVOKE,
+    );
+    const pointsToRevoke = alreadyRevoked ? 0 : Math.max(0, earned);
+    const existingDebt = user.pointsOwed ?? 0;
+    const debtPayment = Math.min(existingDebt, refundable);
+    const balanceAfterRefund = user.loyaltyPoints + refundable - debtPayment;
+    const debtAfterRefund = existingDebt - debtPayment;
+    const availableAfterRefund = Math.max(
+      0,
+      balanceAfterRefund - (user.reservedPoints ?? 0) - debtAfterRefund,
+    );
+    const revoked = Math.min(pointsToRevoke, availableAfterRefund);
+    const revokeOwed = pointsToRevoke - revoked;
+
+    if (refundable > 0 || pointsToRevoke > 0 || debtPayment > 0) {
+      await tx.user.update({
+        where: { id: order.userId },
+        data: {
+          loyaltyPoints: balanceAfterRefund - revoked,
+          pointsOwed: debtAfterRefund + revokeOwed,
+        },
+      });
+    }
+
+    if (refundable > 0) {
+      await tx.loyaltyTransaction.create({
+        data: {
+          userId: order.userId,
+          points: refundable,
+          reason: LOYALTY_REASON.REDEEM_REFUND,
+          orderId: order.id,
+        },
+      });
+    }
+
+    if (pointsToRevoke > 0) {
+      // The record also marks revocation as processed when all of it becomes debt.
+      await tx.loyaltyTransaction.create({
+        data: {
+          userId: order.userId,
+          points: -revoked,
+          reason: LOYALTY_REASON.EARN_REVOKE,
+          orderId: order.id,
+        },
+      });
+    }
+
+    if (debtPayment > 0) {
+      await tx.loyaltyTransaction.create({
+        data: {
+          userId: order.userId,
+          points: -debtPayment,
+          reason: LOYALTY_REASON.EARN_REVOKE,
+        },
+      });
     }
   }
 
   /**
-   * Khi đơn lên PAID (chỉ gọi đúng một lần): trừ điểm đã dùng, cộng điểm mới.
-   * Lượt dùng mã được tính tự động vì đơn đã PAID.
+   * Khi đơn lên PAID (chỉ gọi đúng một lần): ghi nhận lượt dùng mã,
+   * trừ điểm đã dùng, cộng điểm mới.
    */
   async settlePaidOrder(
     tx: Prisma.TransactionClient,
@@ -205,11 +456,37 @@ export class DiscountsService {
   ): Promise<void> {
     await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${order.userId} FOR UPDATE`;
 
+    // Ghi nhận lượt dùng mã. Bảng PromotionUsage không bị xóa khi đơn bị hủy/hoàn tiền
+    // nên lượt dùng không được trả lại. skipDuplicates giúp gọi lại không bị lỗi.
+    const paidOrder = await tx.order.findUnique({
+      where: { id: order.id },
+      select: { promotionId: true },
+    });
+
+    if (paidOrder?.promotionId) {
+      await tx.promotionUsage.createMany({
+        data: [
+          {
+            promotionId: paidOrder.promotionId,
+            userId: order.userId,
+            orderId: order.id,
+          },
+        ],
+        skipDuplicates: true,
+      });
+    }
+
     // Đã quyết toán rồi thì bỏ qua (không cộng/trừ 2 lần).
     const settled = await tx.loyaltyTransaction.findFirst({
       where: {
         orderId: order.id,
-        reason: { in: [LOYALTY_REASON.EARN, LOYALTY_REASON.REDEEM] },
+        reason: {
+          in: [
+            LOYALTY_REASON.EARN,
+            LOYALTY_REASON.REDEEM,
+            LOYALTY_REASON.DEBT_SETTLEMENT,
+          ],
+        },
       },
     });
 
@@ -219,7 +496,11 @@ export class DiscountsService {
 
     const user = await tx.user.findUnique({
       where: { id: order.userId },
-      select: { loyaltyPoints: true },
+      select: {
+        loyaltyPoints: true,
+        reservedPoints: true,
+        pointsOwed: true,
+      },
     });
 
     if (!user) {
@@ -227,10 +508,14 @@ export class DiscountsService {
     }
 
     let balance = user.loyaltyPoints;
+    let pointsOwed = user.pointsOwed ?? 0;
 
     if (order.pointsUsed > 0) {
-      // Khách đã trả tiền theo giá đã giảm nên không từ chối đơn; chỉ không trừ quá số dư.
-      const deduct = Math.min(order.pointsUsed, balance);
+      const available = Math.max(
+        0,
+        balance - pointsOwed - (user.reservedPoints ?? 0),
+      );
+      const deduct = Math.min(order.pointsUsed, available);
 
       if (deduct > 0) {
         await tx.loyaltyTransaction.create({
@@ -246,22 +531,38 @@ export class DiscountsService {
     }
 
     const earned = calcEarnedPoints(order.amountPaid);
+    const debtPayment = Math.min(earned, pointsOwed);
+    const credited = earned - debtPayment;
 
-    if (earned > 0) {
+    if (credited > 0) {
       await tx.loyaltyTransaction.create({
         data: {
           userId: order.userId,
-          points: earned,
+          points: credited,
           reason: LOYALTY_REASON.EARN,
           orderId: order.id,
         },
       });
-      balance += earned;
+      balance += credited;
+    }
+
+    if (debtPayment > 0) {
+      await tx.loyaltyTransaction.create({
+        data: {
+          userId: order.userId,
+          points: -debtPayment,
+          reason: LOYALTY_REASON.DEBT_SETTLEMENT,
+          orderId: order.id,
+        },
+      });
     }
 
     await tx.user.update({
       where: { id: order.userId },
-      data: { loyaltyPoints: balance },
+      data: {
+        loyaltyPoints: balance,
+        ...(debtPayment > 0 ? { pointsOwed: { decrement: debtPayment } } : {}),
+      },
     });
   }
 
@@ -269,16 +570,28 @@ export class DiscountsService {
   // Nội bộ
   // ---------------------------------------------------------------------------
 
+  /**
+   * Quy tắc mã giảm giá:
+   *  - Mỗi tài khoản chỉ dùng 1 mã 1 lần. Lượt dùng ghi khi đơn PAID và không mất khi đơn bị hủy.
+   *  - Đơn PENDING giữ chỗ mã. PAYMENT_FAILED / CANCELLED nhả mã (trả lại số lượng).
+   *  - Số lượng bị chiếm = đơn đã thanh toán + đơn PENDING tạo trước đơn đang kiểm tra,
+   *    nên hai đơn cùng chờ không chặn lẫn nhau, đơn đến trước giữ chỗ trước.
+   * `current` là đơn đang kiểm tra; không truyền khi chỉ xem trước giỏ hàng.
+   */
   private async assertPromotionUsable(
-    tx: Pick<Prisma.TransactionClient, 'order'>,
+    tx: Pick<Prisma.TransactionClient, 'order' | 'promotionUsage'>,
     promotion: Promotion,
     userId: string,
-    orderId: string | undefined,
+    current: { id: string; createdAt: Date } | undefined,
     subtotal: number,
     now: Date,
   ): Promise<void> {
     if (!promotion.active) {
       throw new BadRequestException('Mã giảm giá không còn hiệu lực');
+    }
+
+    if (promotion.startAt && promotion.startAt > now) {
+      throw new BadRequestException('Mã giảm giá chưa đến thời gian áp dụng');
     }
 
     if (promotion.expiredAt && promotion.expiredAt <= now) {
@@ -291,18 +604,61 @@ export class DiscountsService {
       );
     }
 
-    // Chỉ đơn đã thanh toán thành công mới tính là "đã dùng mã".
-    const used = await tx.order.count({
+    const notCurrent = current ? { id: { not: current.id } } : {};
+    // Chỉ đơn PENDING tạo trước đơn hiện tại mới giữ chỗ trước.
+    const reservedBefore = current
+      ? {
+          OR: [
+            { createdAt: { lt: current.createdAt } },
+            { createdAt: current.createdAt, id: { lt: current.id } },
+          ],
+        }
+      : {};
+
+    // 1. Tài khoản đã dùng mã ở đơn khác (kể cả đơn đã bị hủy sau khi PAID).
+    const usedByUser = await tx.promotionUsage.findUnique({
       where: {
-        userId,
-        promotionId: promotion.id,
-        ...(orderId ? { id: { not: orderId } } : {}),
-        status: { in: SUCCESSFUL_ORDER_STATUSES },
+        userId_promotionId: { userId, promotionId: promotion.id },
       },
     });
 
-    if (used > 0) {
+    if (usedByUser && usedByUser.orderId !== current?.id) {
       throw new ConflictException('Bạn đã sử dụng mã giảm giá này rồi');
+    }
+
+    // 2. Mã đang được giữ ở một đơn chờ thanh toán khác của chính khách này.
+    const heldByUser = await tx.order.count({
+      where: {
+        userId,
+        promotionId: promotion.id,
+        status: { in: PROMOTION_RESERVED_STATUSES },
+        ...notCurrent,
+        ...reservedBefore,
+      },
+    });
+
+    if (heldByUser > 0) {
+      throw new ConflictException(
+        'Mã giảm giá đang được giữ ở một đơn chờ thanh toán khác của bạn',
+      );
+    }
+
+    // 3. Số lượng toàn hệ thống.
+    if (promotion.usageLimit !== null && promotion.usageLimit !== undefined) {
+      const taken = await tx.order.count({
+        where: {
+          promotionId: promotion.id,
+          ...notCurrent,
+          OR: [
+            { status: { in: SUCCESSFUL_ORDER_STATUSES } },
+            { status: { in: PROMOTION_RESERVED_STATUSES }, ...reservedBefore },
+          ],
+        },
+      });
+
+      if (taken >= promotion.usageLimit) {
+        throw new ConflictException('Mã giảm giá đã hết lượt sử dụng');
+      }
     }
   }
 

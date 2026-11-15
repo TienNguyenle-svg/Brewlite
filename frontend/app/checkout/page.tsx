@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import StoreShell from "@/components/layout/StoreShell";
 import CheckoutView from "@/components/checkout/CheckoutView";
 
 export const metadata: Metadata = { title: "Checkout · BrewLite" };
 
 export default function CheckoutPage() {
   return (
-    <StoreShell>
+    <main className="px-4 pb-16 pt-[30px] sm:px-8 lg:px-[72px]">
       <div className="mx-auto w-full max-w-[1296px]">
         <p className="text-xs text-[#82776E]">
           <Link href="/">Menu</Link>
@@ -21,6 +20,6 @@ export default function CheckoutPage() {
         </p>
         <CheckoutView />
       </div>
-    </StoreShell>
+    </main>
   );
 }

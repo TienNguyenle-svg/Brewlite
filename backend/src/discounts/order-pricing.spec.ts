@@ -54,9 +54,9 @@ describe('order-pricing', () => {
   });
 
   describe('calcMaxRedeemPoints', () => {
-    it('tối đa 50% giá trị đơn, 1 điểm = 1đ', () => {
-      expect(calcMaxRedeemPoints(90000)).toBe(45000);
-      expect(calcMaxRedeemPoints(100000)).toBe(50000);
+    it('không giới hạn 50% nữa, chỉ chừa tối thiểu 5.000đ', () => {
+      expect(calcMaxRedeemPoints(90000)).toBe(85000);
+      expect(calcMaxRedeemPoints(100000)).toBe(95000);
     });
 
     it('luôn chừa lại tối thiểu 5.000đ', () => {

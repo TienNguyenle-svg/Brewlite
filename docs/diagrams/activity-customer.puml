@@ -1,0 +1,138 @@
+@startuml
+title Activity Diagram – Đặt hàng & Thanh toán (End-to-End)
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ActivityDiamondBackgroundColor #FFF2CC
+skinparam NoteBackgroundColor #FFFBE6
+skinparam NoteBorderColor #B5A642
+
+|#DAE8FC|Khách hàng|
+start
+
+' ===== PHASE 1: chọn món, kiểm tra đăng nhập, tạo đơn =====
+repeat
+  |Khách hàng|
+  :Duyệt menu, chọn món, size và topping;
+
+  |#D5E8D4|Next.js (Giao diện)|
+  :Hiển thị menu, thêm món vào giỏ hàng\n(lưu ở frontend);
+
+  |Khách hàng|
+  :Bấm [Đặt hàng];
+
+  |Next.js (Giao diện)|
+  if (Có JWT token?) then (đã đăng nhập)
+    :Gửi POST /orders kèm JWT\n(giỏ hàng, mã giảm giá, điểm dùng);
+
+    |#FFF2CC|NestJS (Backend)|
+    :Xác thực JWT, tính tiền (mã giảm giá, điểm)\nkiểm tra tồn kho (stock - reserved);
+
+    if (Đủ tồn kho, điểm và mã giảm giá?) then (đủ)
+      :Tạo đơn PENDING\ngiữ chỗ kho, điểm, mã giảm giá\n(cùng một transaction);
+      note right
+        Orders giữ kho khi tạo đơn PENDING
+        (UPDATE có điều kiện).
+        stock chỉ trừ khi PAID.
+      end note
+    else (② hết hàng)
+      #FFE6E6:Rollback, không tạo đơn;
+      |Next.js (Giao diện)|
+      #FFE6E6:Báo hết hàng / thiếu điểm / mã không hợp lệ\ncho khách sửa giỏ;
+    endif
+  else (① chưa đăng nhập)
+    |Khách hàng|
+    #FFE6E6:Đăng nhập / đăng ký\n(NestJS xác thực, cấp JWT);
+  endif
+repeat while (Đơn PENDING chưa được tạo?) is (có, quay lại giỏ hàng) not (đã tạo đơn)
+
+' ===== Time event: đơn PENDING chưa tạo payment =====
+|NestJS (Backend)|
+if (Quá 10 phút chưa gọi POST /payments?\n⏱ time event) then (có)
+  :Cron mỗi phút: đơn PENDING -> CANCELLED\nnhả kho, điểm, mã;
+  stop
+endif
+
+' ===== PHASE 2: thanh toán và thử lại =====
+repeat
+  |Next.js (Giao diện)|
+  :Gọi POST /payments\n(Idempotency-Key: PAY-n);
+
+  |NestJS (Backend)|
+  if (Giữ lại được kho/điểm?\nlượt đầu: không giữ thêm) then (đủ / lượt đầu)
+    note right
+      Lượt đầu: Payments không giữ kho thêm.
+      Thử lại PAYMENT_FAILED -> PENDING:
+      giữ lại kho/điểm, thiếu thì từ chối.
+    end note
+    :Tạo Payment PENDING (expiresAt = +10 phút)\nký URL VNPay, trả paymentUrl;
+
+    |Next.js (Giao diện)|
+    :Chuyển hướng trình duyệt sang paymentUrl;
+
+    |Khách hàng|
+    :Chọn ngân hàng, nhập thẻ,\nxác thực OTP trên cổng VNPay;
+
+    |NestJS (Backend)|
+    if (Quá expiresAt trước khi có kết quả?\n⏱ time event 10 phút) then (hết hạn)
+      :Cron mỗi phút: Payment PENDING quá hạn\n-> coi là thất bại;
+    else (còn hạn)
+      |#F8CECC|Payment Service (VNPay)|
+      :Xử lý giao dịch;
+
+      if (Thanh toán thành công?) then (thành công)
+        :Báo THÀNH CÔNG\n(IPN + Return URL);
+
+        |NestJS (Backend)|
+        :Xác minh chữ ký (sai -> 400, bỏ qua)\nPayment SUCCEEDED, Order PAID\nchốt stock, xóa reservation\nquyết toán điểm, ghi PromotionUsage;
+        note right
+          Late success: lượt đã FAILED nhưng nhận
+          thành công hợp lệ -> vẫn PAID, bỏ qua
+          kiểm tra giữ kho lần hai.
+        end note
+
+        |Next.js (Giao diện)|
+        :Hiển thị thanh toán thành công\nxóa giỏ hàng;
+
+        |Khách hàng|
+        :Xem xác nhận đơn hàng;
+        stop
+      else (③ thất bại)
+        #FFE6E6:Báo THẤT BẠI\n(IPN + Return URL);
+      endif
+    endif
+
+    ' "hết hạn" và "VNPay báo lỗi" cùng đi xuống đây
+    |NestJS (Backend)|
+    :Xác minh chữ ký (nếu VNPay báo)\nPayment FAILED, nhả kho, điểm, mã (một lần);
+
+    if (Đủ 3 lần thất bại?) then (đủ 3 lần)
+      :Order PENDING -> CANCELLED\n(đã nhả kho, không qua PAYMENT_FAILED);
+      stop
+    else (chưa đủ 3 lần)
+      :Order PENDING -> PAYMENT_FAILED;
+
+      |Next.js (Giao diện)|
+      :Hiển thị lỗi thanh toán\ncho chọn thử lại hoặc hủy;
+    endif
+  else (không đủ)
+    |NestJS (Backend)|
+    :Từ chối thử lại\nKhông tạo payment, đơn vẫn PAYMENT_FAILED;
+
+    |Next.js (Giao diện)|
+    :Báo không đủ hàng/điểm, không thể thử lại;
+  endif
+
+  |Khách hàng|
+repeat while (Khách chọn gì trong 10 phút?\n⏱ RETRY_WINDOW) is (thử lại) not (hủy đơn / quá 10 phút)
+
+' ===== Hủy đơn =====
+|NestJS (Backend)|
+:Order PAYMENT_FAILED -> CANCELLED\n(khách hủy hoặc cron 10 phút không thử lại)\nKhông nhả kho lần nữa;
+note right
+  Còn payment PENDING chưa hết hạn
+  -> từ chối hủy (409)
+end note
+stop
+
+@enduml

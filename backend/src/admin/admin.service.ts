@@ -31,7 +31,21 @@ export class AdminService {
 
     return this.prisma.product.findUnique({
       where: { id: newProduct.id },
-      include: { recipes: { include: { ingredient: true } } },
+      include: {
+        recipes: {
+          include: {
+            ingredient: {
+              select: {
+                id: true,
+                name: true,
+                stock: true,
+                reservedQuantity: true,
+                unit: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
@@ -58,7 +72,16 @@ export class AdminService {
       throw new BadRequestException(`Nguyên liệu "${data.name}" đã tồn tại. Vui lòng chọn tên khác.`);
     }
 
-    return this.prisma.ingredient.create({ data });
+    return this.prisma.ingredient.create({
+      data,
+      select: {
+        id: true,
+        name: true,
+        stock: true,
+        reservedQuantity: true,
+        unit: true,
+      },
+    });
   }
 
   // 2. Tạo mới topping
@@ -71,7 +94,17 @@ export class AdminService {
       throw new BadRequestException(`Topping "${data.name}" đã tồn tại. Vui lòng chọn tên khác.`);
     }
 
-    return this.prisma.topping.create({ data });
+    return this.prisma.topping.create({
+      data,
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+        reservedQuantity: true,
+        productId: true,
+      },
+    });
   }
 
   // 3. Nhập thêm số lượng vào nguyên liệu đã có
@@ -80,7 +113,17 @@ export class AdminService {
     if (!ingredient) throw new NotFoundException('Không tìm thấy nguyên liệu');
     return this.prisma.ingredient.update({
       where: { id: ingredientId },
-      data: { stock: { increment: amount } },
+      data: {
+        stock: { increment: amount },
+        version: { increment: 1 },
+      },
+      select: {
+        id: true,
+        name: true,
+        stock: true,
+        reservedQuantity: true,
+        unit: true,
+      },
     });
   }
 
@@ -90,42 +133,99 @@ export class AdminService {
     if (!topping) throw new NotFoundException('Không tìm thấy topping');
     return this.prisma.topping.update({
       where: { id: toppingId },
-      data: { stock: { increment: amount } },
+      data: {
+        stock: { increment: amount },
+        version: { increment: 1 },
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+        reservedQuantity: true,
+        productId: true,
+      },
     });
   }
 
   // 5. Xem toàn bộ tồn kho
   async getInventory() {
-    const ingredients = await this.prisma.ingredient.findMany({ orderBy: { name: 'asc' } });
-    const toppings = await this.prisma.topping.findMany({ orderBy: { name: 'asc' } });
+    const ingredients = await this.prisma.ingredient.findMany({
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        stock: true,
+        reservedQuantity: true,
+        unit: true,
+      },
+    });
+    const toppings = await this.prisma.topping.findMany({
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        stock: true,
+        reservedQuantity: true,
+        productId: true,
+      },
+    });
     return { ingredients, toppings };
   }
 
-  // ===== BÁO CÁO DOANH THU =====
-  async getRevenueReport() {
-    const orders = await this.prisma.order.findMany({
-      where: { status: { in: ['COMPLETED'] as any } },
-    });
-    const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
-    return { totalRevenue, totalOrders: orders.length };
-  }
   // ===== QUẢN LÝ ĐƠN HÀNG =====
   async getAllOrders() {
     return this.prisma.order.findMany({
       include: {
         items: {
           include: {
-            product: { select: { name: true } }, 
-            toppings: { include: { topping: true } }, 
+            product: true,
+            toppings: {
+              include: {
+                topping: true,
+              },
+            },
           },
         },
-        payments: {
-          select: { status: true, method: true, amount: true }
-        }
+        payments: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
       },
       orderBy: {
-        createdAt: 'desc', 
+        createdAt: 'desc',
       },
     });
+  }
+
+  // ===== BÁO CÁO DOANH THU =====
+  async getRevenueReport() {
+    // 1. Lấy thống kê cho các đơn COMPLETED
+    const completedStats = await this.prisma.order.aggregate({
+      where: { status: 'COMPLETED' },
+      _sum: {
+        total: true,      // Doanh thu thực tế (đã trừ mã giảm, điểm thưởng)
+        subtotal: true,   // Doanh thu gốc (trước khi trừ giảm giá)
+      },
+      _count: {
+        id: true,         // Tổng số đơn COMPLETED
+      },
+    });
+
+    // 2. Lấy thống kê tổng đơn CANCELLED
+    const totalCancelledOrders = await this.prisma.order.count({
+      where: { status: 'CANCELLED' },
+    });
+
+    return {
+      totalOrders: completedStats._count.id || 0,
+      totalRevenue: completedStats._sum.total || 0,
+      originalRevenue: completedStats._sum.subtotal || 0, // Thống kê: Doanh thu gốc
+      totalCancelledOrders,                               // Thống kê: Tổng đơn bị hủy
+    };
   }
 }

@@ -1,4 +1,4 @@
-import { IsArray, IsString, IsInt, Min, ValidateNested, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsArray, IsString, IsInt, Min, ValidateNested, IsNotEmpty, IsOptional, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -48,4 +48,9 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   promotionCode?: string;
+
+  @ApiProperty({ example: true, required: false, description: 'Sử dụng điểm thưởng hay không (áp dụng khi điểm >= 100)' })
+  @IsOptional()
+  @IsBoolean()
+  usePoints?: boolean;
 }
