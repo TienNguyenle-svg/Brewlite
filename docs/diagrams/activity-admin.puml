@@ -1,0 +1,43 @@
+@startuml
+skinparam shadowing false
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam ArrowColor Black
+skinparam ActivityBackgroundColor White
+skinparam ActivityBorderColor Black
+
+title <b>Activity Diagram – Quản lý hệ thống của Quản lý (Admin)</b>
+
+|#DAE8FC|Admin|
+start
+:Đăng nhập;
+
+|#FFF2CC|NestJS (Backend)|
+:Xác thực tài khoản, cấp JWT;
+if (Có quyền ADMIN?) then ([không])
+  :Từ chối truy cập (trang 403);
+  stop
+else ([có])
+endif
+
+|#D5E8D4|Next.js (Giao diện)|
+:Hiển thị trang Dashboard quản trị;
+
+|#DAE8FC|Admin|
+if (Chọn chức năng?) then ([Quản lý sản phẩm\n(kho / đơn hàng / topping)])
+  repeat
+    |#DAE8FC|Admin|
+    :Thực hiện thêm / sửa / xóa
+    và bấm [Lưu];
+    |#FFF2CC|NestJS (Backend)|
+    :Kiểm tra dữ liệu hợp lệ;
+  repeat while (Dữ liệu hợp lệ?) is ([không]) not ([có])
+  :Ghi nhận thay đổi vào Database;
+else ([Xem doanh thu])
+  |#FFF2CC|NestJS (Backend)|
+  :Tổng hợp thống kê doanh thu;
+  |#D5E8D4|Next.js (Giao diện)|
+  :Hiển thị thống kê doanh thu;
+endif
+stop
+@enduml
