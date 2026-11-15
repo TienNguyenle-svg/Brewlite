@@ -1,7 +1,5 @@
 # Ma trận truy vết yêu cầu BrewLite
 
-Ma trận dùng mã FR và User Story theo [mẫu Assignment SGU](../Assigment_template_SGU.pdf), rồi đối chiếu giao diện, API và test có trong repository. Các đường dẫn dưới đây là vị trí mã nguồn, không khẳng định mọi tiêu chí chấp nhận của mẫu đã được triển khai.
-
 ## Danh mục sơ đồ
 
 | Mã | Sơ đồ / nguồn |
