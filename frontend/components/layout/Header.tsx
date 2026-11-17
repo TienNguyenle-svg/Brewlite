@@ -112,7 +112,7 @@ export default function Header() {
     ];
 
     return (
-      <header className="border-b border-[#E7E1DA] bg-[#F8F5F0]">
+      <header className="bg-[#F2EBDC]">
         <div className="mx-auto flex min-h-[88px] max-w-[1440px] items-center justify-between gap-4 px-4 md:px-[72px]">
           <Logo href="/barista" />
 
@@ -126,7 +126,7 @@ export default function Header() {
                   href={item.href}
                   className={`flex min-h-[88px] items-center border-b-[3px] ${
                     active
-                      ? "border-[#B9672B] text-[#39281F]"
+                      ? "border-[#2F4A3A] text-[#39281F]"
                       : "border-transparent text-[#82776E]"
                   }`}
                 >
@@ -141,7 +141,7 @@ export default function Header() {
             <button
               type="button"
               onClick={handleLogout}
-              className="rounded-[10px] bg-[#39281F] px-3.5 py-2.5 font-semibold text-white"
+              className="rounded-[10px] bg-[#2F4A3A] px-3.5 py-2.5 font-semibold text-white hover:bg-[#263D2F]"
             >
               Đăng xuất
             </button>
@@ -173,11 +173,11 @@ export default function Header() {
   ];
 
   // Chuỗi class dùng chung cho giỏ hàng, đăng nhập, đăng xuất
- const actionBtn =
-  "flex items-center gap-2 rounded-lg bg-[#2F4A3A] px-3.5 py-2 text-xs font-medium text-white hover:bg-[#263D2F]";
+  const actionBtn =
+    "flex items-center gap-2 rounded-lg bg-[#2F4A3A] px-3.5 py-2 text-xs font-medium text-white hover:bg-[#263D2F]";
 
   return (
-    <header className="border-b border-[#F8F4E8] bg-[#F8F5F0]">
+    <header className="bg-[#F8F5F0]">
       <div className="mx-auto flex h-[88px] max-w-[1440px] items-center justify-between px-4 md:px-[72px]">
         {/* Logo */}
         <Logo href="/" />
@@ -197,7 +197,7 @@ export default function Header() {
               >
                 {item.label}
                 {item.active && (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#C8672B]" />
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#2F4A3A]" />
                 )}
               </Link>
             ))}
@@ -220,7 +220,7 @@ export default function Header() {
               <Link href="/cart" className={actionBtn}>
                 <BagIcon />
                 Giỏ hàng
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[10px] text-[#2B1F1A]">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[10px] text-[#2F4A3A]">
                   {count}
                 </span>
               </Link>
