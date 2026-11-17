@@ -1,225 +1,231 @@
-# SRS rút gọn BrewLite: Yêu cầu chức năng và phi chức năng (Task 1.2)
-
-> Tài liệu bám theo `context-and-scope.md` (Task 1.1). Mức ưu tiên MoSCoW: **Must** = MVP; **Should/Could** = phạm vi mở rộng; **Won't** = ngoài phạm vi.
-> Mục có dấu **[Cần xác nhận]** là chỗ nhóm cần thống nhất trước khi chốt.
+# SRS BrewLite: Yêu cầu chức năng và phi chức năng (Task 1.2)
 
 ## 1. Giới thiệu
 
 ### 1.1 Mục đích
-Liệt kê yêu cầu của hệ thống BrewLite theo dạng kiểm chứng được. Mỗi yêu cầu có mã định danh, mức ưu tiên và tiêu chí chấp nhận (AC) để làm căn cứ viết test.
+
+Tài liệu này mô tả các yêu cầu chức năng và phi chức năng của website đặt đồ uống BrewLite. Mỗi yêu cầu có mã định danh, mức ưu tiên và tiêu chí chấp nhận để nhóm phát triển, kiểm thử và đối chiếu với sản phẩm thực tế.
 
 ### 1.2 Quy ước
-| Mục | Quy ước |
-|-----|---------|
-| Mã yêu cầu chức năng | `FR-01`, `FR-02`, ... |
-| Mã yêu cầu phi chức năng | `NFR-01`, `NFR-02`, ... |
-| Mã tiêu chí chấp nhận | `AC1`, `AC2`, ... trong từng yêu cầu. Khi viết test, đặt tên `TC-<mã yêu cầu>-<số AC>`, ví dụ `TC-FR-09-AC2` |
-| Vai trò | CUSTOMER (khách hàng), BARISTA (nhân viên quầy), ADMIN (quản lý), VNPay (hệ thống ngoài) |
-| Trạng thái đơn | `PENDING` → `PAID` → `PREPARING` → `READY` → `COMPLETED`; nhánh phụ `PAYMENT_FAILED`, `CANCELLED` |
-| Dạng AC | Mỗi AC viết như một ca kiểm thử: điều kiện đầu, thao tác, kết quả mong đợi, có số liệu cụ thể |
 
-### 1.3 Quy tắc nghiệp vụ dùng chung
+| Mục | Quy ước |
+|---|---|
+| Yêu cầu chức năng | FR-01, FR-02, ... |
+| Yêu cầu phi chức năng | NFR-01, NFR-02, ... |
+| Tiêu chí chấp nhận | AC1, AC2, ... trong từng yêu cầu |
+| Mã kiểm thử | `TC-<mã yêu cầu>-<số AC>`, ví dụ `TC-FR-09-AC2` |
+| Vai trò | CUSTOMER, BARISTA, ADMIN, VNPay |
+| Trạng thái đơn | `PENDING` → `PAID` → `PREPARING` → `READY` → `COMPLETED` |
+| Trạng thái phụ | `PAYMENT_FAILED`, `CANCELLED` |
+
+Mỗi tiêu chí chấp nhận cần nêu rõ điều kiện kiểm thử, thao tác thực hiện và kết quả mong đợi.
+
+### 1.3 Quy tắc nghiệp vụ
+
 | Mã | Quy tắc |
-|----|---------|
-| BR-01 | Giá theo size: S = giá gốc × 0,8; M = × 1; L = × 1,2 (giá gốc là `price` trong cơ sở dữ liệu). Topping có giá riêng. |
-| BR-02 | Tiền nước = tổng (giá món theo size + giá topping) × số lượng, tính trước khi trừ khuyến mãi. |
-| BR-03 | Tổng đơn = tiền nước − giảm giá khuyến mãi − giảm giá từ điểm + phí giao hàng. |
-| BR-04 | Phí giao hàng mặc định 15.000đ; miễn phí khi tiền nước đạt ngưỡng miễn phí giao hàng. Ngưỡng theo quy tắc nhóm là **100.000đ**. **[Cần xác nhận: `FREE_DELIVERY_THRESHOLD` trong `frontend/lib/cart-store.ts` đang là 150.000đ, cần thống nhất.]** |
-| BR-05 | Đơn `PENDING` quá 10 phút chưa thanh toán bị tự hủy. |
-| BR-06 | Mã khuyến mãi: theo %, có đơn tối thiểu, có thời gian hiệu lực, có giới hạn tổng lượt dùng, mỗi tài khoản dùng một mã một lần. |
+|---|---|
+| BR-01 | Giá sản phẩm phụ thuộc vào size. Size S bằng 80% giá gốc, M bằng 100%, L bằng 120%. Giá gốc lấy từ trường `price` trong cơ sở dữ liệu. Topping được tính riêng. |
+| BR-02 | Tiền nước được tính bằng tổng giá món theo size cộng giá topping, sau đó nhân với số lượng. Khoản này chưa trừ khuyến mãi. |
+| BR-03 | Tổng tiền đơn hàng = tiền nước - giảm giá khuyến mãi - giảm giá từ điểm thưởng + phí giao hàng. |
+| BR-04 | Phí giao hàng mặc định là 15.000đ. Đơn đạt ngưỡng miễn phí giao hàng sẽ không tính phí này. Quy tắc nhóm đang sử dụng mức 100.000đ.
+| BR-05 | Đơn hàng ở trạng thái `PENDING` quá 10 phút mà chưa thanh toán sẽ tự động bị hủy. |
+| BR-06 | Mã khuyến mãi giảm theo phần trăm, có giá trị đơn tối thiểu, thời gian áp dụng và giới hạn lượt sử dụng. Mỗi tài khoản chỉ được sử dụng một mã một lần. |
 
 ## 2. Sơ đồ use-case tổng quát
 
-Sơ đồ use-case toàn hệ thống do nhóm vẽ bằng PlantUML: **[chèn đường dẫn hoặc hình sơ đồ, ví dụ `docs/diagrams/usecase-overview.png`]**.
+Sơ đồ use-case tổng quát mô tả các chức năng chính của hệ thống BrewLite và sự tương tác giữa người dùng với hệ thống. Hệ thống có ba vai trò chính: Khách hàng (CUSTOMER), Quản trị viên (ADMIN) và Nhân viên pha chế (BARISTA).
 
-Bảng dưới liên kết tác nhân trên sơ đồ với các yêu cầu chức năng, để kiểm tra mỗi use-case đều có yêu cầu tương ứng.
+Các vai trò sử dụng chung chức năng đăng nhập và đăng xuất. Sau khi đăng nhập, hệ thống xác thực tài khoản và kiểm tra quyền truy cập. Người dùng chỉ được sử dụng những chức năng thuộc vai trò của mình.
 
-| Tác nhân | Use-case chính | Yêu cầu liên quan |
-|----------|----------------|-------------------|
-| Khách chưa đăng nhập | Đăng ký, đăng nhập, xem menu, xem chi tiết món | FR-01, FR-02, FR-05 đến FR-11, FR-44 |
-| CUSTOMER | Quản lý giỏ hàng, áp mã, dùng điểm, đặt đơn, thanh toán, xem và hủy đơn | FR-12 đến FR-33 |
-| BARISTA | Xem đơn cần làm, cập nhật trạng thái đơn | FR-34, FR-35 |
-| ADMIN | Quản lý sản phẩm, kho, khuyến mãi; xem đơn và doanh thu | FR-37 đến FR-43 |
-| VNPay | Nhận yêu cầu thanh toán, trả kết quả | FR-26 đến FR-29 |
-| Hệ thống (tự động) | Giữ chỗ kho, tự hủy đơn quá hạn, trừ kho | FR-23, FR-24, FR-36 |
+**[Chèn hình sơ đồ use-case tổng quát của hệ thống BrewLite]**
+
+### 2.1. Các tác nhân và chức năng
+
+| Tác nhân | Chức năng | Yêu cầu liên quan |
+|---|---|---|
+| Khách hàng (CUSTOMER) | Đăng ký tài khoản, đăng nhập, đăng xuất | FR-01 đến FR-03 |
+| Khách hàng (CUSTOMER) | Xem menu và chi tiết sản phẩm, chọn size và topping | FR-05 đến FR-11 |
+| Khách hàng (CUSTOMER) | Quản lý giỏ hàng | FR-12 đến FR-16 |
+| Khách hàng (CUSTOMER) | Đặt hàng và thanh toán | FR-17 đến FR-30 |
+| Khách hàng (CUSTOMER) | Xem lịch sử đơn hàng | FR-31 đến FR-33 |
+| Quản trị viên (ADMIN) | Đăng nhập, đăng xuất | FR-02, FR-03 |
+| Quản trị viên (ADMIN) | Quản lý sản phẩm (thêm, sửa, xóa) | FR-37 |
+| Quản trị viên (ADMIN) | Quản lý kho nguyên liệu | FR-38 đến FR-40 |
+| Quản trị viên (ADMIN) | Quản lý đơn hàng | FR-43 |
+| Quản trị viên (ADMIN) | Xem thống kê doanh thu | FR-42 |
+| Quản trị viên (ADMIN) | Quản lý khuyến mãi | FR-41 |
+| Nhân viên pha chế (BARISTA) | Đăng nhập, đăng xuất | FR-02, FR-03 |
+| Nhân viên pha chế (BARISTA) | Xem danh sách đơn cần pha chế | FR-34 |
+| Nhân viên pha chế (BARISTA) | Cập nhật trạng thái đơn hàng | FR-35 |
+| Hệ thống | Xác thực và phân quyền theo vai trò, từ chối truy cập trái quyền (403) | FR-04 |
 
 ## 3. Yêu cầu chức năng
 
 ### 3.1 Xác thực và phân quyền
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| FR-01 | Người dùng đăng ký tài khoản bằng email và mật khẩu. Tài khoản mới có vai trò CUSTOMER. | Must | AC1. Nhập email chưa dùng và mật khẩu hợp lệ thì tạo tài khoản, vai trò CUSTOMER.<br>AC2. Nhập email đã tồn tại thì báo lỗi, không tạo tài khoản mới.<br>AC3. Email sai định dạng hoặc mật khẩu rỗng thì báo lỗi và không gửi được form.<br>AC4. Mật khẩu không bao giờ xuất hiện trong phản hồi của API. |
-| FR-02 | Người dùng đăng nhập bằng email và mật khẩu; hệ thống cấp JWT và điều hướng theo vai trò. | Must | AC1. Đúng email và mật khẩu thì nhận token, giao diện chuyển trang theo vai trò (CUSTOMER về menu, BARISTA về trang barista, ADMIN về trang quản trị).<br>AC2. Sai mật khẩu hoặc email không tồn tại thì báo "sai thông tin đăng nhập", không phân biệt trường nào sai.<br>AC3. Token hết hạn hoặc không hợp lệ thì API trả 401. |
-| FR-03 | Người dùng đăng xuất; token cũ bị vô hiệu. | Must | AC1. Sau khi đăng xuất, giao diện xóa token và về trạng thái chưa đăng nhập.<br>AC2. Dùng lại token cũ gọi API cần đăng nhập thì bị từ chối (401), nhờ `tokenVersion` tăng lên. |
-| FR-04 | Hệ thống chặn truy cập trái vai trò. | Must | AC1. CUSTOMER gọi API của `/barista` hoặc `/admin` thì nhận 403.<br>AC2. BARISTA gọi API của `/admin` thì nhận 403.<br>AC3. Người chưa đăng nhập mở trang cần đăng nhập thì bị chuyển về trang đăng nhập.<br>AC4. Giao diện hiển thị trang 403 khi người dùng mở trang không đủ quyền. |
+|---|---|---|---|
+| FR-01 | Cho phép người dùng đăng ký tài khoản bằng email và mật khẩu. Tài khoản mới được gán vai trò CUSTOMER. | Must | AC1. Email chưa được sử dụng và mật khẩu hợp lệ thì đăng ký thành công.<br>AC2. Email đã tồn tại thì hệ thống báo lỗi và không tạo tài khoản.<br>AC3. Email sai định dạng hoặc mật khẩu rỗng thì không cho gửi form.<br>AC4. API không trả về mật khẩu của người dùng. |
+| FR-02 | Đăng nhập bằng email và mật khẩu, cấp JWT và điều hướng theo vai trò. | Must | AC1. Thông tin hợp lệ thì đăng nhập thành công. CUSTOMER được chuyển đến menu, BARISTA đến trang nhân viên, ADMIN đến trang quản trị.<br>AC2. Email hoặc mật khẩu không đúng thì thông báo sai thông tin đăng nhập.<br>AC3. Token hết hạn hoặc không hợp lệ thì API trả 401. |
+| FR-03 | Cho phép đăng xuất và vô hiệu hóa token cũ. | Must | AC1. Khi đăng xuất, token được xóa khỏi giao diện và người dùng trở về trạng thái chưa đăng nhập.<br>AC2. Token cũ không thể tiếp tục gọi API yêu cầu xác thực, trả 401 thông qua việc tăng `tokenVersion`. |
+| FR-04 | Kiểm soát quyền truy cập theo vai trò. | Must | AC1. CUSTOMER truy cập API `/barista` hoặc `/admin` thì nhận 403.<br>AC2. BARISTA truy cập API `/admin` thì nhận 403.<br>AC3. Người chưa đăng nhập truy cập trang yêu cầu xác thực sẽ được chuyển đến trang đăng nhập.<br>AC4. Người không đủ quyền được hiển thị trang 403. |
 
 ### 3.2 Thực đơn
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| FR-05 | Hiển thị danh sách sản phẩm (ảnh, tên, danh mục, giá, nút thêm vào giỏ). | Must | AC1. Mở trang menu thì hiển thị toàn bộ sản phẩm từ `GET /products`.<br>AC2. Mỗi thẻ có ảnh, tên, giá định dạng VND (ví dụ 35.000đ).<br>AC3. Sản phẩm thiếu ảnh hiển thị ảnh thay thế, không làm vỡ bố cục.<br>AC4. Khi backend không trả lời, giao diện hiện thông báo lỗi dễ hiểu, không trắng trang. |
-| FR-06 | Lọc sản phẩm theo danh mục. | Must | AC1. Chọn "Cà phê" thì chỉ còn sản phẩm có danh mục Cà phê.<br>AC2. Chọn "Tất cả" thì hiện đủ sản phẩm.<br>AC3. Danh mục không có sản phẩm hiện thông báo "chưa có món". |
-| FR-07 | Tìm kiếm sản phẩm theo tên. | Must | AC1. Gõ một phần tên (không phân biệt hoa thường) thì danh sách chỉ còn các món khớp.<br>AC2. Không có món khớp thì hiện thông báo không tìm thấy.<br>AC3. Xóa ô tìm kiếm thì danh sách trở lại đầy đủ. |
-| FR-08 | Sắp xếp sản phẩm (mặc định theo bán chạy). | Should | AC1. Mặc định sắp xếp theo `soldCount` giảm dần.<br>AC2. Chọn kiểu sắp xếp khác (ví dụ giá) thì thứ tự thay đổi đúng. |
+|---|---|---|---|
+| FR-05 | Hiển thị danh sách đồ uống gồm ảnh, tên, danh mục, giá và nút thêm vào giỏ. | Must | AC1. Trang menu lấy danh sách sản phẩm từ `GET /products`.<br>AC2. Mỗi sản phẩm có ảnh, tên và giá hiển thị theo VND, ví dụ 35.000đ.<br>AC3. Sản phẩm thiếu ảnh được hiển thị bằng ảnh thay thế.<br>AC4. Khi không kết nối được backend, trang hiển thị thông báo lỗi thay vì để trắng. |
+| FR-06 | Lọc đồ uống theo danh mục. | Must | AC1. Chọn danh mục "Cà phê" thì chỉ hiển thị các sản phẩm thuộc danh mục này.<br>AC2. Chọn "Tất cả" thì hiển thị toàn bộ sản phẩm.<br>AC3. Danh mục không có sản phẩm thì thông báo chưa có món. |
+| FR-07 | Tìm kiếm đồ uống theo tên. | Must | AC1. Nhập một phần tên sản phẩm thì hiển thị các kết quả phù hợp, không phân biệt chữ hoa và chữ thường.<br>AC2. Không tìm thấy sản phẩm thì hiển thị thông báo.<br>AC3. Xóa từ khóa thì danh sách trở lại như ban đầu. |
+| FR-08 | Sắp xếp sản phẩm, mặc định theo số lượng bán chạy. | Should | AC1. Sản phẩm được sắp xếp theo `soldCount` giảm dần.<br>AC2. Khi chọn cách sắp xếp khác, chẳng hạn theo giá, danh sách được cập nhật đúng thứ tự. |
 
 ### 3.3 Chi tiết sản phẩm
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| FR-09 | Xem chi tiết một sản phẩm. | Must | AC1. Mở `/products/:id` hợp lệ thì hiển thị tên, ảnh, giá, các lựa chọn size và topping.<br>AC2. Mở id không tồn tại thì hiện thông báo không tìm thấy, không báo lỗi hệ thống. |
-| FR-10 | Chọn size S/M/L; giá hiển thị theo quy tắc BR-01. | Must | AC1. Món giá gốc 30.000đ: size S hiện 24.000đ, M hiện 30.000đ, L hiện 36.000đ.<br>AC2. Đổi size thì giá cập nhật ngay, không cần tải lại.<br>AC3. Mặc định chọn size M. |
-| FR-11 | Chọn topping; hiển thị đủ danh sách topping lấy từ bảng Topping, mỗi topping có giá riêng. | Must | AC1. Danh sách topping trên trang khớp với dữ liệu `Topping` của backend.<br>AC2. Chọn thêm topping thì tổng giá món tăng đúng bằng giá topping.<br>AC3. Bỏ chọn topping thì giá giảm tương ứng.<br>AC4. Topping hết tồn kho (stock = 0) bị vô hiệu hóa, không chọn được. |
+|---|---|---|---|
+| FR-09 | Hiển thị thông tin chi tiết của sản phẩm. | Must | AC1. Truy cập `/products/:id` hợp lệ thì hiển thị tên, ảnh, giá, size và topping.<br>AC2. Nếu sản phẩm không tồn tại, hệ thống thông báo không tìm thấy. |
+| FR-10 | Cho phép chọn size S, M, L và cập nhật giá theo BR-01. | Must | AC1. Sản phẩm giá gốc 30.000đ có giá size S là 24.000đ, M là 30.000đ và L là 36.000đ.<br>AC2. Khi đổi size, giá được cập nhật ngay mà không cần tải lại trang.<br>AC3. Size M được chọn mặc định. |
+| FR-11 | Cho phép chọn topping và tính giá theo topping đã chọn. | Must | AC1. Danh sách topping lấy từ bảng `Topping` của backend.<br>AC2. Chọn topping thì giá món tăng tương ứng.<br>AC3. Bỏ chọn topping thì giá giảm đúng số tiền topping đó.<br>AC4. Topping có `stock = 0` không thể chọn. |
 
 ### 3.4 Giỏ hàng
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| FR-12 | Thêm món vào giỏ. | Must | AC1. Bấm "Thêm vào giỏ hàng" thì giỏ có thêm món với đúng size, topping, giá.<br>AC2. Thêm lại món giống hệt (cùng món, size, topping) thì tăng số lượng thêm 1, không tạo dòng mới.<br>AC3. Thêm món khác size thì tạo dòng riêng. |
-| FR-13 | Đổi số lượng và xóa món trong giỏ. | Must | AC1. Tăng/giảm số lượng thì thành tiền cập nhật ngay.<br>AC2. Giảm số lượng về 0 thì món bị xóa khỏi giỏ.<br>AC3. Giỏ trống hiển thị thông báo giỏ hàng trống và không cho đặt đơn. |
-| FR-14 | Hiển thị tạm tính, phí giao hàng, giảm giá và tổng tiền theo BR-02 đến BR-04. | Must | AC1. Tiền nước dưới ngưỡng miễn phí thì phí giao là 15.000đ.<br>AC2. Tiền nước đạt hoặc vượt ngưỡng thì phí giao là 0đ.<br>AC3. Giỏ trống thì phí giao là 0đ.<br>AC4. Tổng = tạm tính + phí giao − giảm giá; số liệu khớp với kết quả của `POST /checkout/preview`. |
-| FR-15 | Biểu tượng giỏ ở Header hiển thị tổng số ly trong giỏ. | Should | AC1. Thêm 1 ly thì số trên Header tăng 1.<br>AC2. Số hiển thị bằng tổng số lượng của mọi dòng, không phải số dòng.<br>AC3. Số về 0 khi giỏ trống. |
-| FR-16 | Giỏ hàng được giữ lại khi tải lại trang. | Could | AC1. Thêm món, tải lại trang (F5) thì giỏ vẫn còn đúng món và số lượng.<br>AC2. Sau khi đặt đơn thành công, giỏ được xóa. |
+|---|---|---|---|
+| FR-12 | Thêm sản phẩm đã chọn size và topping vào giỏ hàng. | Must | AC1. Bấm "Thêm vào giỏ hàng" thì sản phẩm được thêm với đúng size, topping và giá.<br>AC2. Thêm lại sản phẩm có cùng size và topping thì tăng số lượng thêm 1.<br>AC3. Cùng sản phẩm nhưng khác size được lưu thành dòng riêng. |
+| FR-13 | Thay đổi số lượng và xóa sản phẩm khỏi giỏ. | Must | AC1. Khi tăng hoặc giảm số lượng, thành tiền được tính lại.<br>AC2. Giảm số lượng về 0 thì sản phẩm bị xóa khỏi giỏ.<br>AC3. Giỏ trống có thông báo và không cho phép đặt hàng. |
+| FR-14 | Hiển thị tiền nước, phí giao hàng, giảm giá và tổng thanh toán theo BR-02 đến BR-04. | Must | AC1. Đơn chưa đạt ngưỡng miễn phí giao hàng thì phí giao là 15.000đ.<br>AC2. Đơn đạt ngưỡng thì phí giao là 0đ.<br>AC3. Giỏ trống không tính phí giao hàng.<br>AC4. Tổng tiền hiển thị đúng với kết quả `POST /checkout/preview`. |
+| FR-15 | Hiển thị số lượng sản phẩm trong giỏ trên Header. | Should | AC1. Thêm một ly thì số lượng trên Header tăng 1.<br>AC2. Số hiển thị là tổng số ly, không phải số dòng sản phẩm.<br>AC3. Giỏ trống thì số lượng bằng 0. |
+| FR-16 | Giữ lại giỏ hàng khi tải lại trang. | Could | AC1. Sau khi thêm sản phẩm và nhấn F5, giỏ vẫn giữ đúng dữ liệu.<br>AC2. Khi đặt hàng thành công, giỏ hàng được xóa. |
 
 ### 3.5 Khuyến mãi và điểm thưởng
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| FR-17 | Áp mã khuyến mãi vào đơn theo BR-06. | Should | AC1. Nhập mã hợp lệ, đủ đơn tối thiểu thì số tiền giảm hiển thị đúng và tổng tiền cập nhật.<br>AC2. Mã không tồn tại, đã tắt, chưa tới hạn (`startAt`) hoặc đã hết hạn (`expiredAt`) thì báo lỗi, không giảm giá.<br>AC3. Tạm tính nhỏ hơn đơn tối thiểu (`minOrder`) thì báo lỗi nêu rõ mức tối thiểu.<br>AC4. Tổng lượt dùng đã đạt `usageLimit` thì báo hết lượt.<br>AC5. Tài khoản đã dùng mã này trước đó thì bị từ chối. |
-| FR-18 | Gỡ mã khi tạm tính giảm xuống dưới đơn tối thiểu. | Should | AC1. Đang áp mã, giảm số lượng làm tạm tính thấp hơn `minOrder` thì mã tự gỡ và tổng tiền tính lại.<br>AC2. Người dùng bấm gỡ mã thì giảm giá về 0. |
-| FR-19 | Tích điểm thưởng cho đơn. | Could | AC1. Đơn có tạm tính 50.000đ thì được 50 điểm (1 điểm cho mỗi 1.000đ, làm tròn xuống). **[Cần xác nhận quy tắc và thời điểm cộng điểm]**<br>AC2. Mỗi lần cộng điểm có một bản ghi `LoyaltyTransaction` với lý do.<br>AC3. `GET /users/me/loyalty` trả đúng số điểm hiện có. |
-| FR-20 | Dùng điểm thưởng để giảm tiền. | Could | AC1. Dùng số điểm không vượt quá số điểm hiện có thì tiền giảm bằng số điểm × giá trị quy đổi 1 điểm. **[Cần xác nhận giá trị quy đổi]**<br>AC2. Nhập số điểm vượt số hiện có thì bị từ chối.<br>AC3. Điểm đang dùng cho đơn chờ thanh toán được giữ chỗ (`reservedPoints`); đơn bị hủy thì trả lại điểm. |
+|---|---|---|---|
+| FR-17 | Áp dụng mã khuyến mãi theo BR-06. | Should | AC1. Mã hợp lệ và đơn đủ điều kiện thì hệ thống tính đúng số tiền giảm.<br>AC2. Mã không tồn tại, bị tắt, chưa đến `startAt` hoặc quá `expiredAt` thì không áp dụng.<br>AC3. Đơn chưa đạt `minOrder` thì thông báo mức tối thiểu cần đạt.<br>AC4. Mã đã đạt `usageLimit` thì báo hết lượt sử dụng.<br>AC5. Tài khoản đã sử dụng mã trước đó không được dùng lại. |
+| FR-18 | Tự gỡ mã khi đơn không còn đủ điều kiện. | Should | AC1. Khi giảm số lượng làm tiền nước thấp hơn `minOrder`, mã khuyến mãi được gỡ và tổng tiền được tính lại.<br>AC2. Người dùng chủ động gỡ mã thì tiền giảm trở về 0. |
+| FR-19 | Cộng điểm thưởng cho đơn hàng. | Could | AC1. Đơn có tạm tính 50.000đ được cộng 50 điểm theo quy tắc 1 điểm cho mỗi 1.000đ, làm tròn xuống. **[Cần xác nhận quy tắc và thời điểm cộng điểm]**<br>AC2. Mỗi lần cộng điểm được lưu vào `LoyaltyTransaction` kèm lý do.<br>AC3. `GET /users/me/loyalty` trả đúng số điểm hiện có. |
+| FR-20 | Sử dụng điểm thưởng để giảm tiền thanh toán. | Could | AC1. Người dùng được sử dụng điểm trong giới hạn số điểm đang có. Tiền giảm tính theo số điểm nhân với giá trị quy đổi.<br>AC2. Không cho phép dùng nhiều điểm hơn số điểm hiện có.<br>AC3. Điểm dùng cho đơn đang chờ thanh toán được giữ trong `reservedPoints`. Khi đơn bị hủy, số điểm này được trả lại. |
 
-### 3.6 Đặt đơn
+### 3.6 Đặt hàng
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| FR-21 | Xem trước đơn hàng (checkout preview) trước khi đặt. | Must | AC1. Gọi `POST /checkout/preview` với giỏ hàng thì nhận về tạm tính, phí giao, giảm giá, tổng tiền theo BR-01 đến BR-04.<br>AC2. Giỏ chứa món đã bị xóa hoặc không tồn tại thì trả lỗi rõ ràng.<br>AC3. Cần đăng nhập mới gọi được. |
-| FR-22 | Tạo đơn với thông tin người nhận. | Must | AC1. Nhập đủ tên, số điện thoại, địa chỉ thì tạo đơn ở trạng thái `PENDING`, trả về mã đơn.<br>AC2. Thiếu một trong ba thông tin hoặc số điện thoại sai định dạng thì báo lỗi, không tạo đơn.<br>AC3. Giá lưu trong đơn (`unitPrice`, `lineTotal`) do backend tính lại, không tin giá gửi từ frontend.<br>AC4. Giỏ rỗng thì không tạo được đơn. |
-| FR-23 | Giữ chỗ nguyên liệu, topping (và điểm nếu có) ngay khi tạo đơn. | Must | AC1. Sau khi tạo đơn, `reservedQuantity` của nguyên liệu và topping liên quan tăng đúng theo công thức × size × số lượng.<br>AC2. Nếu một nguyên liệu hoặc topping không đủ tồn khả dụng (tồn kho − giữ chỗ) thì từ chối tạo đơn và báo món nào thiếu.<br>AC3. Tạo đơn thất bại thì không có phần giữ chỗ nào bị thay đổi. |
-| FR-24 | Tự hủy đơn `PENDING` quá 10 phút và trả lại phần giữ chỗ (BR-05). | Must | AC1. Đơn `PENDING` tạo quá 10 phút trước, chưa thanh toán, được chuyển sang `CANCELLED` ở lần chạy tác vụ định kỳ kế tiếp.<br>AC2. Phần giữ chỗ kho và điểm của đơn đó được trả lại đúng số lượng.<br>AC3. Đơn đã `PAID` không bị tự hủy. |
-| FR-25 | Khách hủy đơn của mình khi còn được phép. | Must | AC1. Đơn `PENDING` thì hủy được, trạng thái chuyển `CANCELLED`, trả lại giữ chỗ.<br>AC2. Đơn đã `PREPARING`, `READY` hoặc `COMPLETED` thì không hủy được và báo lý do. **[Cần xác nhận: có cho hủy đơn `PAID` chưa vào chế biến không]**<br>AC3. Khách không hủy được đơn của người khác (403 hoặc 404). |
+|---|---|---|---|
+| FR-21 | Cho phép khách xem trước thông tin đơn hàng. | Must | AC1. `POST /checkout/preview` trả về tạm tính, phí giao, giảm giá và tổng tiền theo BR-01 đến BR-04.<br>AC2. Giỏ chứa sản phẩm không tồn tại hoặc đã bị xóa thì trả thông báo lỗi.<br>AC3. Người dùng phải đăng nhập mới gọi được API. |
+| FR-22 | Tạo đơn hàng với thông tin người nhận. | Must | AC1. Nhập đủ tên, số điện thoại và địa chỉ thì tạo đơn `PENDING` và trả về mã đơn.<br>AC2. Thiếu thông tin hoặc số điện thoại sai định dạng thì không tạo đơn.<br>AC3. Backend tự tính lại `unitPrice` và `lineTotal`, không sử dụng giá do frontend gửi lên.<br>AC4. Không cho phép tạo đơn khi giỏ trống. |
+| FR-23 | Giữ chỗ nguyên liệu, topping và điểm thưởng nếu có khi tạo đơn. | Must | AC1. `reservedQuantity` tăng đúng theo công thức, size và số lượng món.<br>AC2. Nếu tồn khả dụng không đủ, hệ thống từ chối tạo đơn và thông báo nguyên liệu hoặc topping bị thiếu.<br>AC3. Tạo đơn thất bại thì dữ liệu giữ chỗ không thay đổi. |
+| FR-24 | Tự hủy đơn `PENDING` quá 10 phút theo BR-05. | Must | AC1. Đơn chưa thanh toán quá 10 phút được chuyển sang `CANCELLED` ở lần chạy tác vụ định kỳ tiếp theo.<br>AC2. Nguyên liệu, topping và điểm đã giữ chỗ được trả lại.<br>AC3. Đơn `PAID` không bị tự hủy. |
+| FR-25 | Khách hàng hủy đơn của mình khi trạng thái còn cho phép. | Must | AC1. Đơn `PENDING` được hủy và chuyển sang `CANCELLED`, đồng thời trả lại phần giữ chỗ.<br>AC2. Đơn `PREPARING`, `READY`, `COMPLETED` không thể hủy. **[Cần xác nhận: có cho phép hủy đơn `PAID` chưa chế biến hay không]**<br>AC3. Khách không được hủy đơn của tài khoản khác, API trả 403 hoặc 404. |
 
 ### 3.7 Thanh toán
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| FR-26 | Tạo yêu cầu thanh toán VNPay cho đơn `PENDING`. | Must | AC1. Gọi `POST /payments` với đơn hợp lệ thì tạo bản ghi `Payment` trạng thái `PENDING`, số tiền bằng tổng đơn, và trả về URL chuyển sang VNPay.<br>AC2. Đơn không phải `PENDING` hoặc không thuộc về người gọi thì bị từ chối.<br>AC3. URL có chữ ký hợp lệ theo cấu hình VNPay. |
-| FR-27 | Xử lý kết quả khi người dùng quay về từ VNPay (return URL). | Must | AC1. Thanh toán thành công thì giao diện hiện trang kết quả thành công kèm mã đơn.<br>AC2. Thanh toán thất bại hoặc hủy thì hiện trang thất bại và cho phép quay lại giỏ hoặc thanh toán lại.<br>AC3. Tham số trả về bị sửa (sai chữ ký) thì không đổi trạng thái đơn. |
-| FR-28 | Nhận thông báo kết quả (IPN) từ VNPay và cập nhật đơn. | Must | AC1. IPN thành công có chữ ký đúng và đúng số tiền thì `Payment` thành `SUCCEEDED`, đơn thành `PAID`, và `PromotionUsage` được ghi nhận nếu có dùng mã.<br>AC2. IPN sai chữ ký thì trả mã lỗi cho VNPay, không đổi trạng thái.<br>AC3. IPN thất bại thì `Payment` thành `FAILED`, đơn thành `PAYMENT_FAILED`.<br>AC4. Số tiền IPN khác số tiền đơn thì từ chối. |
-| FR-29 | Chống ghi nhận thanh toán trùng. | Must | AC1. Gửi `POST /payments` hai lần với cùng `idempotencyKey` thì chỉ có một bản ghi `Payment`.<br>AC2. VNPay gọi IPN lặp lại cho cùng giao dịch thì lần sau không làm đổi thêm dữ liệu (không cộng điểm, không ghi lượt dùng mã lần hai). |
-| FR-30 | Cho phép hủy thanh toán đang chờ của một đơn. | Should | AC1. Gọi `POST /payments/orders/:orderId/cancel` với thanh toán `PENDING` thì thanh toán chuyển sang trạng thái hủy/thất bại và đơn có thể thanh toán lại hoặc bị hủy.<br>AC2. Thanh toán đã `SUCCEEDED` thì không hủy được. |
+|---|---|---|---|
+| FR-26 | Tạo yêu cầu thanh toán VNPay cho đơn `PENDING`. | Must | AC1. `POST /payments` tạo bản ghi `Payment` trạng thái `PENDING` với số tiền bằng tổng đơn và trả về URL thanh toán.<br>AC2. Đơn không thuộc người dùng hoặc không còn `PENDING` thì bị từ chối.<br>AC3. URL thanh toán có chữ ký hợp lệ theo cấu hình VNPay. |
+| FR-27 | Xử lý kết quả khi khách quay lại từ VNPay. | Must | AC1. Thanh toán thành công thì hiển thị trang kết quả cùng mã đơn.<br>AC2. Thanh toán thất bại hoặc bị hủy thì thông báo và cho phép quay lại giỏ hoặc thanh toán lại.<br>AC3. Tham số có chữ ký không hợp lệ không được làm thay đổi trạng thái đơn. |
+| FR-28 | Nhận IPN từ VNPay và cập nhật thanh toán. | Must | AC1. IPN thành công, chữ ký và số tiền hợp lệ thì `Payment` chuyển sang `SUCCEEDED`, đơn chuyển sang `PAID`. Nếu dùng khuyến mãi thì ghi nhận `PromotionUsage`.<br>AC2. IPN sai chữ ký thì trả mã lỗi và không cập nhật dữ liệu.<br>AC3. IPN thất bại thì `Payment` thành `FAILED`, đơn thành `PAYMENT_FAILED`.<br>AC4. Số tiền IPN khác tổng đơn thì từ chối xử lý. |
+| FR-29 | Ngăn việc ghi nhận thanh toán nhiều lần. | Must | AC1. Gửi `POST /payments` hai lần với cùng `idempotencyKey` chỉ tạo một bản ghi `Payment`.<br>AC2. Khi VNPay gửi lại IPN của cùng giao dịch, hệ thống không cộng điểm hoặc ghi lượt sử dụng khuyến mãi thêm lần nữa. |
+| FR-30 | Cho phép hủy thanh toán đang chờ. | Should | AC1. `POST /payments/orders/:orderId/cancel` hủy thanh toán `PENDING`, sau đó đơn được phép thanh toán lại hoặc bị hủy.<br>AC2. Thanh toán `SUCCEEDED` không được hủy bằng chức năng này. |
 
-### 3.8 Lịch sử đơn
+### 3.8 Lịch sử đơn hàng
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| FR-31 | Khách xem danh sách đơn của mình (đang xử lý và lịch sử). | Must | AC1. `GET /orders/me` chỉ trả đơn của người đang đăng nhập.<br>AC2. Trang `/orders` có 2 tab: "Đang xử lý" gồm `PENDING`, `PAID`, `PREPARING`, `READY`; "Lịch sử" gồm `COMPLETED`, `CANCELLED`, `PAYMENT_FAILED`.<br>AC3. Mỗi đơn hiển thị mã, thời gian, trạng thái, tổng tiền.<br>AC4. Tài khoản chưa có đơn thì hiện thông báo trống. |
-| FR-32 | Khách xem chi tiết một đơn. | Should | AC1. Chi tiết gồm danh sách món (tên, size, topping, số lượng, thành tiền), tạm tính, phí giao, giảm giá, tổng tiền, thông tin người nhận.<br>AC2. Số liệu khớp với lúc đặt đơn. |
-| FR-33 | Cho khách thanh toán lại đơn `PENDING` chưa quá hạn từ trang đơn hàng. | Could | AC1. Đơn `PENDING` còn hạn có nút thanh toán, bấm thì chuyển sang VNPay.<br>AC2. Đơn đã quá hạn hoặc đã hủy không hiện nút thanh toán. |
+|---|---|---|---|
+| FR-31 | Hiển thị các đơn hàng của khách. | Must | AC1. `GET /orders/me` chỉ trả về đơn của tài khoản đang đăng nhập.<br>AC2. Trang `/orders` có tab "Đang xử lý" gồm `PENDING`, `PAID`, `PREPARING`, `READY` và tab "Lịch sử" gồm `COMPLETED`, `CANCELLED`, `PAYMENT_FAILED`.<br>AC3. Mỗi đơn có mã đơn, thời gian, trạng thái và tổng tiền.<br>AC4. Nếu chưa có đơn, hệ thống hiển thị thông báo. |
+| FR-32 | Xem chi tiết đơn hàng đã đặt. | Should | AC1. Hiển thị tên món, size, topping, số lượng, thành tiền, tạm tính, phí giao, giảm giá, tổng tiền và thông tin người nhận.<br>AC2. Các số liệu phải khớp với dữ liệu được lưu khi đặt hàng. |
+| FR-33 | Thanh toán lại đơn `PENDING` chưa quá hạn. | Could | AC1. Đơn còn thời hạn thanh toán có nút chuyển sang VNPay.<br>AC2. Đơn đã quá hạn hoặc bị hủy không hiển thị nút thanh toán. |
 
 ### 3.9 Quản lý trạng thái đơn và kho
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| FR-34 | Barista xem danh sách đơn cần xử lý. | Must | AC1. `GET /barista/orders` chỉ trả các đơn cần làm (đã thanh toán, chưa hoàn tất).<br>AC2. Mỗi đơn hiển thị món, size, topping, số lượng, thời gian đặt.<br>AC3. Đơn `PENDING` chưa thanh toán không xuất hiện.<br>AC4. Chỉ BARISTA hoặc ADMIN truy cập được. |
-| FR-35 | Barista cập nhật trạng thái đơn theo đúng thứ tự. | Must | AC1. `PATCH /barista/orders/:id` chuyển được `PAID` → `PREPARING` → `READY` → `COMPLETED`.<br>AC2. Nhảy bước (ví dụ `PAID` sang `COMPLETED`) hoặc lùi trạng thái bị từ chối với thông báo lỗi.<br>AC3. Đơn đã `COMPLETED` hoặc `CANCELLED` không đổi được nữa.<br>AC4. Sau khi đổi, khách thấy trạng thái mới ở trang đơn hàng. |
-| FR-36 | Trừ kho nguyên liệu và topping theo công thức, size, số lượng khi đơn được thanh toán. | Must | AC1. Món có công thức 20g cà phê, đơn 2 ly size L thì khi đơn lên `PAID`, tồn kho cà phê giảm 20 × 1,2 × 2 = 48g.<br>AC2. Phần giữ chỗ tương ứng được giải phóng, không bị trừ hai lần.<br>AC3. Topping trừ `stock` đúng số lượng.<br>AC4. Đơn bị hủy trước khi thanh toán thì tồn kho không đổi. |
+|---|---|---|---|
+| FR-34 | Nhân viên Barista xem các đơn cần chế biến. | Must | AC1. `GET /barista/orders` trả về các đơn đã thanh toán nhưng chưa hoàn tất.<br>AC2. Danh sách hiển thị món, size, topping, số lượng và thời gian đặt.<br>AC3. Đơn `PENDING` không xuất hiện trong danh sách.<br>AC4. Chỉ BARISTA hoặc ADMIN được truy cập. |
+| FR-35 | Barista cập nhật trạng thái chế biến đơn hàng. | Must | AC1. `PATCH /barista/orders/:id` cho phép chuyển lần lượt `PAID` → `PREPARING` → `READY` → `COMPLETED`.<br>AC2. Không cho phép bỏ qua bước hoặc chuyển ngược trạng thái.<br>AC3. Đơn `COMPLETED` hoặc `CANCELLED` không được cập nhật tiếp.<br>AC4. Khách hàng xem được trạng thái mới sau khi cập nhật. |
+| FR-36 | Trừ nguyên liệu và topping khi đơn thanh toán thành công. | Must | AC1. Món cần 20g cà phê, đặt 2 ly size L thì khi đơn chuyển sang `PAID`, kho giảm 20 × 1,2 × 2 = 48g.<br>AC2. Phần nguyên liệu giữ chỗ được giải phóng và không bị trừ hai lần.<br>AC3. `stock` của topping giảm đúng số lượng sử dụng.<br>AC4. Nếu đơn bị hủy trước khi thanh toán thì tồn kho không đổi. |
 
-### 3.10 Quản trị (Admin)
+### 3.10 Quản trị hệ thống
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| FR-37 | Admin thêm, sửa, xóa sản phẩm. | Must | AC1. Thêm sản phẩm hợp lệ (tên, giá, danh mục, ảnh) thì xuất hiện ở menu.<br>AC2. Sửa giá hoặc tên thì menu hiển thị giá trị mới.<br>AC3. Xóa sản phẩm thì không còn ở menu; đơn cũ có chứa sản phẩm đó vẫn xem được.<br>AC4. Giá âm hoặc tên rỗng bị từ chối.<br>AC5. Người không phải ADMIN nhận 403. |
-| FR-38 | Admin quản lý nguyên liệu và nhập kho nguyên liệu. | Must | AC1. Tạo nguyên liệu mới (tên, đơn vị, tồn ban đầu).<br>AC2. `POST /admin/ingredients/:id/import` với số lượng dương thì tồn kho tăng đúng số đó.<br>AC3. Số lượng nhập bằng 0 hoặc âm bị từ chối. |
-| FR-39 | Admin quản lý topping và nhập kho topping. | Must | AC1. Tạo topping mới (tên, giá, tồn).<br>AC2. `POST /admin/toppings/:id/import` với số lượng dương thì tồn kho tăng đúng.<br>AC3. Số lượng không hợp lệ bị từ chối. |
-| FR-40 | Admin xem tồn kho. | Must | AC1. `GET /admin/inventory` liệt kê nguyên liệu và topping với tồn kho, số lượng giữ chỗ, đơn vị.<br>AC2. Mục sắp hết hàng được làm nổi bật. **[Cần xác nhận ngưỡng "sắp hết"]** |
-| FR-41 | Admin quản lý khuyến mãi (tạo, xem, sửa, tắt). | Should | AC1. Tạo mã mới với mã, giá trị giảm, loại, đơn tối thiểu, thời gian hiệu lực, giới hạn lượt.<br>AC2. Mã trùng với mã đã có bị từ chối.<br>AC3. "Xóa" mã là xóa mềm (`active = false`); mã đó không dùng được nữa nhưng lịch sử lượt dùng vẫn còn.<br>AC4. Sửa mã thì giá trị mới áp dụng cho các đơn sau. |
-| FR-42 | Admin xem báo cáo doanh thu. | Should | AC1. `GET /admin/reports/revenue` trả doanh thu theo khoảng thời gian được chọn.<br>AC2. Chỉ tính các đơn đã thanh toán, không tính đơn `CANCELLED` và `PAYMENT_FAILED`.<br>AC3. Số liệu khớp với tổng của các đơn trong khoảng thời gian đó. |
-| FR-43 | Admin xem danh sách đơn hàng. | Should | AC1. Xem được đơn của mọi khách, lọc được theo trạng thái.<br>AC2. Hiển thị mã đơn, khách, tổng tiền, trạng thái, thời gian. |
-| FR-44 | Trang "Về chúng tôi". | Could | AC1. Trang `/about` hiển thị địa chỉ (Quận 5, TP.HCM), giờ mở cửa (7:00–22:00), điện thoại, email.<br>AC2. Truy cập được từ Header, không cần đăng nhập. |
+|---|---|---|---|
+| FR-37 | Admin thêm, sửa và xóa sản phẩm. | Must | AC1. Thêm sản phẩm với tên, giá, danh mục và ảnh hợp lệ thì sản phẩm xuất hiện trên menu.<br>AC2. Khi sửa tên hoặc giá, menu hiển thị dữ liệu mới.<br>AC3. Xóa sản phẩm thì sản phẩm không còn trong menu nhưng vẫn xem được các đơn cũ.<br>AC4. Từ chối sản phẩm có tên rỗng hoặc giá âm.<br>AC5. Người không có vai trò ADMIN nhận 403. |
+| FR-38 | Quản lý nguyên liệu và nhập kho. | Must | AC1. Admin tạo được nguyên liệu với tên, đơn vị và tồn ban đầu.<br>AC2. `POST /admin/ingredients/:id/import` với số lượng dương làm tồn kho tăng tương ứng.<br>AC3. Số lượng nhập bằng 0 hoặc âm bị từ chối. |
+| FR-39 | Quản lý topping và nhập kho topping. | Must | AC1. Admin tạo topping với tên, giá và tồn kho.<br>AC2. `POST /admin/toppings/:id/import` làm tăng tồn kho đúng số lượng nhập.<br>AC3. Số lượng nhập không hợp lệ bị từ chối. |
+| FR-40 | Xem tồn kho nguyên liệu và topping. | Must | AC1. `GET /admin/inventory` hiển thị tồn kho, số lượng giữ chỗ và đơn vị của nguyên liệu, topping.<br>AC2. Các mục sắp hết hàng được làm nổi bật.|
+| FR-41 | Quản lý mã khuyến mãi. | Should | AC1. Tạo mã với giá trị giảm, loại giảm, đơn tối thiểu, thời gian hiệu lực và giới hạn lượt sử dụng.<br>AC2. Không cho phép tạo mã trùng.<br>AC3. Xóa mã bằng cách đặt `active = false`, giữ lại lịch sử sử dụng.<br>AC4. Mã sau khi chỉnh sửa được áp dụng cho các đơn tiếp theo. |
+| FR-42 | Xem báo cáo doanh thu. | Should | AC1. `GET /admin/reports/revenue` trả về doanh thu trong khoảng thời gian được chọn.<br>AC2. Chỉ tính đơn đã thanh toán, không tính đơn `CANCELLED` và `PAYMENT_FAILED`.<br>AC3. Doanh thu phải khớp với tổng các đơn hợp lệ trong khoảng thời gian đó. |
+| FR-43 | Xem danh sách đơn của toàn bộ khách hàng. | Should | AC1. Admin xem và lọc đơn theo trạng thái.<br>AC2. Mỗi đơn hiển thị mã, khách hàng, tổng tiền, trạng thái và thời gian. |
+| FR-44 | Hiển thị trang "Về chúng tôi". | Could | AC1. Trang `/about` có địa chỉ Quận 5, TP.HCM, giờ mở cửa 7:00–22:00, số điện thoại và email.<br>AC2. Có thể mở trang từ Header mà không cần đăng nhập. |
 
-### 3.11 Ngoài phạm vi (Won't)
+### 3.11 Chức năng ngoài phạm vi
 
-Các yêu cầu sau ghi nhận để thống nhất ranh giới; không thiết kế và không kiểm thử trong đồ án này.
+Các chức năng dưới đây không được triển khai và kiểm thử trong phạm vi đồ án hiện tại.
 
 | Mã | Yêu cầu | Ưu tiên | Ghi chú |
-|----|---------|---------|---------|
-| FR-45 | Thanh toán tiền mặt (COD) và ví điện tử khác ngoài VNPay | Won't | Chỉ dùng VNPay |
-| FR-46 | Ứng dụng di động iOS/Android | Won't | Chỉ làm web responsive |
-| FR-47 | Theo dõi shipper thời gian thực, tích hợp đơn vị vận chuyển | Won't | Ngoài nguồn lực |
-| FR-48 | Đánh giá, bình luận sản phẩm | Won't | Không có trong yêu cầu |
-| FR-49 | Thông báo đẩy, SMS, email giao dịch | Won't | Không có trong yêu cầu |
-| FR-50 | Hoàn tiền tự động qua VNPay | Won't | **[Cần xác nhận]** `PaymentStatus` có `REFUNDED` nhưng chưa làm luồng hoàn tiền |
+|---|---|---|---|
+| FR-45 | Thanh toán tiền mặt (COD) và ví điện tử khác | Won't | BrewLite chỉ sử dụng VNPay |
+| FR-46 | Ứng dụng iOS/Android | Won't | Chỉ phát triển website responsive |
+| FR-47 | Theo dõi shipper theo thời gian thực và tích hợp đơn vị vận chuyển | Won't | Không nằm trong nguồn lực hiện tại |
+| FR-48 | Đánh giá và bình luận sản phẩm | Won't | Không thuộc yêu cầu đồ án |
+| FR-49 | Thông báo đẩy, SMS và email giao dịch | Won't | Không thuộc yêu cầu đồ án |
+| FR-50 | Hoàn tiền tự động qua VNPay | Won't|  `PaymentStatus` có `REFUNDED` nhưng chưa triển khai luồng hoàn tiền |
 
 ## 4. Yêu cầu phi chức năng
 
-Các con số mục tiêu dưới đây là đề xuất cho môi trường demo (máy cá nhân, dữ liệu mẫu vài chục sản phẩm). **[Cần xác nhận với nhóm]**
+Các chỉ tiêu hiệu năng dưới đây được đề xuất cho môi trường demo trên máy cá nhân, với dữ liệu mẫu khoảng vài chục sản phẩm. 
 
 ### 4.1 Hiệu năng
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| NFR-01 | Trang menu tải nhanh. | Must | AC1. Với 50 sản phẩm, trang menu hiển thị đầy đủ nội dung trong tối đa 3 giây khi chạy trên mạng thường (đo bằng thẻ Network của trình duyệt, tải lần đầu).<br>AC2. Ảnh sản phẩm có kích thước hợp lý, mỗi ảnh không quá 500 KB. |
-| NFR-02 | API đọc phản hồi nhanh. | Should | AC1. `GET /products` và `GET /orders/me` có thời gian phản hồi trung vị dưới 500 ms với 20 người dùng đồng thời (đo bằng công cụ như k6 hoặc Postman runner).<br>AC2. Không có truy vấn N+1 gây chậm khi tải danh sách sản phẩm kèm topping. |
-| NFR-03 | Tạo đơn không gây chờ lâu. | Should | AC1. `POST /orders` hoàn tất trong tối đa 2 giây (không tính thời gian ở trang VNPay) với giỏ 10 món. |
+|---|---|---|---|
+| NFR-01 | Thời gian tải trang menu. | Must | AC1. Với 50 sản phẩm, trang menu hiển thị đầy đủ trong tối đa 3 giây khi tải lần đầu trên mạng thông thường, đo bằng thẻ Network của trình duyệt.<br>AC2. Mỗi ảnh sản phẩm không vượt quá 500 KB. |
+| NFR-02 | Thời gian phản hồi API đọc dữ liệu. | Should | AC1. `GET /products` và `GET /orders/me` có thời gian phản hồi trung vị dưới 500 ms với 20 người dùng đồng thời, kiểm tra bằng k6 hoặc Postman runner.<br>AC2. Không xuất hiện truy vấn N+1 khi lấy danh sách sản phẩm và topping. |
+| NFR-03 | Thời gian tạo đơn hàng. | Should | AC1. `POST /orders` xử lý trong tối đa 2 giây với giỏ hàng gồm 10 món, không tính thời gian thanh toán tại VNPay. |
 
 ### 4.2 Bảo mật
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| NFR-04 | Mật khẩu được băm. | Must | AC1. Cột `passwordHash` trong cơ sở dữ liệu không chứa mật khẩu gốc.<br>AC2. Hai tài khoản cùng mật khẩu có hai giá trị băm khác nhau (có salt). |
-| NFR-05 | Mọi API cần đăng nhập đều kiểm tra token và vai trò. | Must | AC1. Gọi API cần đăng nhập mà không có token thì nhận 401.<br>AC2. Gọi API không đủ vai trò thì nhận 403.<br>AC3. Mỗi API ở mục 3 đều có ít nhất một ca kiểm thử về quyền truy cập. |
-| NFR-06 | Khách chỉ truy cập được dữ liệu của mình. | Must | AC1. Khách A gọi xem, hủy hoặc thanh toán đơn của khách B thì bị từ chối.<br>AC2. Danh sách đơn của khách không bao giờ chứa đơn người khác. |
-| NFR-07 | Xác thực dữ liệu từ VNPay. | Must | AC1. Mọi yêu cầu return và IPN đều được kiểm tra chữ ký trước khi xử lý.<br>AC2. Yêu cầu giả mạo không làm đổi trạng thái đơn hay thanh toán. |
-| NFR-08 | Không để lộ bí mật cấu hình. | Must | AC1. Tệp `.env` nằm trong `.gitignore`, không có trong lịch sử commit.<br>AC2. Khóa JWT và khóa VNPay chỉ đọc từ biến môi trường, không viết cứng trong mã nguồn. |
-| NFR-09 | Kiểm tra dữ liệu đầu vào ở backend. | Must | AC1. Dữ liệu sai kiểu, thiếu trường bắt buộc, số âm bị từ chối với mã 400 và thông báo rõ.<br>AC2. Giá và tổng tiền luôn do backend tính, bỏ qua giá do client gửi. |
+|---|---|---|---|
+| NFR-04 | Mật khẩu phải được băm trước khi lưu. | Must | AC1. Trường `passwordHash` không chứa mật khẩu gốc.<br>AC2. Hai tài khoản có cùng mật khẩu vẫn có giá trị băm khác nhau nhờ salt. |
+| NFR-05 | Kiểm tra token và quyền truy cập API. | Must | AC1. API yêu cầu đăng nhập trả 401 nếu không có token.<br>AC2. Người dùng không đủ quyền nhận 403.<br>AC3. Mỗi API ở mục 3 có ít nhất một ca kiểm thử quyền truy cập. |
+| NFR-06 | Bảo vệ dữ liệu đơn hàng của khách. | Must | AC1. Khách A không thể xem, hủy hoặc thanh toán đơn của khách B.<br>AC2. Danh sách đơn chỉ chứa dữ liệu của tài khoản đang đăng nhập. |
+| NFR-07 | Kiểm tra dữ liệu trả về từ VNPay. | Must | AC1. Return URL và IPN đều phải được xác minh chữ ký trước khi xử lý.<br>AC2. Yêu cầu giả mạo không được làm thay đổi trạng thái đơn hoặc thanh toán. |
+| NFR-08 | Bảo vệ thông tin cấu hình. | Must | AC1. File `.env` nằm trong `.gitignore` và không xuất hiện trong lịch sử commit.<br>AC2. Khóa JWT và VNPay được lấy từ biến môi trường, không ghi trực tiếp trong mã nguồn. |
+| NFR-09 | Kiểm tra dữ liệu đầu vào tại backend. | Must | AC1. Dữ liệu thiếu trường bắt buộc, sai kiểu hoặc chứa số âm không hợp lệ thì API trả 400 kèm thông báo.<br>AC2. Backend tự tính giá và tổng tiền, không sử dụng giá do client gửi. |
 
 ### 4.3 Toàn vẹn dữ liệu và độ tin cậy
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| NFR-10 | Các thao tác nhiều bước chạy trong giao dịch (transaction). | Must | AC1. Tạo đơn, giữ chỗ kho, ghi lượt dùng mã, trừ điểm hoặc thành công cả hoặc không thay đổi gì.<br>AC2. Giả lập lỗi giữa chừng thì dữ liệu không bị lệch (kho không bị giữ chỗ thừa). |
-| NFR-11 | Tồn kho không bị âm khi nhiều người đặt cùng lúc. | Must | AC1. Nguyên liệu còn đủ cho 1 ly, hai yêu cầu đặt đồng thời thì chỉ một đơn được tạo, đơn còn lại bị từ chối vì hết hàng.<br>AC2. Sau thử nghiệm, tồn kho và giữ chỗ không âm. |
-| NFR-12 | Tác vụ tự hủy đơn quá hạn chạy đều và không lỗi. | Must | AC1. Tác vụ định kỳ chạy mỗi phút không phát sinh lỗi trong log khi cơ sở dữ liệu đúng schema.<br>AC2. Khi một lần chạy lỗi, lần sau vẫn chạy tiếp. |
+|---|---|---|---|
+| NFR-10 | Các thao tác liên quan đến nhiều dữ liệu phải dùng transaction. | Must | AC1. Tạo đơn, giữ chỗ kho, ghi lượt dùng mã và trừ điểm phải cùng thành công hoặc cùng rollback.<br>AC2. Khi xảy ra lỗi giữa chừng, dữ liệu không bị cập nhật một phần. |
+| NFR-11 | Không để tồn kho âm khi nhiều khách đặt cùng lúc. | Must | AC1. Nếu nguyên liệu chỉ đủ cho một ly mà có hai yêu cầu đặt đồng thời, chỉ một đơn được tạo thành công.<br>AC2. Sau kiểm thử, tồn kho và số lượng giữ chỗ không âm. |
+| NFR-12 | Tác vụ hủy đơn quá hạn hoạt động ổn định. | Must | AC1. Tác vụ chạy mỗi phút, không phát sinh lỗi trong log khi cơ sở dữ liệu đúng schema.<br>AC2. Nếu một lần chạy bị lỗi, tác vụ vẫn tiếp tục ở lần chạy sau. |
 
-### 4.4 Tính khả dụng (usability)
-
-| Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| NFR-13 | Giao diện responsive. | Must | AC1. Hiển thị đúng, không tràn ngang ở bề rộng 360px, 768px, 1440px.<br>AC2. Các nút bấm chính dễ chạm trên điện thoại (vùng chạm tối thiểu khoảng 40px). |
-| NFR-14 | Giao diện tiếng Việt, định dạng tiền VND. | Must | AC1. Mọi nhãn, thông báo hiển thị bằng tiếng Việt.<br>AC2. Tiền có dấu chấm phân cách hàng nghìn và ký hiệu đ (ví dụ 35.000đ). |
-| NFR-15 | Thông báo lỗi dễ hiểu. | Must | AC1. Mọi lỗi người dùng gặp (sai mật khẩu, hết hàng, mã khuyến mãi sai, mất kết nối) đều có thông báo nêu nguyên nhân và hướng xử lý.<br>AC2. Không hiển thị mã lỗi kỹ thuật hoặc stack trace cho người dùng. |
-| NFR-16 | Giao diện bám thiết kế Figma. | Should | AC1. Màu nền, bố cục, phông chữ, khoảng cách của các trang chính khớp bản Figma khi đối chiếu bằng mắt (nền `#F8F5F0`, bố cục rộng 1440px).<br>AC2. Mỗi trang chính được thành viên review đối chiếu Figma trước khi gộp PR. |
-| NFR-17 | Có trạng thái đang tải và trạng thái rỗng. | Should | AC1. Khi chờ dữ liệu, giao diện hiện trạng thái đang tải.<br>AC2. Danh sách rỗng (giỏ, đơn, kết quả tìm) có thông báo thay vì để trống. |
-| NFR-18 | Tương thích trình duyệt. | Should | AC1. Chạy đúng trên bản mới của Chrome, Edge, Firefox. |
-
-### 4.5 Khả năng triển khai và bảo trì
+### 4.4 Tính khả dụng
 
 | Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
-|----|---------|---------|--------------------|
-| NFR-19 | Dựng được môi trường bằng Docker. | Should | AC1. Từ máy sạch có Docker, chạy theo hướng dẫn trong README thì cơ sở dữ liệu PostgreSQL khởi động được.<br>AC2. Không cần cài tay thêm thành phần nào ngoài những gì README nêu. |
-| NFR-20 | Cấu hình qua biến môi trường. | Must | AC1. Repo có tệp mẫu `.env.example` liệt kê đủ các biến cần thiết (kết nối cơ sở dữ liệu, JWT, VNPay, địa chỉ backend).<br>AC2. Đổi cấu hình chỉ cần sửa `.env`, không sửa mã nguồn. |
-| NFR-21 | Dựng được dữ liệu từ đầu. | Must | AC1. Trên cơ sở dữ liệu trống, chạy migration rồi seed thì có đủ sản phẩm, topping, nguyên liệu, công thức và tài khoản mẫu cho 3 vai trò.<br>AC2. Migration không bị lỗi lệch (drift) khi chạy theo thứ tự trong README. |
-| NFR-22 | Mã nguồn biên dịch sạch. | Must | AC1. Backend và frontend biên dịch với 0 lỗi TypeScript.<br>AC2. Không đẩy lên `main` khi build lỗi. |
-| NFR-23 | Có tài liệu API. | Should | AC1. Swagger tại `/api` liệt kê đủ các endpoint ở mục 3 kèm dữ liệu vào/ra. |
-| NFR-24 | Tuân thủ quy ước Git của nhóm. | Should | AC1. Mỗi chức năng một nhánh `feature/<tên-chức-năng>`, commit dạng `feat(<mô-đun>): mô tả`, gộp qua Pull Request có người review.<br>AC2. Không có `node_modules`, `.env` trong commit. |
+|---|---|---|---|
+| NFR-13 | Giao diện responsive. | Must | AC1. Giao diện không tràn ngang ở các kích thước 360px, 768px và 1440px.<br>AC2. Nút bấm chính trên điện thoại có vùng chạm tối thiểu khoảng 40px. |
+| NFR-14 | Giao diện tiếng Việt và hiển thị tiền VND. | Must | AC1. Nhãn và thông báo sử dụng tiếng Việt.<br>AC2. Giá tiền có dấu chấm phân cách hàng nghìn và ký hiệu đ, ví dụ 35.000đ. |
+| NFR-15 | Hiển thị thông báo lỗi rõ ràng. | Must | AC1. Các lỗi như sai mật khẩu, hết hàng, mã giảm giá không hợp lệ hoặc mất kết nối phải có thông báo nêu nguyên nhân và hướng xử lý.<br>AC2. Không hiển thị stack trace hoặc mã lỗi kỹ thuật cho khách hàng. |
+| NFR-16 | Giao diện bám theo thiết kế Figma. | Should | AC1. Màu nền `#F8F5F0`, bố cục rộng 1440px, phông chữ và khoảng cách của các trang chính được đối chiếu với Figma.<br>AC2. Thành viên review giao diện trước khi gộp Pull Request. |
+| NFR-17 | Có thông báo khi đang tải hoặc không có dữ liệu. | Should | AC1. Khi chờ backend trả dữ liệu, giao diện hiển thị trạng thái đang tải.<br>AC2. Giỏ hàng, danh sách đơn hoặc kết quả tìm kiếm rỗng đều có thông báo. |
+| NFR-18 | Hỗ trợ các trình duyệt phổ biến. | Should | AC1. Website hoạt động đúng trên phiên bản mới của Chrome, Edge và Firefox. |
 
-## 5. Tóm tắt ưu tiên
+### 4.5 Triển khai và bảo trì
 
-| Mức | Ý nghĩa trong dự án | Gồm các nhóm |
-|-----|--------------------|--------------|
-| **Must** | MVP; thiếu thì hệ thống không dùng được | Xác thực, menu, chi tiết món, giỏ hàng, đặt đơn, thanh toán VNPay, lịch sử đơn, barista, quản trị sản phẩm và kho, bảo mật, toàn vẹn dữ liệu |
-| **Should** | Quan trọng, làm ngay sau MVP | Sắp xếp, hiển thị số lượng giỏ, khuyến mãi, hủy thanh toán, chi tiết đơn, báo cáo doanh thu, hiệu năng, Docker, Swagger |
-| **Could** | Có thì tốt | Lưu giỏ hàng, điểm thưởng, thanh toán lại, trang "Về chúng tôi" |
-| **Won't** | Không làm trong đồ án này | COD, ứng dụng di động, theo dõi shipper, đánh giá, thông báo, hoàn tiền tự động |
+| Mã | Yêu cầu | Ưu tiên | Tiêu chí chấp nhận |
+|---|---|---|---|
+| NFR-19 | Khởi tạo môi trường bằng Docker. | Should | AC1. Trên máy có Docker, thực hiện theo README thì PostgreSQL khởi động được.<br>AC2. Không cần cài thêm thành phần ngoài hướng dẫn trong README. |
+| NFR-20 | Quản lý cấu hình bằng biến môi trường. | Must | AC1. Repository có `.env.example` chứa các biến cần thiết cho PostgreSQL, JWT, VNPay và backend.<br>AC2. Khi thay đổi cấu hình, chỉ cần chỉnh `.env` mà không phải sửa mã nguồn. |
+| NFR-21 | Khởi tạo cơ sở dữ liệu và dữ liệu mẫu. | Must | AC1. Chạy migration và seed trên cơ sở dữ liệu trống sẽ tạo đủ sản phẩm, topping, nguyên liệu, công thức và tài khoản mẫu cho CUSTOMER, BARISTA, ADMIN.<br>AC2. Migration chạy theo README không phát sinh lỗi drift. |
+| NFR-22 | Frontend và backend build không có lỗi. | Must | AC1. Cả hai phần không có lỗi TypeScript khi build.<br>AC2. Không gộp mã nguồn vào `main` khi build chưa thành công. |
+| NFR-23 | Có tài liệu API. | Should | AC1. Swagger tại `/api` hiển thị các endpoint trong mục 3 cùng dữ liệu đầu vào và đầu ra. |
+| NFR-24 | Thực hiện đúng quy trình Git của nhóm. | Should | AC1. Mỗi chức năng phát triển trên nhánh `feature/<tên-chức-năng>`, commit theo mẫu `feat(<mô-đun>): mô tả` và tạo Pull Request để review.<br>AC2. Không commit `node_modules` hoặc `.env`. |
 
-## 6. Điểm cần nhóm thống nhất
+## 5. Mức độ ưu tiên MoSCoW
 
-1. Ngưỡng miễn phí giao hàng: 100.000đ hay 150.000đ (BR-04).
-2. Có cho hủy đơn đã `PAID` nhưng chưa chế biến không (FR-25).
-3. Quy tắc tích điểm, quy đổi điểm và thời điểm cộng điểm (FR-19, FR-20).
-4. Có làm hoàn tiền không (FR-50).
-5. Ngưỡng "sắp hết hàng" của tồn kho (FR-40).
-6. Các con số hiệu năng ở mục 4.1 có phù hợp với nhóm không.
-7. Đường dẫn hoặc hình sơ đồ use-case để chèn vào mục 2.
+| Mức | Ý nghĩa | Các nhóm chức năng |
+|---|---|---|
+| Must | Các yêu cầu cần hoàn thành trong MVP | Đăng nhập, phân quyền, menu, chi tiết sản phẩm, giỏ hàng, đặt hàng, thanh toán VNPay, lịch sử đơn, Barista, quản lý sản phẩm và kho, bảo mật và toàn vẹn dữ liệu |
+| Should | Ưu tiên thực hiện sau khi hoàn thành MVP | Sắp xếp sản phẩm, hiển thị số lượng giỏ, khuyến mãi, hủy thanh toán, chi tiết đơn, báo cáo doanh thu, hiệu năng, Docker và Swagger |
+| Could | Thực hiện nếu nhóm còn thời gian | Lưu giỏ hàng, tích điểm, dùng điểm, thanh toán lại và trang "Về chúng tôi" |
+| Won't | Không thực hiện trong đồ án | COD, ứng dụng di động, theo dõi shipper, đánh giá sản phẩm, thông báo và hoàn tiền tự động |
