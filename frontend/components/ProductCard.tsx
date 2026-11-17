@@ -4,7 +4,7 @@ import { Product } from "@/lib/types";
 
 export default function ProductCard({ product }: { product: Product }) {
   return (
-    <article className="rounded-2xl border border-[#EDE6DC] bg-white p-2.5 shadow-sm transition hover:shadow-md">
+    <article className="rounded-2xl border border-[#D9CBAA] bg-[#F3EAD8] p-2.5 shadow-[0_6px_18px_-8px_rgba(46,31,20,0.3)] transition hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-8px_rgba(46,31,20,0.35)]">
       <Link href={`/products/${product.id}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-stone-200">
           <Image
@@ -42,7 +42,7 @@ export default function ProductCard({ product }: { product: Product }) {
         </span>
         <Link
           href={`/products/${product.id}`}
-          className="rounded-lg border border-[#EDE6DC] px-3 py-1.5 text-xs font-medium text-[#2B1F1A] hover:bg-[#F8F5F0]"
+          className="rounded-lg bg-[#2F4A3A] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#263D2F]"
         >
           Thêm vào giỏ hàng
         </Link>
