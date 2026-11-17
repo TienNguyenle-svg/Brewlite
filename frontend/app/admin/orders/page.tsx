@@ -85,11 +85,11 @@ function Row({ label, value, strong = false }: { label: string; value: string; s
   return (
     <div
       className={`flex items-center justify-between text-sm ${
-        strong ? 'font-semibold' : 'text-[#82776E]'
+        strong ? 'font-semibold' : 'text-[#627467]'
       }`}
     >
       <span>{label}</span>
-      <span className={strong ? '' : 'text-[#39281F]'}>{value}</span>
+      <span className={strong ? '' : 'text-[#2F4A3A]'}>{value}</span>
     </div>
   );
 }
@@ -208,7 +208,7 @@ export default function AdminOrdersPage() {
             type="button"
             onClick={handleExport}
             disabled={loading || filtered.length === 0}
-            className={`${btnOutline} flex items-center gap-2 text-[#B9672B]`}
+            className={`${btnOutline} flex items-center gap-2 text-[#2F4A3A]`}
           >
             <DownloadIcon size={14} />
             Xuất danh sách
@@ -298,17 +298,17 @@ export default function AdminOrdersPage() {
         />
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[#E7E1DA] bg-white">
-        <div className="flex items-center justify-between border-b border-[#E7E1DA] px-5 py-3.5 text-sm">
+      <div className="overflow-hidden rounded-2xl border border-[#CBD7C8] bg-white shadow-[0_8px_24px_rgba(47,74,58,0.10)]">
+        <div className="flex items-center justify-between border-b border-[#CBD7C8] px-5 py-3.5 text-sm">
           <span className="flex items-center gap-2 font-semibold">
             {tableTitle}
             <Badge tone="neutral">{filtered.length} đơn</Badge>
           </span>
-          <span className="text-xs text-[#82776E]">Mới nhất trước</span>
+          <span className="text-xs text-[#627467]">Mới nhất trước</span>
         </div>
 
         <div
-          className={`${GRID} border-b border-[#E7E1DA] bg-[#FBF8F4] py-3 text-xs text-[#82776E]`}
+          className={`${GRID} border-b border-[#CBD7C8] bg-[#F8F4EA] py-3 text-xs text-[#627467]`}
         >
           <span>Mã đơn</span>
           <span>Thời gian</span>
@@ -338,7 +338,7 @@ export default function AdminOrdersPage() {
         )}
 
         {!loading && !loadError && filtered.length === 0 && (
-          <div className="p-10 text-center text-sm text-[#82776E]">
+          <div className="p-10 text-center text-sm text-[#627467]">
             {dayOrders.length === 0
               ? 'Không có đơn hàng nào trong thời gian đã chọn.'
               : 'Không có đơn hàng khớp với bộ lọc.'}
@@ -353,16 +353,16 @@ export default function AdminOrdersPage() {
             return (
               <div
                 key={o.id}
-                className={`${GRID} border-b border-[#F1ECE5] py-3 text-sm transition-colors hover:bg-[#FBF8F4]`}
+                className={`${GRID} border-b border-[#E8EEDD] py-3 text-sm transition-colors hover:bg-[#F8F4EA]`}
               >
                 <span className="font-semibold">{formatOrderCode(o.id)}</span>
                 <div>
                   <p>{timeOf(o.createdAt)}</p>
-                  <p className="text-xs text-[#82776E]">{dateOf(o.createdAt)}</p>
+                  <p className="text-xs text-[#627467]">{dateOf(o.createdAt)}</p>
                 </div>
                 <div className="min-w-0">
                   <p className="font-medium">{qtyOf(o)} món</p>
-                  <p className="truncate text-xs text-[#82776E]">{namesOf(o)}</p>
+                  <p className="truncate text-xs text-[#627467]">{namesOf(o)}</p>
                 </div>
                 <span className="font-medium">{formatVnd(o.total)}</span>
                 <span>
@@ -377,7 +377,7 @@ export default function AdminOrdersPage() {
                   <button
                     type="button"
                     onClick={() => setDetail(o)}
-                    className="flex items-center gap-1 text-xs font-semibold text-[#B9672B] hover:underline"
+                    className="flex items-center gap-1 text-xs font-semibold text-[#2F4A3A] hover:underline"
                   >
                     Xem chi tiết
                     <ArrowUpRightIcon size={12} />
@@ -405,7 +405,7 @@ export default function AdminOrdersPage() {
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">Đơn {formatOrderCode(detail.id)}</h2>
-              <p className="text-xs text-[#82776E]">
+              <p className="text-xs text-[#627467]">
                 {timeOf(detail.createdAt)} · {dateOf(detail.createdAt)}
               </p>
             </div>
@@ -414,16 +414,16 @@ export default function AdminOrdersPage() {
             </Badge>
           </div>
 
-          <div className="mb-4 space-y-1 rounded-xl bg-[#F8F5F0] p-4 text-sm">
-            <p className="mb-1 text-xs font-medium text-[#82776E]">Thông tin nhận hàng</p>
+          <div className="mb-4 space-y-1 rounded-xl bg-[#F3EAD8] p-4 text-sm">
+            <p className="mb-1 text-xs font-medium text-[#627467]">Thông tin nhận hàng</p>
             <p>{detail.receiverName || '—'}</p>
-            <p className="text-[#82776E]">{detail.receiverPhone || '—'}</p>
-            <p className="text-[#82776E]">{detail.deliveryAddress || '—'}</p>
+            <p className="text-[#627467]">{detail.receiverPhone || '—'}</p>
+            <p className="text-[#627467]">{detail.deliveryAddress || '—'}</p>
           </div>
 
           <div className="mb-4">
-            <p className="mb-2 text-xs font-medium text-[#82776E]">Danh sách món</p>
-            <ul className="divide-y divide-[#F1ECE5] rounded-xl border border-[#E7E1DA]">
+            <p className="mb-2 text-xs font-medium text-[#627467]">Danh sách món</p>
+            <ul className="divide-y divide-[#E8EEDD] rounded-xl border border-[#CBD7C8]">
               {detail.items.map((it) => (
                 <li key={it.id} className="flex items-start justify-between gap-4 px-4 py-3 text-sm">
                   <div className="min-w-0">
@@ -431,7 +431,7 @@ export default function AdminOrdersPage() {
                       {it.qty} × {it.product.name} ({it.size})
                     </p>
                     {it.toppings.length > 0 && (
-                      <p className="text-xs text-[#82776E]">
+                      <p className="text-xs text-[#627467]">
                         Topping: {it.toppings.map((t) => t.topping.name).join(', ')}
                       </p>
                     )}
@@ -442,7 +442,7 @@ export default function AdminOrdersPage() {
             </ul>
           </div>
 
-          <div className="mb-4 space-y-2 border-t border-[#E7E1DA] pt-4">
+          <div className="mb-4 space-y-2 border-t border-[#CBD7C8] pt-4">
             <Row
               label="Tạm tính"
               value={formatVnd(detail.items.reduce((s, i) => s + i.lineTotal, 0))}
@@ -457,9 +457,9 @@ export default function AdminOrdersPage() {
           </div>
 
           <div className="mb-5">
-            <p className="mb-2 text-xs font-medium text-[#82776E]">Thanh toán</p>
+            <p className="mb-2 text-xs font-medium text-[#627467]">Thanh toán</p>
             {detail.payments.length === 0 ? (
-              <p className="text-sm text-[#82776E]">Chưa có giao dịch thanh toán.</p>
+              <p className="text-sm text-[#627467]">Chưa có giao dịch thanh toán.</p>
             ) : (
               <ul className="space-y-1.5 text-sm">
                 {detail.payments.map((p, i) => (

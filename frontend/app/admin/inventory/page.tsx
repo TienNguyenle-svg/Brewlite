@@ -40,7 +40,7 @@ import {
 const PAGE_SIZE = 8;
 const GENERIC_ERROR = 'Đã có lỗi xảy ra, vui lòng thử lại';
 const GRID =
-  'grid grid-cols-[130px_minmax(0,1.6fr)_130px_130px_140px_120px] items-center gap-4 px-5';
+  'grid min-w-[930px] grid-cols-[140px_minmax(0,1.7fr)_130px_145px_145px_145px] items-center gap-5 px-7';
 
 type Tab = 'ingredients' | 'toppings';
 type StockFilter = '' | 'ok' | 'out';
@@ -265,10 +265,10 @@ export default function AdminInventoryPage() {
   }
 
   const tabBtn = (active: boolean) =>
-    `rounded-lg border px-4 py-2 text-sm transition-colors ${
+    `rounded-xl border px-5 py-2.5 text-sm font-semibold shadow-sm transition-colors ${
       active
-        ? 'border-[#39281F] bg-[#39281F] font-semibold text-white'
-        : 'border-[#E7E1DA] bg-white text-[#39281F] hover:bg-[#F8F5F0]'
+        ? 'border-[#2F4A3A] bg-[#2F4A3A] font-semibold text-white'
+        : 'border-[#CBD7C8] bg-white text-[#2F4A3A] hover:bg-[#F3EAD8]'
     }`;
 
   return (
@@ -307,7 +307,7 @@ export default function AdminInventoryPage() {
 
       {!loading && !loadError && (
         <>
-          <div className="mb-4 grid grid-cols-3 gap-4">
+          <div className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-3 [&>div]:transition-all [&>div]:duration-300 [&>div]:hover:-translate-y-1 [&>div]:hover:shadow-[0_14px_30px_rgba(47,74,58,0.18)]">
             <StatCard
               label={`Tổng ${noun}`}
               value={pad2(items.length)}
@@ -329,7 +329,7 @@ export default function AdminInventoryPage() {
           </div>
 
           {outItems.length > 0 && (
-            <div className="mb-4 flex items-center justify-between rounded-xl bg-[#FAEAD7] px-4 py-3 text-xs text-[#B9672B]">
+            <div className="mb-4 flex items-center justify-between rounded-xl bg-[#FAEAD7] px-4 py-3 text-xs text-[#2F4A3A]">
               <span className="flex items-center gap-2">
                 <AlertIcon size={14} />
                 Có {outItems.length} {noun} đã hết:{' '}
@@ -377,15 +377,15 @@ export default function AdminInventoryPage() {
           <option value="out">Hết hàng</option>
         </select>
         {updatedAt && (
-          <span className="ml-auto text-xs text-[#82776E]">
+          <span className="ml-auto text-xs text-[#617466]">
             Cập nhật lúc {formatClock(updatedAt)}
           </span>
         )}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[#E7E1DA] bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-[#CBD7C8] bg-white shadow-[0_10px_28px_rgba(47,74,58,0.14)]">
         <div
-          className={`${GRID} border-b border-[#E7E1DA] bg-[#FBF8F4] py-3 text-xs text-[#82776E]`}
+          className={`${GRID} border-b border-[#CBD7C8] bg-[#EAF1E6] py-5 text-sm font-extrabold text-[#2F4A3A]`}
         >
           <span>{isIngredients ? 'Mã nguyên liệu' : 'Mã topping'}</span>
           <span>{isIngredients ? 'Tên nguyên liệu' : 'Tên topping'}</span>
@@ -414,7 +414,7 @@ export default function AdminInventoryPage() {
         )}
 
         {!loading && !loadError && filtered.length === 0 && (
-          <div className="p-10 text-center text-sm text-[#82776E]">
+          <div className="p-10 text-center text-sm text-[#617466]">
             {items.length === 0
               ? `Chưa có ${noun} nào trong kho.`
               : `Không có ${noun} khớp với bộ lọc.`}
@@ -428,12 +428,12 @@ export default function AdminInventoryPage() {
             return (
               <div
                 key={item.id}
-                className={`${GRID} border-b border-[#F1ECE5] py-3 text-sm transition-colors hover:bg-[#FBF8F4]`}
+                className={`${GRID} group relative border-b border-[#E1E9DE] py-5 text-base text-[#2F4A3A] transition-all duration-300 ease-out hover:z-10 hover:scale-[1.005] hover:bg-[#EAF3E6] hover:shadow-[0_8px_24px_rgba(47,74,58,0.13)]`}
               >
-                <span className="text-xs text-[#82776E]">{item.code}</span>
-                <span className="truncate font-medium">{item.name}</span>
-                <span>{isIngredients ? item.unit : formatVnd(item.price ?? 0)}</span>
-                <span className={`font-semibold ${out ? 'text-[#C0443B]' : ''}`}>
+                <span className="text-sm font-semibold text-[#617466]">{item.code}</span>
+                <span className="truncate text-[17px] font-extrabold tracking-tight transition-colors duration-300 group-hover:text-[#1E3B2A]">{item.name}</span>
+                <span className="font-medium">{isIngredients ? item.unit : formatVnd(item.price ?? 0)}</span>
+                <span className={`text-[17px] font-extrabold tabular-nums ${out ? 'text-[#C0443B]' : ''}`}>
                   {formatNumber(item.stock)}
                 </span>
                 <span>
@@ -445,10 +445,10 @@ export default function AdminInventoryPage() {
                   <button
                     type="button"
                     onClick={() => openImport(item)}
-                    className="flex items-center gap-1 text-xs font-semibold text-[#B9672B] hover:underline"
+                    className="inline-flex items-center gap-2 rounded-xl border border-[#C5D7C1] bg-[#F1F6EE] px-3.5 py-2.5 text-sm font-extrabold text-[#2F4A3A] shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:scale-105 hover:border-[#2F4A3A] hover:bg-[#2F4A3A] hover:text-white hover:shadow-[0_6px_16px_rgba(47,74,58,0.22)] active:scale-95"
                   >
                     Nhập kho
-                    <PlusIcon size={12} />
+                    <PlusIcon size={15} />
                   </button>
                 </span>
               </div>
@@ -471,7 +471,7 @@ export default function AdminInventoryPage() {
       {importing && (
         <Modal width={400} onClose={() => !importBusy && setImporting(null)}>
           <h2 className="mb-1 text-lg font-semibold">Nhập kho</h2>
-          <p className="mb-4 text-sm text-[#82776E]">
+          <p className="mb-4 text-sm text-[#617466]">
             {importing.name} · tồn hiện tại {formatNumber(importing.stock)}
             {isIngredients ? ` ${importing.unit}` : ''}
           </p>

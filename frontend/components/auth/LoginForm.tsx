@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -14,20 +15,23 @@ interface FieldErrors {
 
 function validate(email: string, password: string): FieldErrors {
   const errors: FieldErrors = {};
+
   if (!EMAIL_REGEX.test(email.trim())) {
     errors.email = "Email không hợp lệ";
   }
+
   if (password.length < 6) {
     errors.password = "Mật khẩu phải có ít nhất 6 ký tự";
   }
+
   return errors;
 }
 
 export function EyeIcon({ off }: { off: boolean }) {
   return (
     <svg
-      width="16"
-      height="16"
+      width="21"
+      height="21"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -61,37 +65,17 @@ export function Banner({
   children: string;
 }) {
   const isError = type === "error";
+
   return (
     <div
       role={isError ? "alert" : "status"}
-      className={`mb-4 mt-4 flex items-center gap-2 rounded-lg border px-3 py-3 text-[11px] ${
+      className={`my-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm font-medium ${
         isError
-          ? "border-[#F5CFCB] bg-[#FDEFEE] text-[#C0443B]"
-          : "border-[#CFE6D4] bg-[#EAF5EC] text-[#2F7A45]"
+          ? "border-red-200 bg-red-50 text-red-700"
+          : "border-green-200 bg-green-50 text-green-700"
       }`}
     >
-      <svg
-        className="shrink-0"
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="10" />
-        {isError ? (
-          <>
-            <path d="M12 8v4" />
-            <path d="M12 16h.01" />
-          </>
-        ) : (
-          <path d="m9 12 2 2 4-4" />
-        )}
-      </svg>
+      <span className="shrink-0">{isError ? "!" : "✓"}</span>
       <span>{children}</span>
     </div>
   );
@@ -101,8 +85,8 @@ export function Spinner() {
   return (
     <svg
       className="animate-spin"
-      width="16"
-      height="16"
+      width="20"
+      height="20"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -117,14 +101,15 @@ export function Spinner() {
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
-  const searchParams = useSearchParams();
-  // Trang đăng ký chuyển về /login?registered=1 sau khi đăng ký thành công
+
   const [showSuccess, setShowSuccess] = useState(
     searchParams.get("registered") === "1",
   );
@@ -135,11 +120,14 @@ export default function LoginForm() {
 
     setServerError("");
     setShowSuccess(false);
+
     const fieldErrors = validate(email, password);
     setErrors(fieldErrors);
+
     if (Object.keys(fieldErrors).length > 0) return;
 
     setLoading(true);
+
     try {
       const data = await login(email.trim(), password);
       saveSession(data.accessToken, data.user);
@@ -151,59 +139,123 @@ export default function LoginForm() {
           : "Đã có lỗi xảy ra, vui lòng thử lại.",
       );
     } finally {
-      // Luôn tắt loading, dù đăng nhập thành công hay lỗi
       setLoading(false);
     }
   }
 
   const inputBase =
-    "h-11 w-full rounded-xl border bg-white px-3.5 text-sm text-[#3B2A20] outline-none transition-colors placeholder:text-[#A39A92] focus:border-[#3B2A20]";
-  const inputOk = "border-[#E5DED5]";
-  const inputBad = "border-[#D6574F] focus:border-[#D6574F]";
+    "h-[58px] w-full rounded-2xl border-2 bg-[#FAF8F2] pl-12 pr-4 text-base font-medium text-[#2F4A3A] outline-none transition-all duration-300 placeholder:text-[#9A9F96] focus:bg-white focus:shadow-[0_0_0_4px_rgba(47,74,58,0.1)]";
+
+  const inputOk =
+    "border-[#E5E6DA] hover:border-[#A4BC89] focus:border-[#2F4A3A]";
+
+  const inputBad = "border-red-400 focus:border-red-500";
 
   return (
-    <div className="flex w-full max-w-[300px] flex-col items-center sm:max-w-[300px]">
-      <div className="w-full rounded-2xl border border-[#EFE9E1] bg-white px-5 pb-5 pt-6 shadow-[0_8px_24px_rgba(59,42,32,0.06)]">
-        <h1 className="text-center text-2xl font-semibold">Đăng nhập</h1>
+    <div className="w-full max-w-[520px]">
+      <div className="rounded-[32px] border border-[#E8E2D5] bg-white px-7 py-10 shadow-[0_25px_65px_-15px_rgba(47,74,58,0.25),0_10px_25px_rgba(47,74,58,0.08)] transition-shadow duration-300 hover:shadow-[0_30px_75px_-15px_rgba(47,74,58,0.3)] sm:px-12 sm:py-12">
+        <div className="mb-9 text-center">
+          <p className="mb-4 text-2xl font-extrabold tracking-tight text-[#2F4A3A]">
+            BrewLite.
+          </p>
+
+          <h1 className="text-[36px] font-extrabold tracking-tight text-[#2F4A3A] sm:text-[40px]">
+            Đăng nhập
+          </h1>
+
+          <p className="mt-4 text-[15px] font-medium leading-6 text-[#737B70]">
+            Chào bạn trở lại. Cà phê ngon đang chờ!
+          </p>
+        </div>
 
         {serverError ? (
           <Banner type="error">{serverError}</Banner>
         ) : showSuccess ? (
-          <Banner type="success">Đăng ký thành công, vui lòng đăng nhập</Banner>
-        ) : (
-          <p className="mb-5 mt-4 text-center text-[11px] text-[#8A7F76]">
-            Chào bạn trở lại. Cà phê ngon đang chờ!
-          </p>
-        )}
+          <Banner type="success">
+            Đăng ký thành công, vui lòng đăng nhập
+          </Banner>
+        ) : null}
 
         <form onSubmit={handleSubmit} noValidate>
-          <div className="mb-3">
-            <label htmlFor="email" className="mb-1.5 block text-[11px] font-medium">
+          <div className="mb-6">
+            <label
+              htmlFor="email"
+              className="mb-3 block text-base font-bold text-[#2F4A3A]"
+            >
               Email
             </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="customer@brewlite.com"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
-              }}
-              aria-invalid={!!errors.email}
-              className={`${inputBase} ${errors.email ? inputBad : inputOk}`}
-            />
+
+            <div className="relative">
+              <svg
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#78917D]"
+                width="21"
+                height="21"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="m3 7 9 6 9-6" />
+              </svg>
+
+              <input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="Nhập địa chỉ email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) {
+                    setErrors((p) => ({
+                      ...p,
+                      email: undefined,
+                    }));
+                  }
+                }}
+                aria-invalid={!!errors.email}
+                className={`${inputBase} ${
+                  errors.email ? inputBad : inputOk
+                }`}
+              />
+            </div>
+
             {errors.email && (
-              <p className="mt-1 text-[10px] text-[#D6574F]">{errors.email}</p>
+              <p className="mt-2 text-sm font-medium text-red-600">
+                {errors.email}
+              </p>
             )}
           </div>
 
-          <div className="mb-4">
-            <label htmlFor="password" className="mb-1.5 block text-[11px] font-medium">
+          <div className="mb-8">
+            <label
+              htmlFor="password"
+              className="mb-3 block text-base font-bold text-[#2F4A3A]"
+            >
               Mật khẩu
             </label>
+
             <div className="relative">
+              <svg
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#78917D]"
+                width="21"
+                height="21"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="4" y="10" width="16" height="11" rx="2" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+              </svg>
+
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -213,25 +265,33 @@ export default function LoginForm() {
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
-                  if (errors.password)
-                    setErrors((p) => ({ ...p, password: undefined }));
+                  if (errors.password) {
+                    setErrors((p) => ({
+                      ...p,
+                      password: undefined,
+                    }));
+                  }
                 }}
                 aria-invalid={!!errors.password}
-                className={`${inputBase} pr-10 ${
+                className={`${inputBase} pr-14 ${
                   errors.password ? inputBad : inputOk
                 }`}
               />
+
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#3B2A20] hover:opacity-70"
+                aria-label={
+                  showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                }
+                className="absolute right-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[#2F4A3A] transition-colors hover:bg-[#E8EFE5]"
               >
                 <EyeIcon off={!showPassword} />
               </button>
             </div>
+
             {errors.password && (
-              <p className="mt-1 text-[10px] text-[#D6574F]">
+              <p className="mt-2 text-sm font-medium text-red-600">
                 {errors.password}
               </p>
             )}
@@ -240,21 +300,24 @@ export default function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className={`flex h-11 w-full items-center justify-center gap-2 rounded-lg text-xs font-semibold text-white transition-colors ${
+            className={`flex h-[60px] w-full items-center justify-center gap-3 rounded-2xl text-lg font-extrabold text-white transition-all duration-300 ${
               loading
-                ? "cursor-not-allowed bg-[#A89B90]"
-                : "bg-[#3B2A20] hover:bg-[#2C1F17]"
+                ? "cursor-not-allowed bg-[#91A095]"
+                : "bg-[#2F4A3A] shadow-[0_8px_20px_rgba(47,74,58,0.25)] hover:-translate-y-1 hover:bg-[#3F614C] hover:shadow-[0_14px_28px_rgba(47,74,58,0.35)] active:translate-y-0"
             }`}
           >
             {loading && <Spinner />}
-            Đăng nhập
+            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-[11px] text-[#8A7F76]">
+        <p className="mt-8 text-center text-[15px] font-medium text-[#737B70]">
           Chưa có tài khoản?{" "}
-          <Link href="/register" className="font-semibold text-[#3B2A20] underline">
-            Đăng ký
+          <Link
+            href="/register"
+            className="font-extrabold text-[#2F4A3A] underline decoration-[#A4BC89] decoration-2 underline-offset-4 transition-colors hover:text-[#60846A]"
+          >
+            Đăng ký ngay
           </Link>
         </p>
       </div>
