@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { ApiError, ROLE_HOME, login, saveSession } from "../../lib/auth";
-import { LogoMark } from "./AuthShell";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -164,11 +163,6 @@ export default function LoginForm() {
 
   return (
     <div className="flex w-full max-w-[300px] flex-col items-center sm:max-w-[300px]">
-      <div className="mb-3 flex items-center gap-2.5">
-        <LogoMark />
-        <span className="text-xl">Brewlite</span>
-      </div>
-
       <div className="w-full rounded-2xl border border-[#EFE9E1] bg-white px-5 pb-5 pt-6 shadow-[0_8px_24px_rgba(59,42,32,0.06)]">
         <h1 className="text-center text-2xl font-semibold">Đăng nhập</h1>
 
