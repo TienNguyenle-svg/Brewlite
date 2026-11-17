@@ -116,7 +116,7 @@ export default function Header() {
         <div className="mx-auto flex min-h-[88px] max-w-[1440px] items-center justify-between gap-4 px-4 md:px-[72px]">
           <Logo href="/barista" />
 
-          <nav className="flex h-full items-center gap-4 text-sm md:gap-9">
+          <nav className="flex h-full items-center gap-4 text-[15px] md:gap-9">
             {baristaNav.map((item) => {
               const active = pathname.startsWith(item.href);
 
@@ -124,10 +124,10 @@ export default function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex min-h-[88px] items-center border-b-[3px] ${
+                  className={`flex min-h-[88px] items-center border-b-[3px] transition-colors ${
                     active
-                      ? "border-[#2F4A3A] text-[#39281F]"
-                      : "border-transparent text-[#82776E]"
+                      ? "border-[#2F4A3A] font-semibold text-[#2F4A3A]"
+                      : "border-transparent font-medium text-[#6B5240] hover:text-[#2F4A3A]"
                   }`}
                 >
                   {item.label}
@@ -177,27 +177,27 @@ export default function Header() {
     "flex items-center gap-2 rounded-lg bg-[#2F4A3A] px-3.5 py-2 text-xs font-medium text-white hover:bg-[#263D2F]";
 
   return (
-    <header className="bg-[#F8F5F0]">
+    <header className="bg-[#F2EBDC]">
       <div className="mx-auto flex h-[88px] max-w-[1440px] items-center justify-between px-4 md:px-[72px]">
         {/* Logo */}
         <Logo href="/" />
 
         {/* Điều hướng giữa: ẩn ở trang đăng nhập / đăng ký */}
         {!isAuthPage && (
-          <nav className="hidden h-full items-center gap-8 text-sm md:flex">
+          <nav className="hidden h-full items-center gap-9 text-[15px] md:flex">
             {navItems.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className={`relative flex h-full items-center ${
+                className={`relative flex h-full items-center transition-colors ${
                   item.active
-                    ? "font-medium text-[#2B1F1A]"
-                    : "text-stone-500 hover:text-[#2B1F1A]"
+                    ? "font-semibold text-[#2F4A3A]"
+                    : "font-medium text-[#6B5240] hover:text-[#2F4A3A]"
                 }`}
               >
                 {item.label}
                 {item.active && (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#2F4A3A]" />
+                  <span className="absolute inset-x-0 bottom-0 h-[3px] rounded-t-full bg-[#2F4A3A]" />
                 )}
               </Link>
             ))}
