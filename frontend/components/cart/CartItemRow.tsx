@@ -10,7 +10,7 @@ export default function CartItemRow({
   onSetQty: (id: string, qty: number) => void;
 }) {
   return (
-    <div className="flex gap-4 border-b border-[#E3DACF] py-[25px] last:border-b-0 sm:gap-[22px]">
+    <div className="flex gap-4 border-b border-[#D9CBAA] py-[25px] last:border-b-0 sm:gap-[22px]">
       <Image
         src={item.imageUrl}
         alt={item.name}
@@ -23,7 +23,7 @@ export default function CartItemRow({
         <div className="flex min-w-0 flex-col">
           <p className="text-[17px] font-semibold leading-[21px]">{item.name}</p>
           <p className="mt-[11px] text-xs text-[#82776E]">{item.customization}</p>
-          <p className="mt-[19px] text-[10px] font-semibold leading-3 text-[#B9672B]">
+          <p className="mt-[19px] text-[10px] font-semibold leading-3 text-[#2F4A3A]">
             {item.category}
           </p>
         </div>
@@ -31,7 +31,7 @@ export default function CartItemRow({
           <p className="text-base font-semibold leading-[19px]">
             {money(item.price * item.qty)}
           </p>
-          <div className="flex h-9 w-[126px] items-center justify-between rounded-full border border-[#E3DACF] bg-[#FBF7F1] px-3.5 text-xs font-medium">
+          <div className="flex h-9 w-[126px] items-center justify-between rounded-full border border-[#D9CBAA] bg-[#F3EAD8] px-3.5 text-xs font-medium">
             <button
               type="button"
               aria-label={`Decrease ${item.name}`}

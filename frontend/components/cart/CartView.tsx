@@ -66,11 +66,11 @@ export default function CartView() {
 
   return (
     <div className="mt-[42px] grid items-start gap-9 lg:grid-cols-[minmax(0,1fr)_440px]">
-      <section className="rounded-[18px] border border-[#E3DACF] bg-white px-5 pb-8 pt-[26px] sm:px-8">
+      <section className="rounded-[18px] border border-[#D9CBAA] bg-white px-5 pb-8 pt-[26px] sm:px-8">
         <h2 className="pb-[19px] text-xl font-semibold leading-6">
           Số lượng ({cart.count})
         </h2>
-        <div className="border-t border-[#E3DACF]">
+        <div className="border-t border-[#D9CBAA]">
           {cart.items.length === 0 && (
             <p className="py-10 text-sm text-[#82776E]">Giỏ hàng của bạn đang trống.</p>
           )}
@@ -80,7 +80,7 @@ export default function CartView() {
         </div>
         <Link
           href="/"
-          className="mt-8 inline-block text-[13px] font-semibold text-[#B9672B]"
+          className="mt-8 inline-block text-[13px] font-semibold text-[#2F4A3A] hover:underline"
         >
           ← Chọn thêm món
         </Link>
@@ -91,25 +91,25 @@ export default function CartView() {
           Đơn hàng
         </h2>
         {user && (
-          <div className="mt-[24px] rounded-xl border border-[#E7E1DA] bg-[#F7F2ED] p-3.5">
+          <div className="mt-[24px] rounded-xl border border-[#D9CBAA] bg-[#F3EAD8] p-3.5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.08em] text-[#82776E]">
                   Điểm thưởng
                 </p>
-                <p className="mt-1 text-sm font-semibold text-[#39281F]">
+                <p className="mt-1 text-sm font-semibold text-[#2E1F14]">
                   {loyaltyLoading
                     ? "Đang tải điểm thưởng…"
                     : `${availablePoints} điểm khả dụng`}
                 </p>
               </div>
-              <label className="inline-flex cursor-pointer items-center gap-2 text-[12px] font-medium text-[#39281F]">
+              <label className="inline-flex cursor-pointer items-center gap-2 text-[12px] font-medium text-[#2E1F14]">
                 <input
                   type="checkbox"
                   checked={cart.usePoints && canRedeemPoints}
                   disabled={!canRedeemPoints}
                   onChange={(e) => cart.setUsePoints(e.target.checked)}
-                  className="size-[15px] accent-[#B9672B]"
+                  className="size-[15px] accent-[#2F4A3A]"
                 />
                 Dùng điểm
               </label>
@@ -137,19 +137,19 @@ export default function CartView() {
             <dd className="font-medium">{money(cart.delivery)}</dd>
           </div>
           {cart.promo && (
-            <div className="flex justify-between text-[#406B4A]">
+            <div className="flex justify-between text-[#2F4A3A]">
               <dt>Giảm giá ({cart.promo.code})</dt>
               <dd className="font-medium">−{money(cart.discount)}</dd>
             </div>
           )}
           {cart.usePoints && cart.pointsDiscount > 0 && (
-            <div className="flex justify-between text-[#406B4A]">
+            <div className="flex justify-between text-[#2F4A3A]">
               <dt>Dùng điểm thưởng</dt>
               <dd className="font-medium">−{money(cart.pointsDiscount)}</dd>
             </div>
           )}
         </dl>
-        <div className="mt-[23px] flex items-center justify-between border-t border-[#E3DACF] pt-6">
+        <div className="mt-[23px] flex items-center justify-between border-t border-[#D9CBAA] pt-6">
           <span className="text-[17px] font-semibold">Tổng cộng cần thanh toán</span>
           <span className="text-[22px] font-bold">{money(cart.total)}</span>
         </div>
@@ -164,14 +164,14 @@ export default function CartView() {
           <button
             type="button"
             disabled
-            className="mt-[22px] flex h-12 w-full cursor-not-allowed items-center justify-center rounded-xl bg-[#39281F] text-sm font-semibold text-white opacity-50"
+            className="mt-[22px] flex h-12 w-full cursor-not-allowed items-center justify-center rounded-xl bg-[#2F4A3A] text-sm font-semibold text-white opacity-50"
           >
             Đặt hàng
           </button>
         ) : (
           <Link
             href="/checkout"
-            className="mt-[22px] flex h-12 items-center justify-center rounded-xl bg-[#39281F] text-sm font-semibold text-white"
+            className="mt-[22px] flex h-12 items-center justify-center rounded-xl bg-[#2F4A3A] text-sm font-semibold text-white transition-colors hover:bg-[#263D2F]"
           >
             Đặt hàng
           </Link>
@@ -181,7 +181,7 @@ export default function CartView() {
         </p>
 
         {cart.toFreeDelivery > 0 && cart.items.length > 0 && (
-          <div className="mt-[39px] rounded-xl bg-[#F2E9DC] px-[18px] py-3.5">
+          <div className="mt-[39px] rounded-xl bg-[#F3EAD8] px-[18px] py-3.5">
             <p className="text-[13px] font-semibold">
               Bạn sắp được nhận một phần quà nhỏ á!
             </p>
