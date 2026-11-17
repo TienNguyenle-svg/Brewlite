@@ -1,174 +1,171 @@
-# Task 1.1: Bối cảnh, stakeholder và phạm vi dự án BrewLite
+# Task 1.1 – Bối cảnh, các bên liên quan và phạm vi dự án BrewLite
 
-> Tài liệu này định hình toàn bộ đồ án. Các tài liệu sau (use-case, thiết kế, báo cáo) phải bám theo phạm vi ở đây.
-> Mục có dấu **[Cần xác nhận]** là chỗ nhóm cần thống nhất trước khi chốt.
+## 1. Bối cảnh và vấn đề cần giải quyết
 
-## 1. Bối cảnh và vấn đề nghiệp vụ
+### 1.1. Bối cảnh
 
-### 1.1 Bối cảnh
+Hiện nay, nhiều quán đồ uống nhỏ vẫn nhận đơn qua điện thoại hoặc tin nhắn. Cách này khá thuận tiện khi ít khách, nhưng khi lượng đơn tăng thì nhân viên dễ bỏ sót đơn hoặc ghi nhầm món, size và topping. Việc theo dõi đơn đã thanh toán hay kiểm tra nguyên liệu còn lại cũng mất thời gian.
 
-Các quán đồ uống nhỏ thường nhận đơn qua điện thoại hoặc mạng xã hội. Khách muốn đặt món giao tận nơi, còn quán muốn nhận đơn gọn, thu tiền chắc chắn và biết mình còn bao nhiêu nguyên liệu.
+Từ những vấn đề đó, nhóm xây dựng **BrewLite**, một website đặt đồ uống giao tận nơi và thanh toán không dùng tiền mặt qua **VNPay**. Dự án tập trung vào hoạt động của một cửa hàng, với ba vai trò sử dụng hệ thống: **khách hàng (CUSTOMER)**, **nhân viên pha chế (BARISTA)** và **quản lý (ADMIN)**.
 
-**BrewLite** là website đặt đồ uống giao tận nơi, **thanh toán không dùng tiền mặt qua VNPay**. Hệ thống phục vụ một quán, có ba nhóm người dùng đăng nhập theo phân quyền: khách hàng (CUSTOMER), nhân viên quầy/barista (BARISTA) và quản lý cửa hàng (ADMIN).
+### 1.2. Những vấn đề BrewLite hướng đến
 
-### 1.2 Vấn đề BrewLite cần giải quyết
+| Vấn đề | Hướng giải quyết |
+|---|---|
+| Đơn đặt qua tin nhắn dễ bị sót hoặc nhầm thông tin | Khách chọn món, size, topping trên website; hệ thống lưu thông tin đơn hàng. |
+| Khó kiểm tra đơn đã thanh toán | Khách thanh toán qua VNPay trước khi đơn được chuyển đến quầy. |
+| Không nắm rõ số lượng nguyên liệu và topping | Quản lý tồn kho theo công thức pha chế; giữ trước số lượng cần dùng khi đơn đang chờ thanh toán. |
+| Nhân viên khó theo dõi tiến độ các đơn | Hiển thị danh sách đơn theo trạng thái để nhân viên cập nhật và khách hàng theo dõi. |
+| Khó tổng hợp kết quả bán hàng | Hỗ trợ quản lý xem số liệu bán hàng, doanh thu và tồn kho. |
+| Khuyến mãi và điểm thưởng khó quản lý thủ công | Dự kiến kiểm tra điều kiện áp dụng mã giảm giá và điểm thưởng trên hệ thống. |
 
-| # | Vấn đề hiện tại | Hệ quả | BrewLite giải quyết bằng |
-|---|-----------------|--------|--------------------------|
-| 1 | Nhận đơn thủ công qua tin nhắn, điện thoại | Sót đơn, nhầm size/topping | Khách tự chọn món, size, topping trên web; đơn được lưu có cấu trúc |
-| 2 | Thu tiền thủ công, khó đối soát | Khách bom đơn, thất thoát | Thanh toán trước qua VNPay; đơn chỉ vào quầy khi đã thanh toán |
-| 3 | Không biết tồn kho nguyên liệu, topping | Hết hàng vẫn nhận đơn | Mỗi món có công thức (Recipe); kho tự trừ theo size và topping, có giữ chỗ khi đơn chờ thanh toán |
-| 4 | Quầy không có hàng đợi rõ ràng | Làm sai thứ tự, khách không biết tiến độ | Danh sách đơn theo trạng thái; khách xem được đơn của mình |
-| 5 | Không có số liệu bán hàng | Khó ra quyết định | Quản lý xem sản phẩm bán chạy, tồn kho, doanh thu |
-| 6 | Khuyến mãi và tích điểm làm bằng tay | Dễ lạm dụng, khó kiểm soát | Mã khuyến mãi có điều kiện và điểm thưởng được kiểm tra tự động |
+### 1.3. Bối cảnh thực hiện đồ án
 
-### 1.3 Bối cảnh học thuật
+BrewLite là đồ án nhóm của môn **Công nghệ phần mềm**. Nhóm sử dụng Git để quản lý mã nguồn, chia công việc theo chức năng và tạo Pull Request để các thành viên kiểm tra trước khi gộp code.
 
-Đồ án môn **Công nghệ phần mềm**, làm theo nhóm, quản lý mã nguồn bằng Git (mỗi chức năng một nhánh `feature/...`, commit theo dạng `feat(<mô-đun>): mô tả`, gộp qua Pull Request).
+## 2. Các bên liên quan (Stakeholder)
 
-## 2. Stakeholder chính
+### 2.1. Danh sách stakeholder
 
-### 2.1 Bảng stakeholder
+| Bên liên quan | Vai trò | Công việc hoặc tương tác với BrewLite |
+|---|---|---|
+| Khách hàng (CUSTOMER) | Người đặt đồ uống | Đăng ký, đăng nhập, chọn món, đặt hàng, thanh toán, xem lịch sử và hủy đơn khi được phép. |
+| Nhân viên pha chế (BARISTA) | Người xử lý đơn tại quầy | Xem các đơn đã thanh toán, chuẩn bị đồ uống và cập nhật trạng thái. |
+| Quản lý cửa hàng (ADMIN) | Người quản lý hoạt động cửa hàng | Quản lý sản phẩm, nguyên liệu, topping, khuyến mãi và theo dõi doanh thu. |
+| Giảng viên / người nghiệm thu | Người đánh giá đồ án | Xem tài liệu, kiểm tra sản phẩm và đánh giá kết quả thực hiện. |
+| Nhóm phát triển | Người xây dựng hệ thống | Phân tích yêu cầu, thiết kế, lập trình, kiểm thử và viết báo cáo. |
+| VNPay | Hệ thống thanh toán bên ngoài | Tiếp nhận giao dịch và gửi kết quả thanh toán về BrewLite. |
 
-| Stakeholder | Loại | Vai trò trong hệ thống | Tương tác chính |
-|-------------|------|------------------------|-----------------|
-| **Khách hàng** (CUSTOMER) | Người dùng chính | Người đặt và trả tiền | Đăng ký/đăng nhập, xem menu, giỏ hàng, đặt hàng, thanh toán, xem và hủy đơn |
-| **Nhân viên quầy / Barista** (BARISTA) | Người dùng nội bộ | Chế biến và bàn giao đơn | Xem danh sách đơn, cập nhật trạng thái đơn |
-| **Quản lý cửa hàng** (ADMIN) | Người dùng nội bộ | Vận hành và kiểm soát cửa hàng | Quản lý sản phẩm, kho, khuyến mãi; xem đơn và doanh thu |
-| **Giảng viên / khách hàng nghiệm thu** | Bên đánh giá | Đánh giá đồ án đạt yêu cầu | Xem demo, đọc tài liệu, chấm điểm |
-| **Nhóm phát triển** | Nội bộ dự án | Phân tích, thiết kế, lập trình, kiểm thử | Làm theo task, review PR, viết tài liệu |
-| **Đơn vị thanh toán (VNPay)** | Hệ thống ngoài | Xử lý giao dịch trực tuyến | Nhận yêu cầu thanh toán, trả kết quả qua return URL và IPN |
+### 2.2. Mục tiêu và kỳ vọng
 
-### 2.2 Mục tiêu và kỳ vọng của từng stakeholder
+| Bên liên quan | Mục tiêu và kỳ vọng |
+|---|---|
+| Khách hàng | Dễ tìm đồ uống, chọn đúng size và topping, biết số tiền cần trả, thanh toán thuận tiện và theo dõi được đơn hàng. |
+| Nhân viên pha chế | Nhìn rõ món cần làm, các tùy chọn của khách và cập nhật tiến độ mà không phải xử lý đơn chưa thanh toán. |
+| Quản lý cửa hàng | Dễ cập nhật sản phẩm, kiểm tra nguyên liệu, theo dõi đơn và xem tình hình kinh doanh. |
+| Giảng viên / người nghiệm thu | Nhóm có tài liệu rõ ràng, thực hiện đúng phạm vi và trình bày được hệ thống chạy thực tế. |
+| Nhóm phát triển | Phân chia công việc hợp lý, hạn chế xung đột code và hoàn thành các chức năng đúng tiến độ. |
+| VNPay | Nhận thông tin giao dịch đúng định dạng; kết quả thanh toán được hệ thống xử lý an toàn, không ghi nhận trùng. |
 
-| Stakeholder | Mục tiêu | Kỳ vọng với hệ thống |
-|-------------|----------|----------------------|
-| **Khách hàng** | Đặt được đồ uống đúng ý, nhanh, trả tiền an toàn | Menu dễ xem; tùy chỉnh size, topping; giá rõ ràng (tạm tính, phí giao, giảm giá, tổng); thanh toán xong biết đơn đã được nhận; xem được tiến độ và lịch sử đơn |
-| **Nhân viên quầy** | Làm đúng và kịp các đơn đã thanh toán | Chỉ thấy đơn đã thanh toán; thấy rõ món, size, topping; đổi trạng thái chỉ vài thao tác; không phải xử lý đơn chưa trả tiền |
-| **Quản lý cửa hàng** | Kiểm soát sản phẩm, kho, ưu đãi và doanh thu | Thêm/sửa/xóa món; nhập kho, thấy tồn kho; tạo mã khuyến mãi có giới hạn; xem báo cáo doanh thu; chỉ quản lý mới vào được khu vực quản trị |
-| **Giảng viên / nghiệm thu** | Xác nhận nhóm làm đúng quy trình công nghệ phần mềm | Có phạm vi rõ ràng, tài liệu yêu cầu, use-case, thiết kế nhất quán với sản phẩm chạy được |
-| **Nhóm phát triển** | Hoàn thành đúng phạm vi, đúng hạn, phối hợp ít xung đột | Phân công rõ; quy ước Git thống nhất; schema và API ổn định; tài liệu làm chuẩn chung |
-| **VNPay** | Giao dịch được gửi đúng định dạng và xử lý đúng một lần | Hệ thống tạo yêu cầu đúng chữ ký, nhận IPN và return URL, xử lý kết quả an toàn, không ghi nhận trùng |
+## 3. Phạm vi dự án
 
-## 3. Phạm vi
+### 3.1. Chức năng chính (In-scope / MVP)
 
-### 3.1 Trong phạm vi MVP (In-scope)
+Nhóm ưu tiên hoàn thiện luồng từ lúc khách chọn đồ uống đến khi thanh toán và nhận được đơn. Bên cạnh đó, nhân viên cần xử lý được đơn và quản lý cần cập nhật được sản phẩm, kho.
 
-MVP là phần tối thiểu để một khách đặt và trả tiền được một đơn, quầy làm được đơn đó và quản lý kiểm soát được món và kho.
+| Nhóm chức năng | Nội dung thực hiện |
+|---|---|
+| Tài khoản và phân quyền | Đăng ký, đăng nhập, đăng xuất bằng email và mật khẩu; sử dụng JWT; giới hạn quyền truy cập theo vai trò. |
+| Thực đơn | Hiển thị sản phẩm, tìm kiếm, lọc theo danh mục và sắp xếp danh sách. |
+| Chi tiết đồ uống | Chọn size S/M/L, topping và xem giá tương ứng. |
+| Giỏ hàng | Thêm món đã tùy chỉnh, thay đổi số lượng, xóa món và xem số tiền tạm tính, phí giao hàng, tổng tiền. |
+| Đặt hàng | Nhập tên, số điện thoại, địa chỉ nhận hàng; kiểm tra thông tin và tạo đơn. |
+| Thanh toán | Thanh toán bằng VNPay; nhận kết quả qua return URL và IPN; tránh ghi nhận thanh toán nhiều lần. |
+| Đơn hàng | Xem đơn hiện tại, lịch sử đặt hàng và hủy đơn nếu còn đủ điều kiện. |
+| Trạng thái đơn | `PENDING` → `PAID` → `PREPARING` → `READY` → `COMPLETED`; có trạng thái `PAYMENT_FAILED`, `CANCELLED`. Đơn `PENDING` quá 10 phút sẽ được tự hủy. |
+| Kho nguyên liệu | Quản lý nguyên liệu theo công thức, size và topping; giữ trước lượng nguyên liệu cho đơn chờ thanh toán. |
+| Nhân viên pha chế | Xem đơn và cập nhật trạng thái chế biến. |
+| Quản lý cửa hàng | Thêm, sửa, xóa sản phẩm; quản lý nguyên liệu, topping và nhập kho. |
 
-| Nhóm | Chức năng MVP |
-|------|---------------|
-| Xác thực và phân quyền | Đăng ký, đăng nhập, đăng xuất bằng email và mật khẩu; JWT; điều hướng theo vai trò; chặn truy cập trái quyền (403) |
-| Thực đơn | Xem danh sách sản phẩm; lọc theo danh mục; tìm kiếm; sắp xếp (mặc định bán chạy) |
-| Chi tiết sản phẩm | Chọn size S/M/L và topping; hiển thị giá theo quy tắc nghiệp vụ |
-| Giỏ hàng | Thêm, đổi số lượng, xóa món; hiển thị tạm tính, phí giao hàng, tổng tiền |
-| Đặt hàng | Nhập thông tin người nhận (tên, số điện thoại, địa chỉ); xem trước đơn; tạo đơn |
-| Thanh toán | Thanh toán VNPay; xử lý return URL và IPN; chống thanh toán trùng (idempotency key) |
-| Đơn hàng của tôi | Xem đơn đang xử lý và lịch sử đơn; hủy đơn khi còn được phép |
-| Vòng đời đơn | `PENDING` → `PAID` → `PREPARING` → `READY` → `COMPLETED`; nhánh `PAYMENT_FAILED`, `CANCELLED`; tự hủy đơn `PENDING` quá 10 phút |
-| Kho | Trừ nguyên liệu theo công thức, size; trừ topping theo tồn kho; giữ chỗ khi chờ thanh toán |
-| Barista | Xem danh sách đơn; cập nhật trạng thái chế biến |
-| Admin | Quản lý sản phẩm (thêm, sửa, xóa); quản lý nguyên liệu, topping và nhập kho |
+### 3.2. Chức năng mở rộng
 
-### 3.2 Phạm vi mở rộng (làm nếu còn thời gian)
+Đây là những chức năng nhóm dự kiến làm thêm sau khi các chức năng chính hoạt động ổn định.
 
 | Chức năng | Ghi chú |
-|-----------|---------|
-| Mã khuyến mãi (theo %, đơn tối thiểu, thời gian hiệu lực, giới hạn lượt, mỗi tài khoản một lần) | Đã có phần backend; cần hoàn thiện giao diện và quản trị mã |
-| Điểm thưởng (tích điểm, dùng điểm giảm tiền) | Phụ thuộc quy tắc quy đổi chính thức |
-| Báo cáo doanh thu cho Admin | Trang doanh thu, quản lý đơn hàng cho Admin |
-| Trang "Về chúng tôi" | Thông tin quán: Quận 5, TP.HCM; 7:00–22:00; hotline 0123456789; goodvibe@brewlite.com |
-| Lưu giỏ hàng khi tải lại trang | Hiện giỏ lưu trong bộ nhớ trình duyệt, chưa bền vững |
-| Chọn địa chỉ/khu vực giao hàng nâng cao | Hiện chỉ nhập địa chỉ dạng chữ |
+|---|---|
+| Mã khuyến mãi | Áp dụng theo phần trăm, giá trị đơn tối thiểu, thời gian và số lượt sử dụng. Backend đã có một phần; giao diện cần hoàn thiện. |
+| Điểm thưởng | Tích điểm và sử dụng điểm để giảm tiền; cần thống nhất cách quy đổi. |
+| Báo cáo doanh thu | Thống kê doanh thu và hỗ trợ quản lý theo dõi đơn hàng. |
+| Trang Về chúng tôi | Giới thiệu cửa hàng tại Quận 5, TP.HCM; giờ hoạt động 7:00–22:00; số điện thoại 0123456789; email goodvibe@brewlite.com. |
+| Lưu giỏ hàng | Giữ thông tin giỏ hàng khi người dùng tải lại trang; cần kiểm tra và hoàn thiện khả năng lưu trữ. |
+| Địa chỉ giao hàng nâng cao | Bổ sung lựa chọn khu vực giao hàng thay vì chỉ nhập địa chỉ bằng chữ. |
 
-**[Cần xác nhận]** Cách chia giữa MVP và mở rộng ở trên là đề xuất. Nhóm cần thống nhất lại, nhất là việc khuyến mãi và điểm thưởng thuộc MVP hay mở rộng, vì backend đã làm sẵn.
+**Cần nhóm xác nhận:** Mã khuyến mãi, điểm thưởng và báo cáo doanh thu sẽ thuộc MVP hay phần mở rộng. Phần backend của một số chức năng đã được triển khai.
 
-### 3.3 Ngoài phạm vi (Out-of-scope, không thực hiện)
+### 3.3. Những nội dung không thực hiện (Out-of-scope)
 
 | Nội dung | Lý do |
-|----------|-------|
-| Thanh toán tiền mặt (COD) và các ví khác ngoài VNPay | Thiết kế cho thanh toán không dùng tiền mặt qua một cổng |
-| Ứng dụng di động (iOS/Android) | Chỉ làm web responsive |
-| Theo dõi shipper thời gian thực, tích hợp đơn vị vận chuyển | Ngoài thời gian và nguồn lực đồ án |
-| Đa chi nhánh, đa cửa hàng | Hệ thống phục vụ một quán |
-| Đánh giá, bình luận sản phẩm | Không nằm trong yêu cầu |
-| Thông báo đẩy, SMS, email giao dịch | Không nằm trong yêu cầu |
-| Đa ngôn ngữ | Giao diện chỉ tiếng Việt |
-| Quản lý nhân sự, chấm công, lương | Không liên quan luồng đặt đồ uống |
-| Gợi ý cá nhân hóa bằng AI, phân tích nâng cao | Vượt mức yêu cầu môn học |
-| Hoàn tiền tự động qua VNPay | **[Cần xác nhận]** `PaymentStatus` có `REFUNDED` nhưng chưa rõ có làm luồng hoàn tiền |
+|---|---|
+| Thanh toán tiền mặt (COD) hoặc cổng thanh toán khác | Dự án tập trung vào VNPay. |
+| Ứng dụng riêng cho Android và iOS | Nhóm chỉ xây dựng website có thể dùng trên điện thoại. |
+| Theo dõi vị trí người giao hàng trực tiếp | Chưa nằm trong phạm vi và thời gian của đồ án. |
+| Quản lý nhiều chi nhánh | BrewLite được xây dựng cho một cửa hàng. |
+| Đánh giá và bình luận sản phẩm | Không thuộc các chức năng ưu tiên. |
+| Gửi thông báo qua SMS, email hoặc thông báo đẩy | Chưa triển khai trong phạm vi này. |
+| Hỗ trợ nhiều ngôn ngữ | Giao diện sử dụng tiếng Việt. |
+| Quản lý nhân sự, chấm công và tiền lương | Không phục vụ trực tiếp quy trình đặt đồ uống. |
+| Gợi ý sản phẩm bằng AI, phân tích dữ liệu nâng cao | Vượt quá phạm vi hiện tại. |
+| Hoàn tiền tự động qua VNPay | Chưa chốt có triển khai hay không, dù hệ thống có trạng thái `REFUNDED`. |
 
-## 4. Giả định
+## 4. Giả định ban đầu
 
-| # | Giả định | Nếu sai thì |
-|---|----------|-------------|
-| A1 | Quán chỉ có một điểm bán, giao hàng trong nội thành TP.HCM | Phải thêm khu vực giao, tính phí theo khoảng cách |
-| A2 | Mọi khách đặt hàng đều có tài khoản và đăng nhập | Phải thêm luồng đặt hàng cho khách vãng lai |
-| A3 | VNPay dùng môi trường sandbox, không phát sinh tiền thật | Phải bổ sung hồ sơ và kiểm thử với môi trường thật |
-| A4 | Công thức món và tồn kho ban đầu do Admin hoặc dữ liệu mẫu (seed) cung cấp | Kho trừ sai hoặc không trừ được |
-| A5 | Giá là VND, số nguyên | Phải xử lý làm tròn |
-| A6 | Mỗi đơn có một địa chỉ giao và tối đa một lần thanh toán thành công | Phải hỗ trợ chia đơn, thanh toán nhiều lần |
-| A7 | Người dùng dùng trình duyệt hiện đại và có Internet ổn định | Cần thêm xử lý mất kết nối |
-| A8 | Dữ liệu demo (món, ảnh, tài khoản) đủ để trình bày | Cần bổ sung dữ liệu mẫu |
+Các giả định dưới đây được dùng khi thiết kế hệ thống. Nếu có thay đổi, nhóm cần xem lại những chức năng liên quan.
 
-## 5. Ràng buộc
+| Mã | Giả định |
+|---|---|
+| A1 | Cửa hàng chỉ có một địa điểm bán và phục vụ giao hàng trong nội thành TP.HCM. |
+| A2 | Khách cần có tài khoản và đăng nhập trước khi đặt hàng. |
+| A3 | VNPay được sử dụng ở môi trường thử nghiệm (sandbox), không giao dịch bằng tiền thật. |
+| A4 | Công thức pha chế và số lượng nguyên liệu ban đầu được quản lý nhập hoặc lấy từ dữ liệu mẫu. |
+| A5 | Giá sản phẩm tính bằng VND và lưu dưới dạng số nguyên. |
+| A6 | Mỗi đơn có một địa chỉ nhận hàng và tối đa một lần thanh toán thành công. |
+| A7 | Người dùng có kết nối Internet và sử dụng trình duyệt tương đối mới. |
+| A8 | Nhóm chuẩn bị đủ dữ liệu mẫu về món, hình ảnh và tài khoản để kiểm thử, demo. |
 
-### 5.1 Công nghệ
+Nếu các giả định về khu vực giao hàng, tài khoản hoặc thanh toán thay đổi, nhóm sẽ cần bổ sung luồng xử lý tương ứng.
+
+## 5. Ràng buộc của dự án
+
+### 5.1. Công nghệ sử dụng
 
 | Thành phần | Công nghệ |
-|------------|-----------|
-| Frontend | Next.js (App Router), React, TypeScript, TailwindCSS, Zustand |
-| Backend | NestJS, TypeScript, Passport + JWT |
-| Cơ sở dữ liệu | PostgreSQL qua Prisma ORM |
-| Thanh toán | VNPay (sandbox) |
-| Môi trường | Docker; pnpm; backend tại `localhost:3001` |
-| Thiết kế | Figma (giao diện), PlantUML (use-case, sequence, activity) |
+|---|---|
+| Frontend | Next.js (App Router), React, TypeScript, Tailwind CSS, Zustand |
+| Backend | NestJS, TypeScript, Passport, JWT |
+| Cơ sở dữ liệu | PostgreSQL, Prisma ORM |
+| Thanh toán | VNPay sandbox |
+| Môi trường phát triển | Docker, pnpm; backend chạy tại `localhost:3001` |
+| Thiết kế và sơ đồ | Figma, PlantUML |
 
-### 5.2 Nghiệp vụ
+### 5.2. Quy tắc nghiệp vụ
 
-- **Giá theo size:** S = giá gốc × 0,8; M = × 1; L = × 1,2. Topping có giá riêng.
-- **Tiền nước** (dùng để xét miễn phí giao hàng) gồm cả topping, tính trước khi trừ khuyến mãi.
-- **Tổng đơn** = tiền nước − khuyến mãi (và điểm) + phí giao hàng. Phí giao mặc định 15.000đ.
-- **Ngưỡng miễn phí giao hàng:** quy tắc nhóm là 100.000đ, nhưng `FREE_DELIVERY_THRESHOLD` trong `frontend/lib/cart-store.ts` đang là 150.000đ. **[Cần xác nhận một giá trị duy nhất.]**
-- **Trừ kho** theo công thức và hệ số size; topping trừ theo tồn kho riêng.
-- **Tự hủy** đơn `PENDING` quá 10 phút và trả lại phần giữ chỗ.
+- Giá size S bằng 80% giá gốc, M bằng giá gốc và L bằng 120% giá gốc. Topping được cộng thêm theo giá riêng.
+- Tiền nước gồm giá đồ uống và topping, được tính trước khi trừ khuyến mãi.
+- Tổng tiền đơn hàng = tiền nước − khuyến mãi − điểm quy đổi (nếu có) + phí giao hàng.
+- Phí giao hàng mặc định là **15.000đ**. Nhóm đang có hai mức miễn phí giao hàng: **100.000đ** theo quy tắc đã trao đổi và **150.000đ** trong `frontend/lib/cart-store.ts`.
+- Nguyên liệu được tính theo công thức và size; topping có số lượng tồn riêng.
+- Đơn `PENDING` quá 10 phút sẽ tự hủy và hoàn lại phần nguyên liệu, điểm đã giữ trước.
 
-### 5.3 Quy trình nhóm
+### 5.3. Quy trình làm việc nhóm
 
-- Mỗi chức năng một nhánh `feature/<tên-chức-năng>`; chỉ `git add` file của chức năng đó; commit `feat(<mô-đun>): mô tả`; gộp qua Pull Request.
-- Thay đổi schema đi qua migration của Prisma; không sửa tay file migration đã áp dụng.
-- Giao diện phải bám thiết kế Figma (nền `#F8F5F0`, bố cục rộng 1440px).
+- Mỗi chức năng hoặc lần sửa lỗi được thực hiện trên một nhánh Git riêng, ví dụ `feature/...` hoặc `fix/...`.
+- Sau khi làm xong, thành viên kiểm tra lại, commit, push và tạo Pull Request để nhóm review trước khi merge.
+- Khi thay đổi cấu trúc cơ sở dữ liệu, sử dụng Prisma migration và không tự sửa migration đã áp dụng.
+- Giao diện bám theo thiết kế Figma, với màu nền `#F8F5F0` và bố cục thiết kế rộng 1440px.
 
-### 5.4 Thời gian và nguồn lực
+### 5.4. Thời gian và nhân lực
 
-- Hạn nộp theo lịch môn học. **[Cần điền ngày cụ thể.]**
-- Nhóm là sinh viên làm song song với các môn khác; một số thành viên đang học công nghệ mới, nên ưu tiên MVP trước.
+Dự án do nhóm sinh viên thực hiện trong thời gian học môn Công nghệ phần mềm. Các thành viên còn phải học những môn khác nên nhóm sẽ ưu tiên hoàn thành chức năng chính trước, sau đó mới làm phần mở rộng.
 
-### 5.5 Chất lượng
 
-- **Bảo mật:** mật khẩu lưu dạng băm; API phân quyền theo vai trò; token vô hiệu hóa được bằng `tokenVersion`.
-- **Toàn vẹn dữ liệu:** đặt hàng, trừ kho, dùng khuyến mãi, dùng điểm phải nằm trong giao dịch (transaction).
-- **Giao diện:** tiếng Việt, hiển thị tốt trên máy tính và điện thoại.
+### 5.5. Yêu cầu chất lượng
 
-## 6. Rủi ro ban đầu
+- Mật khẩu được lưu dưới dạng băm; API kiểm tra quyền truy cập theo vai trò. Hệ thống có cơ chế `tokenVersion` để vô hiệu hóa token.
+- Các thao tác đặt hàng, trừ kho, dùng khuyến mãi và điểm thưởng cần được xử lý nhất quán bằng transaction.
+- Website sử dụng tiếng Việt và hiển thị phù hợp trên máy tính, điện thoại.
 
-| # | Rủi ro | Khả năng | Ảnh hưởng | Cách giảm thiểu |
-|---|--------|----------|-----------|-----------------|
-| R1 | VNPay gọi IPN về địa chỉ công khai, còn máy dev chạy `localhost` nên không nhận được kết quả | Cao | Cao | Dùng công cụ tạo đường hầm (ví dụ ngrok) khi demo; hoặc xử lý cả return URL; chuẩn bị kịch bản demo sandbox |
-| R2 | Thành viên mới học công nghệ, tiến độ chậm | Cao | Trung bình | Chia task nhỏ; review PR sớm; ưu tiên MVP |
-| R3 | Schema lệch giữa các thành viên (migration bị sửa, database mỗi máy một kiểu) gây lỗi chạy | Trung bình | Cao | Thống nhất người tạo migration; commit thư mục `migrations`; không sửa migration đã áp dụng; có seed chung |
-| R4 | Hai người dùng cùng đặt món cuối cùng, kho trừ sai hoặc âm | Trung bình | Cao | Giữ chỗ (reserved) và trừ kho trong transaction; kiểm thử đồng thời |
-| R5 | Quy tắc nghiệp vụ không thống nhất giữa frontend, backend và tài liệu (ví dụ ngưỡng miễn phí giao hàng) | Cao | Trung bình | Chốt quy tắc trong tài liệu này; backend là nguồn chuẩn, frontend chỉ hiển thị |
-| R6 | Đơn chờ thanh toán chiếm kho quá lâu | Trung bình | Trung bình | Tự hủy sau 10 phút; trả lại kho và điểm |
-| R7 | Thanh toán bị ghi nhận hai lần do VNPay gọi IPN lặp | Trung bình | Cao | Idempotency key; kiểm tra trạng thái trước khi cập nhật |
-| R8 | Phạm vi phình to do thêm chức năng mở rộng | Trung bình | Trung bình | Chốt MVP trước; mở rộng chỉ làm khi MVP chạy ổn |
-| R9 | Xung đột code khi nhiều người sửa chung file (ví dụ Header, layout) | Cao | Thấp | Một chức năng một nhánh; pull `main` thường xuyên; chia file rõ ràng |
-| R10 | Sát hạn nộp, thiếu thời gian kiểm thử và demo | Trung bình | Cao | Đặt mốc nội bộ; đóng băng tính năng sớm; luyện demo trước hạn |
+## 6. Rủi ro có thể gặp
 
-## 7. Điểm cần nhóm thống nhất
+| Rủi ro | Mức ảnh hưởng dự kiến | Cách xử lý dự kiến |
+|---|---|---|
+| VNPay không gửi được IPN về máy chạy `localhost` | Cao | Chuẩn bị môi trường demo sandbox và công cụ như ngrok để nhận callback. |
+| Một số thành viên chưa quen công nghệ sử dụng | Trung bình | Chia nhỏ công việc, hỗ trợ nhau và review code sớm. |
+| Cơ sở dữ liệu giữa các máy không đồng nhất | Cao | Dùng chung migration và dữ liệu mẫu; không sửa migration đã chạy. |
+| Nhiều khách cùng đặt món gần hết nguyên liệu | Cao | Kiểm tra tồn kho, giữ trước nguyên liệu và xử lý trong transaction. |
+| Frontend và backend áp dụng quy tắc khác nhau | Trung bình | Thống nhất quy tắc, đặc biệt là mức miễn phí giao hàng. |
+| Đơn chờ thanh toán giữ nguyên liệu quá lâu | Trung bình | Tự hủy đơn sau 10 phút và hoàn lại lượng đã giữ. |
+| VNPay gửi thông báo thanh toán lặp | Cao | Kiểm tra trạng thái giao dịch và dùng cơ chế chống xử lý trùng. |
+| Thêm quá nhiều chức năng ngoài kế hoạch | Trung bình | Hoàn thiện MVP trước khi nhận thêm chức năng. |
+| Thành viên sửa cùng một file gây xung đột | Trung bình | Làm việc trên nhánh riêng, cập nhật nhánh chính thường xuyên và review PR. |
+| Thiếu thời gian kiểm thử trước ngày nộp | Cao | Chốt chức năng sớm và dành thời gian kiểm thử, chạy thử demo. |
 
-1. Ranh giới MVP và mở rộng (khuyến mãi, điểm thưởng, báo cáo doanh thu).
-2. Ngưỡng miễn phí giao hàng: 100.000đ hay 150.000đ.
-3. Có làm luồng hoàn tiền (`REFUNDED`) hay không.
-4. Quy tắc chính thức cho điểm thưởng (tích bao nhiêu, quy đổi bao nhiêu).
-5. Ngày nộp và các mốc kiểm tra tiến độ.
