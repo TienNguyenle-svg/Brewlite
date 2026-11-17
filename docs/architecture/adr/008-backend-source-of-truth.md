@@ -1,9 +1,5 @@
 # ADR-008: Backend là nguồn chuẩn của giá và quy tắc nghiệp vụ
 
-- Trạng thái: Đã chấp nhận
-- Ngày: 2026-11-14
-- Người quyết định: Nhóm phát triển
-
 ## Bối cảnh
 
 Frontend cần hiển thị ngay tạm tính, phí giao, giảm giá, tổng khi khách đổi giỏ, nên có hàm tính riêng (`useCart`, `calcDiscount`, `validatePromo`). Nhưng giá thật phải đáng tin cậy và không bị sửa từ trình duyệt (FR-22, NFR-09). Thực tế đã có lệch: ngưỡng miễn phí giao hàng quy tắc nhóm là 100.000đ, còn hằng số `FREE_DELIVERY_THRESHOLD` ở frontend đang là 150.000đ.

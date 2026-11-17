@@ -1,9 +1,5 @@
 # ADR-002: Backend NestJS theo kiến trúc modular monolith
 
-- Trạng thái: Đã chấp nhận
-- Ngày: 2026-11-14
-- Người quyết định: Nhóm phát triển
-
 ## Bối cảnh
 
 Backend phải xử lý đặt hàng, thanh toán, kho, khuyến mãi, điểm thưởng, phân quyền. Một lần đặt hàng chạm nhiều bảng cùng lúc (đơn, kho, lượt dùng mã, điểm) và phải thành công hoặc thất bại trọn vẹn (NFR-10). Nhóm nhỏ, thời gian có hạn, một số thành viên mới học công nghệ.

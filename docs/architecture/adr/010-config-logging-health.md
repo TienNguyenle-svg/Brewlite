@@ -1,9 +1,5 @@
 # ADR-010: Quản lý cấu hình, logging và health check
 
-- Trạng thái: Đã chấp nhận (cấu hình và logging); Đề xuất (health check) **[Cần xác nhận]**
-- Ngày: 2026-11-14
-- Người quyết định: Nhóm phát triển
-
 ## Bối cảnh
 
 Hệ thống có nhiều bí mật và giá trị thay đổi theo máy: địa chỉ cơ sở dữ liệu, khóa JWT, thông tin VNPay, địa chỉ backend. Cần theo dõi lỗi khi chạy (đã có lỗi truy vấn `P2022`, lỗi kết nối) và biết hệ thống còn sống không (NFR-08, NFR-12, NFR-20).

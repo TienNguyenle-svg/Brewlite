@@ -1,9 +1,5 @@
 # ADR-007: Giữ chỗ kho khi tạo đơn, dùng transaction và tự hủy đơn quá hạn
 
-- Trạng thái: Đã chấp nhận
-- Ngày: 2026-11-14
-- Người quyết định: Nhóm phát triển
-
 ## Bối cảnh
 
 Đơn được tạo trước, thanh toán sau (có thể mất vài phút trên VNPay). Nếu không giữ hàng trong thời gian chờ, hai khách có thể cùng đặt món cuối cùng. Nếu trừ kho ngay khi tạo đơn, đơn bỏ dở sẽ làm hao kho vô ích (NFR-11, FR-23, FR-24).

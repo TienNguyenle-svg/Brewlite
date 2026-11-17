@@ -1,9 +1,5 @@
 # ADR-001: Dùng một repository (monorepo) cho backend và frontend
 
-- Trạng thái: Đã chấp nhận
-- Ngày: 2026-11-14
-- Người quyết định: Nhóm phát triển
-
 ## Bối cảnh
 
 BrewLite gồm backend NestJS và frontend Next.js do nhiều thành viên làm song song, mỗi người một nhánh `feature/...`. Giao diện phụ thuộc chặt vào API (ví dụ `GET /products`, `POST /checkout/preview`). Nhóm cần một nơi duy nhất để review, theo dõi thay đổi và đặt tài liệu.

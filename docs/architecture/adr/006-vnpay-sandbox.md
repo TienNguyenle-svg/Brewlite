@@ -1,9 +1,5 @@
 # ADR-006: Thanh toán qua VNPay (sandbox), dùng IPN và khóa idempotency
 
-- Trạng thái: Đã chấp nhận
-- Ngày: 2026-11-14
-- Người quyết định: Nhóm phát triển
-
 ## Bối cảnh
 
 BrewLite chỉ nhận thanh toán không dùng tiền mặt (xem `context-and-scope.md`). Đồ án cần một dịch vụ thanh toán mô phỏng, không phát sinh tiền thật nhưng có luồng gần với thực tế. Thanh toán phải chống ghi nhận trùng và chống giả mạo (FR-28, FR-29, NFR-07).

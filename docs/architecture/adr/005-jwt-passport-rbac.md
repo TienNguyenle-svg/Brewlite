@@ -1,9 +1,5 @@
 # ADR-005: Xác thực bằng JWT và Passport, phân quyền theo vai trò
 
-- Trạng thái: Đã chấp nhận
-- Ngày: 2026-11-14
-- Người quyết định: Nhóm phát triển
-
 ## Bối cảnh
 
 Hệ thống có ba vai trò (CUSTOMER, BARISTA, ADMIN) dùng chung một trang đăng nhập. Frontend và backend chạy ở hai cổng khác nhau. Cần chặn truy cập trái quyền (FR-04, NFR-05) và vô hiệu hóa token khi đăng xuất (FR-03). Đề bài yêu cầu JWT với Passport.

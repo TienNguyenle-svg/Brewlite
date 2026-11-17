@@ -1,9 +1,5 @@
 # ADR-004: Dùng PostgreSQL với Prisma ORM và Prisma Migrate
 
-- Trạng thái: Đã chấp nhận
-- Ngày: 2026-11-14
-- Người quyết định: Nhóm phát triển
-
 ## Bối cảnh
 
 Dữ liệu của BrewLite có nhiều quan hệ: đơn - món - topping, món - công thức - nguyên liệu, mã khuyến mãi - lượt dùng. Cần giao dịch ACID cho đặt hàng và thanh toán (NFR-10, NFR-11), ràng buộc duy nhất (khóa idempotency, mỗi tài khoản một mã một lần) và chỉ mục để truy vấn nhanh. Nhiều người cùng sửa schema nên cần lịch sử thay đổi có kiểm soát.
