@@ -4,14 +4,16 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main      
+      - main
     paths:
       - 'backend/**'
+      - 'tests/integration/**'
   pull_request:
     paths:
       - 'backend/**'
+      - 'tests/integration/**'
 
-permissions:      
+permissions:
   contents: read
   statuses: write
 
@@ -19,6 +21,23 @@ permissions:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: brewlite_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d brewlite_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/brewlite_test?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/brewlite_test?schema=public
     defaults:
       run:
         working-directory: ./backend
@@ -44,8 +63,9 @@ jobs:
 
       - name: Generate Prisma Client
         run: pnpm prisma generate
-        env:
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+
+      - name: Apply Prisma migrations
+        run: pnpm prisma:deploy
 
       - name: Run Lint
         run: pnpm run lint
@@ -54,6 +74,9 @@ jobs:
         run: node --experimental-vm-modules node_modules/jest/bin/jest.js
         env:
           NODE_OPTIONS: --experimental-vm-modules
+
+      - name: Run Integration Tests
+        run: pnpm run test:integration:workspace
 
       - name: Build project
         run: pnpm run build
