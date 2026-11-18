@@ -4,11 +4,16 @@
 
 | Mã | Sơ đồ / nguồn |
 |---|---|
-| D-UC | Sơ đồ Use Case trong [report/Assignment2-BrewLite.pdf](../report/Assignment2-BrewLite.pdf) |
-| D-ER | ERD trong [report/BrewLite-CongNghePhanMem.pdf](../report/BrewLite-CongNghePhanMem.pdf), đối chiếu với `backend/prisma/schema.prisma` |
+| D-UC-G | Use Case tổng quát tại [CNPM-US general.drawio.svg](./diagrams/CNPM-US%20general.drawio.svg) |
+| D-UC-C | Use Case Checkout tại [CNPM-US checkout.drawio (1).svg](./diagrams/CNPM-US%20checkout.drawio%20(1).svg) |
 | D-SM | Order State Machine trong [README](../README.md) và logic trạng thái backend |
-| D-ACT-B | Activity Barista tại [activity-barista.puml](./diagrams/activity-barista.puml) |
-| D-ACT-A | Activity Admin tại [activity-admin.puml](./diagrams/activity-admin.puml) |
+| D-ACT-C | Activity khách hàng tại [CNPM-Activity-customer.drawio.svg](./diagrams/CNPM-Activity-customer.drawio.svg) |
+| D-ACT-A | Activity Admin tại [CNPM-ActivityDiagram-Admin.drawio.svg](./diagrams/CNPM-ActivityDiagram-Admin.drawio.svg) |
+| D-ACT-B | Activity Barista tại [CNPM-ActivityDiagram-Barista.drawio.svg](./diagrams/CNPM-ActivityDiagram-Barista.drawio.svg) |
+| D-SEQ | Sequence Diagram tại [CNPM-sequence diagram.drawio.svg](./diagrams/CNPM-sequence%20diagram.drawio.svg) |
+| D-DEP | Deployment Diagram tại [CNPM-Deployment.drawio.svg](./diagrams/CNPM-Deployment.drawio.svg) |
+
+| D-CLD | Class Diagram tại [CNPM-Class diagram.drawio.svg](./diagrams/CNPM-Class%20diagram.drawio.svg) |
 
 ## Yêu cầu chức năng
 
