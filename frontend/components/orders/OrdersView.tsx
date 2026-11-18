@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
+  cancelMyOrder,
   getAccessToken,
   getMyOrders,
   getProduct,
@@ -10,6 +12,8 @@ import {
 } from "@/lib/api";
 import { formatOrderCode } from "@/lib/order-code";
 import type { ApiProduct } from "@/lib/types";
+import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
+import { sizePrice, type SizeId } from "@/lib/pricing";
 
 // ===== KIỂU DỮ LIỆU CỦA GIAO DIỆN =====
 // Sau này API trả về dữ liệu dạng khác thì chỉ cần đổi sang dạng này
@@ -24,11 +28,13 @@ type UiStatus =
 
 type OrderItemView = {
   id: string;
+  productId: string;
   name: string;
   imageUrl?: string;
   qty: number;
   size: string;
   toppings: string[];
+  toppingIds: string[];
   note?: string;
   lineTotal: number;
 };
@@ -152,7 +158,17 @@ function Stepper({ current }: { current: number }) {
   );
 }
 
-function OrderCard({ order }: { order: OrderView }) {
+function OrderCard({
+  order,
+  busy,
+  onReorder,
+  onCancel,
+}: {
+  order: OrderView;
+  busy: boolean;
+  onReorder: (order: OrderView) => void;
+  onCancel: (order: OrderView) => void;
+}) {
   const info = STATUS_INFO[order.status];
   const step = STEP_OF[order.status];
   const isCompleted = order.status === "COMPLETED";
@@ -220,8 +236,7 @@ function OrderCard({ order }: { order: OrderView }) {
           </span>
         </p>
 
-        {/* Tạm thời hai nút này chưa có chức năng */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           {isCompleted && (
             <button
               type="button"
@@ -232,14 +247,26 @@ function OrderCard({ order }: { order: OrderView }) {
           )}
           <button
             type="button"
+            onClick={() => onReorder(order)}
+            disabled={busy}
             className={`rounded-lg px-3 py-2 text-xs font-medium ${
               isCompleted
                 ? "bg-stone-800 text-white hover:bg-stone-900"
                 : "border border-gray-200 bg-white text-gray-700 hover:bg-stone-50"
             }`}
           >
-            ↻ Đặt lại
+            {busy ? "Đang xử lý..." : "↻ Đặt lại"}
           </button>
+          {order.status === "PAID" && (
+            <button
+              type="button"
+              onClick={() => onCancel(order)}
+              disabled={busy}
+              className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy ? "Đang xử lý..." : "Hủy đơn"}
+            </button>
+          )}
         </div>
       </div>
     </article>
@@ -337,6 +364,7 @@ function toOrderView(
     status: order.status,
     items: order.items.map((item) => ({
       id: item.id,
+      productId: item.productId,
       name: productsById.get(item.productId)?.name ?? "Sản phẩm",
       imageUrl: productsById.get(item.productId)?.imageUrl ?? "/window.svg",
       qty: item.qty,
@@ -344,6 +372,7 @@ function toOrderView(
       toppings: item.toppings.map(
         ({ toppingId }) => toppingsById.get(toppingId) ?? "Topping",
       ),
+      toppingIds: item.toppings.map(({ toppingId }) => toppingId),
       lineTotal: item.lineTotal,
     })),
     total: order.total,
@@ -352,10 +381,105 @@ function toOrderView(
 
 // ===== TRANG CHÍNH =====
 export default function OrdersView({ placedId }: { placedId?: string }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("active");
   const [orders, setOrders] = useState<OrderView[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
+
+  const handleReorder = async (order: OrderView) => {
+    setBusyOrderId(order.id);
+    setActionError(null);
+
+    try {
+      await ensureCartHydrated();
+      const itemWithToppings = order.items.find(
+        (item) => item.toppingIds.length > 0,
+      );
+      const [products, productWithToppings] = await Promise.all([
+        getProducts(),
+        itemWithToppings ? getProduct(itemWithToppings.productId) : Promise.resolve(null),
+      ]);
+      const productsById = new Map(products.map((product) => [product.id, product]));
+      const toppingsById = new Map(
+        (productWithToppings?.toppings ?? []).map((topping) => [topping.id, topping]),
+      );
+      const validSizes: SizeId[] = ["S", "M", "L"];
+
+      const itemsToAdd = order.items.map((item) => {
+        const product = productsById.get(item.productId);
+        if (!product) {
+          throw new Error(`Món “${item.name}” hiện không còn trong thực đơn.`);
+        }
+        if (!validSizes.includes(item.size as SizeId)) {
+          throw new Error(`Size của món “${item.name}” không còn hợp lệ.`);
+        }
+
+        const size = item.size as SizeId;
+        const toppings = item.toppingIds.map((toppingId) => {
+          const topping = toppingsById.get(toppingId);
+          if (!topping) {
+            throw new Error(`Topping của món “${item.name}” hiện không còn.`);
+          }
+          return { id: topping.id, name: topping.name, price: topping.price };
+        });
+
+        return {
+          product,
+          size,
+          qty: item.qty,
+          toppings,
+          unitPrice:
+            sizePrice(product.price, size) +
+            toppings.reduce((total, topping) => total + topping.price, 0),
+        };
+      });
+
+      const cart = useCartStore.getState();
+      for (const item of itemsToAdd) {
+        cart.addItem(item.product, item.size, {
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          toppings: item.toppings,
+        });
+      }
+
+      router.push("/cart");
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error
+          ? cause.message
+          : "Không thể đặt lại đơn hàng này.",
+      );
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
+
+  const handleCancel = async (order: OrderView) => {
+    if (!window.confirm(`Bạn có chắc muốn hủy đơn #${order.code}?`)) return;
+
+    setBusyOrderId(order.id);
+    setActionError(null);
+    try {
+      const cancelled = await cancelMyOrder(order.id);
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === order.id
+            ? { ...item, status: cancelled.status as UiStatus }
+            : item,
+        ),
+      );
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error ? cause.message : "Không thể hủy đơn hàng.",
+      );
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -435,7 +559,7 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
 
   const tabs: { id: Tab; label: string; count: number }[] = [
     { id: "active", label: "Đang xử lý", count: activeOrders.length },
-    { id: "history", label: "Lịch sử đơn", count: historyOrders.length },
+    { id: "history", label: "Đơn đã hủy", count: historyOrders.length },
   ];
 
   return (
@@ -478,6 +602,11 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
           {error}
         </p>
       )}
+      {actionError && (
+        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          {actionError}
+        </p>
+      )}
 
       {/* Hai tab */}
       <div className="mt-6 flex gap-6 border-b border-gray-200">
@@ -509,7 +638,15 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
             </p>
           ) : tab === "active" ? (
             activeOrders.length > 0 ? (
-              activeOrders.map((o) => <OrderCard key={o.id} order={o} />)
+              activeOrders.map((o) => (
+                <OrderCard
+                  key={o.id}
+                  order={o}
+                  busy={busyOrderId === o.id}
+                  onReorder={handleReorder}
+                  onCancel={handleCancel}
+                />
+              ))
             ) : (
               <p className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
                 Bạn chưa có đơn nào đang xử lý.
@@ -521,7 +658,15 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
                 {historyOrders.length} đơn đã qua
               </p>
               {historyOrders.length > 0 ? (
-                historyOrders.map((o) => <OrderCard key={o.id} order={o} />)
+                historyOrders.map((o) => (
+                  <OrderCard
+                    key={o.id}
+                    order={o}
+                    busy={busyOrderId === o.id}
+                    onReorder={handleReorder}
+                    onCancel={handleCancel}
+                  />
+                ))
               ) : (
                 <p className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
                   Bạn chưa có đơn nào trong lịch sử.

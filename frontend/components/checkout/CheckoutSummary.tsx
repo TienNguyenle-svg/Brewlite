@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import PromoForm from "@/components/cart/PromoForm";
 import { money } from "@/lib/format";
 import type { useCart } from "@/lib/cart-store";
 
@@ -40,20 +39,18 @@ export default function CheckoutSummary({
                 {i.qty > 1 && ` × ${i.qty}`}
               </span>
               <span className="text-[11px] leading-[13px] text-[#82776E]">
-                {i.summaryNote}
+                {i.customization}
               </span>
+              {i.summaryNote && (
+                <span className="text-[11px] leading-[13px] text-[#82776E]">
+                  Ghi chú: {i.summaryNote}
+                </span>
+              )}
             </span>
             <span className="text-xs font-medium">{money(i.price * i.qty)}</span>
           </li>
         ))}
       </ul>
-
-      <PromoForm
-        className="mt-[22px] border-t border-[#E3DACF] pt-[22px]"
-        applied={cart.promo}
-        onApply={cart.applyPromo}
-        onRemove={cart.removePromo}
-      />
 
       <div className="mt-[22px] border-t border-[#E3DACF] pt-[22px]">
         <dl className="flex flex-col gap-4 text-[13px]">
@@ -69,6 +66,12 @@ export default function CheckoutSummary({
             <div className="flex justify-between text-[#406B4A]">
               <dt>Giảm giá ({cart.promo.code})</dt>
               <dd className="font-medium">−{money(cart.discount)}</dd>
+            </div>
+          )}
+          {cart.usePoints && cart.pointsDiscount > 0 && (
+            <div className="flex justify-between text-[#406B4A]">
+              <dt>Dùng điểm thưởng</dt>
+              <dd className="font-medium">−{money(cart.pointsDiscount)}</dd>
             </div>
           )}
         </dl>

@@ -41,7 +41,7 @@ const DELETE_BLOCKED =
   'Không thể xóa: sản phẩm đang được dùng trong đơn hàng, công thức hoặc topping.';
 
 const GRID =
-  'grid grid-cols-[110px_minmax(0,1.7fr)_160px_130px_140px_110px] items-center gap-4 px-5';
+  'grid min-w-[1050px] grid-cols-[120px_minmax(260px,1.8fr)_150px_145px_150px_120px] items-center gap-5 px-7';
 
 type RecipeRow = { ingredientId: string; amount: string };
 type FormState = {
@@ -90,7 +90,7 @@ function validate(form: FormState, isEdit: boolean): FormErrors {
 function Tile({ src, tea, size }: { src: string | null; tea: boolean; size: number }) {
   return (
     <div
-      className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#F4EDE3] text-[#B9672B]"
+      className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#E5EDE2] text-[#2F4A3A] shadow-sm ring-1 ring-[#CBD7C8] transition-all duration-300 group-hover:scale-[1.08] group-hover:shadow-[0_8px_18px_rgba(47,74,58,0.22)]"
       style={{ width: size, height: size }}
     >
       {tea ? <LeafIcon size={16} /> : <CupIcon size={16} />}
@@ -99,7 +99,7 @@ function Tile({ src, tea, size }: { src: string | null; tea: boolean; size: numb
         <img
           src={src}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           onError={(e) => {
             e.currentTarget.style.display = 'none';
           }}
@@ -329,14 +329,14 @@ export default function AdminProductsPage() {
           <option value="available">Còn hàng</option>
           <option value="soldout">Hết hàng</option>
         </select>
-        <span className="ml-auto text-xs text-[#82776E]">
+        <span className="ml-auto text-sm font-semibold text-[#526B59]">
           {products.length} sản phẩm · {availableCount} còn hàng
         </span>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[#E7E1DA] bg-white">
+      <div className="overflow-x-auto rounded-2xl border border-[#CBD7C8] bg-white shadow-[0_12px_32px_rgba(47,74,58,0.14)]">
         <div
-          className={`${GRID} border-b border-[#E7E1DA] bg-[#FBF8F4] py-3 text-xs text-[#82776E]`}
+          className={`${GRID} border-b border-[#CBD7C8] bg-[#E8F0E5] py-5 text-sm font-extrabold tracking-wide text-[#2F4A3A]`}
         >
           <span>Mã sản phẩm</span>
           <span>Tên sản phẩm</span>
@@ -365,7 +365,7 @@ export default function AdminProductsPage() {
         )}
 
         {!loading && !loadError && filtered.length === 0 && (
-          <div className="p-10 text-center text-sm text-[#82776E]">
+          <div className="p-10 text-center text-sm text-[#617466]">
             {products.length === 0
               ? 'Chưa có sản phẩm nào. Bấm "Thêm sản phẩm" để bắt đầu.'
               : 'Không có sản phẩm khớp với bộ lọc.'}
@@ -379,14 +379,14 @@ export default function AdminProductsPage() {
             return (
               <div
                 key={p.id}
-                className={`${GRID} border-b border-[#F1ECE5] py-3 text-sm transition-colors hover:bg-[#FBF8F4]`}
+                className={`${GRID} group relative border-b border-[#E1E9DE] py-5 text-base text-[#2F4A3A] transition-all duration-300 ease-out hover:z-10 hover:-translate-y-[2px] hover:bg-[#EFF6EB] hover:shadow-[0_10px_26px_rgba(47,74,58,0.15)]`}
               >
-                <span className="text-xs text-[#82776E]">{codeById.get(p.id)}</span>
-                <div className="flex min-w-0 items-center gap-3">
-                  <Tile src={p.imageUrl} tea={isTea(p.category)} size={36} />
+                <span className="text-sm font-bold text-[#617466]">{codeById.get(p.id)}</span>
+                <div className="flex min-w-0 items-center gap-4">
+                  <Tile src={p.imageUrl} tea={isTea(p.category)} size={56} />
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{p.name}</p>
-                    <p className="truncate text-xs text-[#82776E]">
+                    <p className="truncate text-[17px] font-extrabold text-[#2F4A3A] transition-colors group-hover:text-[#1C3928]">{p.name}</p>
+                    <p className="mt-1 truncate text-sm font-medium text-[#617466]">
                       {subtitle || 'Chưa có công thức'}
                     </p>
                   </div>
@@ -394,18 +394,18 @@ export default function AdminProductsPage() {
                 <span>
                   <Badge tone="neutral">{p.category}</Badge>
                 </span>
-                <span className="font-medium">{formatVnd(p.price)}</span>
+                <span className="text-[17px] font-extrabold text-[#2F4A3A]">{formatVnd(p.price)}</span>
                 <span>
                   <Badge tone={p.isAvailable ? 'success' : 'danger'} dot>
                     {p.isAvailable ? 'Còn hàng' : 'Hết hàng'}
                   </Badge>
                 </span>
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-3">
                   <button
                     type="button"
                     aria-label={`Sửa ${p.name}`}
                     onClick={() => openEdit(p)}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E7E1DA] bg-white text-[#B9672B] hover:bg-[#F8F5F0]"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#B7CBB5] bg-white text-[#2F4A3A] shadow-sm transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:border-[#2F4A3A] hover:bg-[#DCEBDD] hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F4A3A]"
                   >
                     <PencilIcon size={14} />
                   </button>
@@ -416,7 +416,7 @@ export default function AdminProductsPage() {
                       setDeleteError('');
                       setDeleting(p);
                     }}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#C0443B] text-white hover:bg-[#a93a32]"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#C0443B] text-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:bg-[#A8322C] hover:shadow-[0_6px_14px_rgba(192,68,59,0.25)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C0443B]"
                   >
                     <TrashIcon size={14} />
                   </button>
@@ -497,11 +497,11 @@ export default function AdminProductsPage() {
             <div>
               <p className="mb-1.5 text-xs font-medium">Công thức</p>
               {modal.product ? (
-                <div className="rounded-xl border border-[#E7E1DA] bg-[#F8F5F0] p-3 text-xs text-[#82776E]">
+                <div className="rounded-xl border border-[#CBD7C8] bg-[#F3EAD8] p-3 text-xs text-[#617466]">
                   {modal.product.recipes.length === 0 ? (
                     <p>Sản phẩm chưa có công thức.</p>
                   ) : (
-                    <ul className="mb-2 space-y-1 text-[#39281F]">
+                    <ul className="mb-2 space-y-1 text-[#2F4A3A]">
                       {modal.product.recipes.map((r) => (
                         <li key={r.id}>
                           {r.ingredient.name}: {r.amount} {r.ingredient.unit}
@@ -516,7 +516,7 @@ export default function AdminProductsPage() {
                   {form.recipes.map((r, i) => {
                     const unit = ingredients.find((x) => x.id === r.ingredientId)?.unit;
                     return (
-                      <div key={i} className="flex items-center gap-2">
+                      <div key={i} className="flex items-center gap-3">
                         <select
                           value={r.ingredientId}
                           onChange={(e) => setRecipe(i, { ingredientId: e.target.value })}
@@ -536,7 +536,7 @@ export default function AdminProductsPage() {
                           placeholder="Định lượng"
                           className={`${fieldClass()} max-w-[130px]`}
                         />
-                        <span className="w-10 text-xs text-[#82776E]">{unit ?? ''}</span>
+                        <span className="w-10 text-xs text-[#617466]">{unit ?? ''}</span>
                         <button
                           type="button"
                           aria-label="Xóa dòng"
@@ -561,7 +561,7 @@ export default function AdminProductsPage() {
                         recipes: [...f.recipes, { ingredientId: '', amount: '' }],
                       }))
                     }
-                    className="text-xs font-medium text-[#B9672B] hover:underline"
+                    className="text-xs font-medium text-[#2F4A3A] hover:underline"
                   >
                     + Thêm nguyên liệu
                   </button>
@@ -595,7 +595,7 @@ export default function AdminProductsPage() {
       {deleting && (
         <Modal width={400} onClose={() => !deleteBusy && setDeleting(null)}>
           <h2 className="mb-2 text-lg font-semibold">Xóa sản phẩm?</h2>
-          <p className="mb-4 text-sm text-[#82776E]">
+          <p className="mb-4 text-sm text-[#617466]">
             Bạn có chắc muốn xóa &quot;{deleting.name}&quot;? Thao tác này không thể hoàn tác.
           </p>
           {deleteError && (

@@ -2,21 +2,25 @@ import type { ApiProduct, ApiTopping, Product } from "./types";
 
 // Hàm tự động chọn URL phù hợp với môi trường
 const getApiUrl = () => {
-  // Ưu tiên biến môi trường dành cho trình duyệt và server trên Render
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  // Fallback cho môi trường Docker ở máy local
+  // 1. Đang chạy trên Server (Docker) -> BẮT BUỘC gọi qua tên service nội bộ
   if (typeof window === "undefined" && process.env.API_URL_INTERNAL) {
     return process.env.API_URL_INTERNAL;
   }
-  // Fallback cuối cùng cho máy local
+  
+  // 2. Đang chạy trên Trình duyệt -> Dùng biến NEXT_PUBLIC
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // 3. Fallback
   return "http://localhost:3001";
 };
 
 const API_URL = getApiUrl().replace(/\/+$/, "");
 export const TOKEN_KEY = "accessToken";
 export const PENDING_PAYMENT_ORDER_KEY = "brewlite-pending-payment-order";
+export const PENDING_PAYMENT_IDEMPOTENCY_KEY =
+  "brewlite-pending-payment-idempotency-key";
 export const PENDING_ORDER_IDEMPOTENCY_KEY =
   "brewlite-pending-order-idempotency-key";
 export const PENDING_ORDER_REQUEST_FINGERPRINT =
@@ -42,6 +46,8 @@ export type CreateOrderInput = {
   receiverName: string;
   receiverPhone: string;
   deliveryAddress: string;
+  promotionCode?: string;
+  usePoints?: boolean;
 };
 
 export type OrderReceipt = {
@@ -81,6 +87,27 @@ export type CreatePaymentInput = {
   orderId: string;
 };
 
+export type CheckoutPreviewInput = {
+  items: Array<{
+    productId: string;
+    size: "S" | "M" | "L";
+    qty: number;
+    toppingIds: string[];
+  }>;
+  promotionCode?: string;
+  usePoints: boolean;
+};
+
+export type CheckoutPreviewReceipt = {
+  promotionCode: string | null;
+  subtotal: number;
+  discountAmount: number;
+  pointsUsed: number;
+  pointsDiscount: number;
+  shippingFee: number;
+  total: number;
+};
+
 export type PaymentReceipt = {
   paymentId: string;
   orderId: string;
@@ -89,6 +116,24 @@ export type PaymentReceipt = {
   status: string;
   expiresAt?: string;
   paymentUrl: string | null;
+};
+
+export type LoyaltySummary = {
+  points: number;
+  availablePoints: number;
+  reservedPoints: number;
+  pointsOwed: number;
+  pointValueVnd: number;
+  earnRule: string;
+  transactions: Array<{
+    id: string;
+    type: string;
+    points: number;
+    amount?: number | null;
+    description?: string | null;
+    orderId?: string | null;
+    createdAt: string;
+  }>;
 };
 
 export const getAccessToken = () =>
@@ -152,7 +197,7 @@ type ProductResponse = Omit<Product, "imageUrl"> & {
 function normalizeProduct(product: ProductResponse): ApiProduct {
   return {
     ...product,
-    imageUrl: product.imageUrl ?? "/window.svg",
+    imageUrl: product.imageUrl ?? "/images/hero-1.jpg",
   };
 }
 
@@ -180,7 +225,21 @@ export const createOrder = (
     body: JSON.stringify(input),
   });
 
+export const previewCheckout = (input: CheckoutPreviewInput) =>
+  request<CheckoutPreviewReceipt>("/checkout/preview", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
 export const getMyOrders = () => request<CustomerOrder[]>("/orders/me");
+
+export const getLoyalty = () => request<LoyaltySummary>("/users/me/loyalty");
+
+export const cancelMyOrder = (orderId: string) =>
+  request<{ id: string; status: string }>(
+    `/orders/${encodeURIComponent(orderId)}/cancel`,
+    { method: "PATCH" },
+  );
 
 export const createPayment = (
   input: CreatePaymentInput,

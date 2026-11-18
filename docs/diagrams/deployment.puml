@@ -1,0 +1,91 @@
+@startuml
+!theme plain
+skinparam componentStyle rectangle
+skinparam node {
+  BackgroundColor #FEFECE
+  BorderColor #A80036
+}
+
+title Deployment Diagram - Hệ thống BrewLite (Full Render)
+
+' ==========================================
+' HÀNG 1: NGƯỜI DÙNG (Bên trái) - GITHUB & VNPAY (Bên phải)
+' ==========================================
+node "Thiết bị người dùng\n(Browser / PWA)" as UserDevice <<device>> {
+  artifact "Trình duyệt Web" as Browser
+}
+
+node "GitHub" as GitHubCloud <<device>> {
+  node "GitHub Actions" as GitHubActions <<execution environment>> {
+    artifact "CI/CD Pipeline" as CICD
+  }
+  node "Container Registry" as Registry <<execution environment>> {
+    artifact "Docker Images" as DockerImage
+  }
+}
+
+node "Third-party\n(Payment Gateway)" as VNPay <<device>> {
+  artifact "VNPay Sandbox API" as VNPayAPI
+}
+
+' ==========================================
+' HÀNG 2: RENDER CLOUD PLATFORM
+' ==========================================
+node "Render Cloud Platform" as RenderCloud {
+  
+  together {
+    node "Web Service 1\n(Frontend)" as RenderFrontend <<device>> {
+      node "Node.js Runtime" as NodeFE <<execution environment>> {
+        artifact "Next.js App" as NextApp
+      }
+    }
+
+    node "Web Service 2\n(Backend API)" as RenderBackend <<device>> {
+      node "Docker Container" as DockerAPI <<execution environment>> {
+        artifact "NestJS API" as NestAPI
+      }
+    }
+  }
+
+  node "Database Service\n(Managed PostgreSQL)" as RenderDB <<device>> {
+    node "PostgreSQL Engine" as PostgresEnv <<execution environment>> {
+      database "BrewLite DB" as PostgresDB
+      artifact "Persistent Storage" as DBStorage
+    }
+  }
+}
+
+' ==========================================
+' KẾT NỐI (ÉP HƯỚNG ĐỂ KHÔNG BỊ CHÉO)
+' ==========================================
+
+' User -> Frontend
+Browser -down-> NextApp : "HTTPS (Port 443)"
+
+' Frontend -> Backend
+NextApp -right-> NestAPI : "HTTPS API Calls\n(REST / JSON)"
+
+' Backend -> Database
+NestAPI -down-> PostgresDB : "TCP (Port 5432)\nPrisma ORM\n(Internal IP)"
+
+' Backend -> VNPay (Nối chéo sang phải)
+NestAPI -up-> VNPayAPI : "HTTPS (Port 443)\nThanh toán / Webhook"
+
+' Luồng CI/CD (Nét đứt)
+GitHubActions -down-> Registry : "1. Build & Push"
+GitHubActions ..> RenderFrontend : "Auto Deploy"
+Registry ..> RenderBackend : "2. Pull & Deploy\n(Webhook)"
+
+note bottom of RenderDB
+  Database không public trực tiếp.
+  Chỉ nhận kết nối nội bộ từ Backend.
+end note
+
+note right of RenderBackend
+  Biến môi trường:
+  DATABASE_URL, JWT_SECRET,
+  VNPAY_TMN_CODE...
+  Health check: GET /health
+end note
+
+@enduml

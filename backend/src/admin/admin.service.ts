@@ -174,7 +174,35 @@ export class AdminService {
     return { ingredients, toppings };
   }
 
-// ===== BÁO CÁO DOANH THU =====
+  // ===== QUẢN LÝ ĐƠN HÀNG =====
+  async getAllOrders() {
+    return this.prisma.order.findMany({
+      include: {
+        items: {
+          include: {
+            product: true,
+            toppings: {
+              include: {
+                topping: true,
+              },
+            },
+          },
+        },
+        payments: true,
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  // ===== BÁO CÁO DOANH THU =====
   async getRevenueReport() {
     // 1. Lấy thống kê cho các đơn COMPLETED
     const completedStats = await this.prisma.order.aggregate({

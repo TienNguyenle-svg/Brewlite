@@ -80,7 +80,7 @@ export class OrdersService {
       }
 
       const finalProductPrice = Math.round(product.price * multiplier);
-      const lineTotal = (finalProductPrice * item.qty) + toppingPriceTotal;
+      const lineTotal = (finalProductPrice + toppingPriceTotal) * item.qty;
       subTotal += lineTotal;
 
       orderItems.push({
@@ -255,7 +255,6 @@ export class OrdersService {
         data: { status: 'PAID' },
       });
 
-      await this.inventoryService.settleOrder(tx, orderId);
 
       for (const item of order.items) {
         await tx.product.update({
@@ -306,13 +305,17 @@ export class OrdersService {
     });
   }
 
-  async cancelOrder(orderId: string) {
+  async cancelOrder(orderId: string, requestingUserId?: string) {
     const order = await this.prisma.order.findUnique({ 
       where: { id: orderId },
       include: { items: true, payments: true } 
     });
     
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+
+    if (requestingUserId && order.userId !== requestingUserId) {
+      throw new NotFoundException('Không tìm thấy đơn hàng');
+    }
     
     if (order.status !== 'PAID' && order.status !== 'PENDING') {
       throw new BadRequestException('Chỉ có thể hủy đơn PENDING hoặc PAID.');

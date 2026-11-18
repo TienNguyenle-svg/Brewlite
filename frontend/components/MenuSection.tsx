@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Product } from "@/lib/types";
 import ProductCard from "@/components/ProductCard";
 
-const CATEGORIES = ["Tất cả", "Cà phê", "Trà sữa", "Trà trái cây"];
+const CATEGORIES = ["Tất cả", "Cà phê", "Trà", "Sinh tố", "Khác"];
 
 type SortKey = "popular" | "price-asc" | "price-desc" | "name";
 
@@ -92,8 +92,8 @@ export default function MenuSection({ products }: { products: Product[] }) {
               onClick={() => setCategory(c)}
               className={
                 c === category
-                  ? "rounded-full bg-[#2B1F1A] px-4 py-2 text-xs font-medium text-white"
-                  : "rounded-full border border-[#EDE6DC] bg-white px-4 py-2 text-xs text-[#2B1F1A] hover:bg-[#F3EDE4]"
+                  ? "rounded-full bg-[#2F4A3A] px-4 py-2 text-xs font-medium text-white"
+                  : "rounded-full border border-[#EDE6DC] bg-white px-4 py-2 text-xs text-[#2F4A3A] hover:border-[#2F4A3A]/40 hover:bg-[#E8EFEA]"
               }
             >
               {c}
@@ -102,7 +102,7 @@ export default function MenuSection({ products }: { products: Product[] }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex h-10 items-center gap-2 rounded-xl border border-[#EDE6DC] bg-white px-3.5 text-stone-500">
+          <label className="flex h-10 items-center gap-2 rounded-xl border border-[#EDE6DC] bg-white px-3.5 text-stone-500 focus-within:border-[#2F4A3A]">
             <SearchIcon />
             <input
               type="text"
@@ -113,7 +113,7 @@ export default function MenuSection({ products }: { products: Product[] }) {
             />
           </label>
 
-          <label className="flex h-10 items-center gap-2 rounded-xl border border-[#D8CDB4] bg-white px-3.5 text-[##2E1F14]">
+          <label className="flex h-10 items-center gap-2 rounded-xl border border-[#EDE6DC] bg-white px-3.5 text-[#2F4A3A]">
             <SlidersIcon />
             <span className="text-xs font-medium">Sắp xếp:</span>
             <select
@@ -132,7 +132,7 @@ export default function MenuSection({ products }: { products: Product[] }) {
 
       {/* Dòng đếm */}
       <div className="mt-5 flex flex-wrap justify-between gap-2 text-[11px] text-[#6B5240]">
-        <p>{visible.length} món ngon để bạn nghỉ tay một chút.</p>
+        <p>{visible.length} Món ngon để bạn nghỉ tay một chút.</p>
         <p>Giá tính bằng VND · Tùy chỉnh món theo ý bạn</p>
       </div>
 
