@@ -79,7 +79,7 @@ function OrderDetail() {
                 setLoading(true);
                 await loadData();
               }}
-              className="font-semibold text-[#B9672B]"
+              className="font-semibold text-[#2F4A3A]"
             >
               Thử tải lại
             </button>
@@ -87,7 +87,7 @@ function OrderDetail() {
         ) : (
           <p>Không tìm thấy đơn này trong hàng đợi (có thể đã hoàn thành).</p>
         )}
-        <Link href="/barista/orders" className="font-semibold text-[#B9672B]">
+        <Link href="/barista/orders" className="font-semibold text-[#2F4A3A]">
           ← Về hàng đợi đơn
         </Link>
       </div>
@@ -100,7 +100,7 @@ function OrderDetail() {
 
   return (
     <div className="mx-auto flex max-w-[840px] flex-col gap-6">
-      <Link href="/barista/orders" className="text-[13px] text-[#82776E] hover:text-[#39281F]">
+      <Link href="/barista/orders" className="text-[13px] text-[#6B5240] hover:text-[#2F4A3A]">
         ← Về hàng đợi đơn
       </Link>
 
@@ -110,7 +110,7 @@ function OrderDetail() {
         </div>
       )}
 
-      <article className="flex flex-col gap-5 rounded-2xl border border-[#E7E1DA] bg-white p-6">
+      <article className="flex flex-col gap-5 rounded-2xl border border-[#D9CBAA] bg-white p-6">
         <header className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl tracking-tight">Đơn #{orderCode(order)}</h1>
@@ -125,25 +125,25 @@ function OrderDetail() {
           </span>
         </header>
 
-        <ol className="flex items-center justify-between rounded-[10px] bg-[#FCFAF7] px-3.5 py-3 text-[11px]">
+        <ol className="flex items-center justify-between rounded-[10px] bg-[#F3EAD8] px-3.5 py-3 text-[11px]">
           {STEPS.map((s, i) => {
             const done = i <= currentIndex;
             return (
               <li key={s.key} className="flex items-center gap-2">
                 <span
                   className={`flex h-[23px] w-[23px] items-center justify-center rounded-full text-[11px] font-semibold ${
-                    done ? 'bg-[#B9672B] text-white' : 'bg-[#F1EDE7] text-[#82776E]'
+                    done ? 'bg-[#2F4A3A] text-white' : 'bg-white text-[#6B5240]'
                   }`}
                 >
                   {i + 1}
                 </span>
-                <span className={done ? 'text-[#39281F]' : 'text-[#82776E]'}>{s.label}</span>
+                <span className={done ? 'text-[#2E1F14]' : 'text-[#6B5240]'}>{s.label}</span>
               </li>
             );
           })}
         </ol>
 
-        <ul className="flex flex-col gap-4 border-t border-[#E7E1DA] pt-5">
+        <ul className="flex flex-col gap-4 border-t border-[#D9CBAA] pt-5">
           {order.items.map((item) => {
             const options = [item.size, ...item.toppings.map((t) => t.topping.name)]
               .filter(Boolean)
@@ -154,14 +154,14 @@ function OrderDetail() {
                 <img
                   src={item.product.imageUrl ?? '/images/hero-1.jpg'}
                   alt={item.product.name}
-                  className="h-16 w-16 rounded-[10px] bg-[#F1EDE7] object-cover"
+                  className="h-16 w-16 rounded-[10px] bg-[#F3EAD8] object-cover"
                 />
                 <div>
                   <p className="text-sm font-semibold">
                     {item.qty} × {item.product.name}
                   </p>
                   {options && <p className="text-xs text-[#82776E]">{options}</p>}
-                  {item.note && <p className="text-xs text-[#B9672B]">Ghi chú: {item.note}</p>}
+                  {item.note && <p className="text-xs text-[#2F4A3A]">Ghi chú: {item.note}</p>}
                 </div>
               </li>
             );

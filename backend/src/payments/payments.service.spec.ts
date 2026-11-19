@@ -584,7 +584,7 @@ describe('PaymentsService', () => {
       );
       expect(prisma.order.updateMany).toHaveBeenCalledWith({
         where: { id: 'order-1', status: 'PENDING' },
-        data: { status: 'PAID' },
+        data: { status: 'PAID', paidAt: expect.any(Date) },
       });
     });
   });
@@ -722,7 +722,7 @@ describe('PaymentsService', () => {
       });
       expect(prisma.order.updateMany).toHaveBeenCalledWith({
         where: { id: 'order-1', status: 'PENDING' },
-        data: { status: 'PAID' },
+        data: { status: 'PAID', paidAt: expect.any(Date) },
       });
       expect(discounts.settlePaidOrder).toHaveBeenCalledWith(prisma, {
         id: 'order-1',
@@ -848,7 +848,7 @@ describe('PaymentsService', () => {
       expect(prisma.order.updateMany).toHaveBeenCalledTimes(1);
       expect(prisma.order.updateMany).toHaveBeenCalledWith({
         where: { id: 'order-1', status: 'PENDING' },
-        data: { status: 'PAID' },
+        data: { status: 'PAID', paidAt: expect.any(Date) },
       });
     });
 
@@ -873,7 +873,7 @@ describe('PaymentsService', () => {
       });
       expect(prisma.order.updateMany).toHaveBeenNthCalledWith(2, {
         where: { id: 'order-1', status: 'PENDING' },
-        data: { status: 'PAID' },
+        data: { status: 'PAID', paidAt: expect.any(Date) },
       });
       expect(inventory.reserveOrder).not.toHaveBeenCalled();
       expect(inventory.settleOrder).toHaveBeenCalledWith(

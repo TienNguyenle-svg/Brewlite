@@ -795,9 +795,14 @@ export class PaymentsService {
       );
     }
 
+    const data: Prisma.OrderUpdateManyMutationInput = { status: to };
+    if (to === 'PAID') {
+      data.paidAt = new Date();
+    }
+
     const result = await client.order.updateMany({
       where: { id: orderId, status: from },
-      data: { status: to },
+      data,
     });
 
     if (result.count > 0) {

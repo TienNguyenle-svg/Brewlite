@@ -80,7 +80,7 @@ export default function BaristaOrdersPage() {
     <div className="flex flex-col gap-6">
       <section className="flex items-end justify-between">
         <div className="flex flex-col gap-2">
-          <p className="text-[11px] uppercase tracking-wide text-[#B9672B]">Quầy barista</p>
+          <p className="text-[11px] uppercase tracking-wide text-[#2F4A3A]">Quầy barista</p>
           <h1 className="text-4xl tracking-tight">Hàng đợi đơn hàng</h1>
           <p className="text-sm text-[#82776E]">
             Đơn cũ nhất hiển thị trước. Chuyển từng đơn qua từng bước: đã thanh toán, đang pha
@@ -88,15 +88,15 @@ export default function BaristaOrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-2 rounded-full bg-[#EAF2EC] px-3.5 py-1.5 text-xs font-semibold text-[#41705A]">
-            <span className="h-2 w-2 rounded-full bg-[#41705A]" />
+          <span className="flex items-center gap-2 rounded-full bg-[#E8EFEA] px-3.5 py-1.5 text-xs font-semibold text-[#2F4A3A]">
+            <span className="h-2 w-2 rounded-full bg-[#2F4A3A]" />
             Trực tiếp
             {updatedAt && ` · cập nhật ${updatedAt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`}
           </span>
           <button
             type="button"
             onClick={load}
-            className="rounded-[10px] bg-[#39281F] px-3.5 py-2.5 text-[13px] font-semibold text-white"
+            className="rounded-[10px] bg-[#2F4A3A] px-3.5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-[#263D2F]"
           >
             Làm mới
           </button>
@@ -115,7 +115,7 @@ export default function BaristaOrdersPage() {
         </div>
       )}
 
-      <div className="flex gap-8 border-b border-[#E7E1DA]">
+      <div className="flex gap-8 border-b border-[#D9CBAA]">
         {tabs.map((t) => {
           const active = filter === t.key;
           return (
@@ -125,12 +125,12 @@ export default function BaristaOrdersPage() {
               onClick={() => setFilter(t.key)}
               className={`flex h-[50px] items-center gap-2 border-b-[3px] text-sm ${
                 active
-                  ? 'border-[#B9672B] font-semibold text-[#39281F]'
+                  ? 'border-[#2F4A3A] font-semibold text-[#2E1F14]'
                   : 'border-transparent text-[#82776E]'
               }`}
             >
               {t.label}
-              <span className="rounded-full bg-[#F1EDE7] px-[7px] text-[11px] leading-5">
+              <span className="rounded-full bg-[#F3EAD8] px-[7px] text-[11px] leading-5">
                 {t.count}
               </span>
             </button>
@@ -156,7 +156,7 @@ export default function BaristaOrdersPage() {
             return (
               <section
                 key={status}
-                className="flex min-h-[200px] flex-col gap-3.5 rounded-2xl border border-[#E7E1DA] bg-[#FCFAF7] p-4"
+                className="flex min-h-[200px] flex-col gap-3.5 rounded-2xl border border-[#D9CBAA] bg-[#F8F5F0] p-4"
               >
                 <header className="flex items-center gap-2.5 px-1 pb-1.5">
                   <span className={`h-2.5 w-2.5 rounded-full ${cfg.dotClass}`} />
@@ -164,7 +164,7 @@ export default function BaristaOrdersPage() {
                     <h2 className="text-base leading-6">{cfg.column}</h2>
                     <p className="text-[10px] tracking-wider text-[#82776E]">{status}</p>
                   </div>
-                  <span className="rounded-full border border-[#E7E1DA] bg-white px-[9px] text-xs font-semibold leading-6">
+                  <span className="rounded-full border border-[#D9CBAA] bg-white px-[9px] text-xs font-semibold leading-6">
                     {list.length}
                   </span>
                 </header>
@@ -186,7 +186,7 @@ export default function BaristaOrdersPage() {
         </div>
       )}
 
-      <section className="flex items-center justify-between rounded-2xl border border-[#E7E1DA] bg-white px-6 py-4 text-xs text-[#82776E]">
+      <section className="flex items-center justify-between rounded-2xl border border-[#D9CBAA] bg-white px-6 py-4 text-xs text-[#6B5240]">
         <span>Mỗi đơn chỉ chuyển tiếp từng bước một. Đơn hoàn thành sẽ rời khỏi hàng đợi.</span>
         <span className="flex items-center gap-2.5">
           Đã thanh toán — Đang pha — Sẵn sàng — Hoàn thành
