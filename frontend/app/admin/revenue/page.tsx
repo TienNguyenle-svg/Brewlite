@@ -36,7 +36,7 @@ import {
 const GENERIC_ERROR = 'Đã có lỗi xảy ra, vui lòng thử lại';
 const MAX_DAYS = 92;
 const DAY_MS = 86_400_000;
-const COLORS = ['#39281F', '#B9672B', '#E5C9A8', '#41705A', '#8A7F76', '#D6574F'];
+const COLORS = ['#2F4A3A', '#2F4A3A', '#A9C5A4', '#2F704B', '#809E84', '#D6574F'];
 
 type Preset = 'today' | '7d' | 'month' | 'custom';
 type Range = { from: string; to: string };
@@ -117,7 +117,7 @@ function Change({ value, label }: { value: number | null; label: string }) {
   }
   const up = value >= 0;
   return (
-    <span className={up ? 'text-[#41705A]' : 'text-[#C0443B]'}>
+    <span className={up ? 'text-[#2F704B]' : 'text-[#C0443B]'}>
       {up ? '+' : '−'}
       {formatPercent(Math.abs(value))} so với {label}
     </span>
@@ -128,11 +128,11 @@ function Row({ label, value, strong = false }: { label: string; value: string; s
   return (
     <div
       className={`flex items-center justify-between text-sm ${
-        strong ? 'font-semibold' : 'text-[#82776E]'
+        strong ? 'font-semibold' : 'text-[#627467]'
       }`}
     >
       <span>{label}</span>
-      <span className={strong ? '' : 'text-[#39281F]'}>{value}</span>
+      <span className={strong ? '' : 'text-[#2F4A3A]'}>{value}</span>
     </div>
   );
 }
@@ -163,7 +163,7 @@ function Donut({
   return (
     <div className="relative h-[150px] w-[150px] shrink-0">
       <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90">
-        <circle cx="60" cy="60" r={R} fill="none" stroke="#F1ECE5" strokeWidth="14" />
+        <circle cx="60" cy="60" r={R} fill="none" stroke="#E8EEDD" strokeWidth="14" />
         {segments.map((s) => (
           <circle
             key={s.name}
@@ -180,7 +180,7 @@ function Donut({
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-xl font-semibold">{million(total)}</span>
-        <span className="text-[10px] text-[#82776E]">triệu đồng</span>
+        <span className="text-[10px] text-[#627467]">triệu đồng</span>
       </div>
     </div>
   );
@@ -188,7 +188,7 @@ function Donut({
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-xl border border-[#E7E1DA] bg-white p-5 ${className}`}>
+    <div className={`rounded-2xl border border-[#CBD7C8] bg-white p-5 shadow-[0_8px_24px_rgba(47,74,58,0.10)] ${className}`}>
       {children}
     </div>
   );
@@ -315,8 +315,8 @@ export default function AdminRevenuePage() {
   const tabBtn = (active: boolean) =>
     `rounded-lg border px-4 py-2 text-sm transition-colors ${
       active
-        ? 'border-[#39281F] bg-[#39281F] font-semibold text-white'
-        : 'border-[#E7E1DA] bg-white text-[#39281F] hover:bg-[#F8F5F0]'
+        ? 'border-[#2F4A3A] bg-[#2F4A3A] font-semibold text-white'
+        : 'border-[#CBD7C8] bg-white text-[#2F4A3A] hover:bg-[#F3EAD8]'
     }`;
 
   // ----- Chuẩn bị số liệu cho biểu đồ (khi khoảng ngày hợp lệ) -----
@@ -362,7 +362,7 @@ export default function AdminRevenuePage() {
             type="button"
             onClick={handleExport}
             disabled={!data || loading}
-            className={`${btnOutline} flex items-center gap-2 text-[#B9672B]`}
+            className={`${btnOutline} flex items-center gap-2 text-[#2F4A3A]`}
           >
             <DownloadIcon size={14} />
             Xuất báo cáo
@@ -381,7 +381,7 @@ export default function AdminRevenuePage() {
             {PRESET_LABEL[p]}
           </button>
         ))}
-        <div className="ml-auto flex items-center gap-2 text-[#82776E]">
+        <div className="ml-auto flex items-center gap-2 text-[#627467]">
           <CalendarIcon size={15} />
           <input
             type="date"
@@ -402,7 +402,7 @@ export default function AdminRevenuePage() {
       </div>
 
       {loading && (
-        <div className="overflow-hidden rounded-xl border border-[#E7E1DA] bg-white">
+        <div className="overflow-hidden rounded-2xl border border-[#CBD7C8] bg-white shadow-[0_8px_24px_rgba(47,74,58,0.10)]">
           <TableSkeleton />
         </div>
       )}
@@ -465,17 +465,17 @@ export default function AdminRevenuePage() {
             <Card>
               <div className="mb-1 flex items-center justify-between">
                 <h2 className="font-semibold">Doanh thu theo ngày</h2>
-                <span className="flex items-center gap-1.5 text-xs text-[#82776E]">
+                <span className="flex items-center gap-1.5 text-xs text-[#627467]">
                   <span className="h-2 w-2 rounded-full bg-[#D9A877]" />
                   Doanh thu
                 </span>
               </div>
-              <p className="mb-4 text-xs text-[#82776E]">
+              <p className="mb-4 text-xs text-[#627467]">
                 {formatDate(data.from)} – {formatDate(data.to)} · Đơn vị: triệu đồng
               </p>
 
               <div className="flex gap-3">
-                <div className="relative h-[200px] w-6 shrink-0 text-[11px] text-[#82776E]">
+                <div className="relative h-[200px] w-6 shrink-0 text-[11px] text-[#627467]">
                   {chart.ticks.map((t) => (
                     <span
                       key={t}
@@ -505,7 +505,7 @@ export default function AdminRevenuePage() {
                             className="flex h-full min-w-0 flex-1 flex-col items-center justify-end"
                           >
                             {chart.showValues && d.revenue > 0 && (
-                              <span className="mb-1 text-[10px] text-[#82776E]">
+                              <span className="mb-1 text-[10px] text-[#627467]">
                                 {million(d.revenue)}
                               </span>
                             )}
@@ -514,7 +514,7 @@ export default function AdminRevenuePage() {
                               style={{
                                 height: `${h}%`,
                                 minHeight: d.revenue > 0 ? 2 : 0,
-                                backgroundColor: last ? '#39281F' : '#D9A877',
+                                backgroundColor: last ? '#2F4A3A' : '#D9A877',
                               }}
                             />
                           </div>
@@ -529,7 +529,7 @@ export default function AdminRevenuePage() {
                         <span
                           key={d.key}
                           className={`min-w-0 flex-1 text-center text-[11px] ${
-                            last ? 'font-semibold text-[#39281F]' : 'text-[#82776E]'
+                            last ? 'font-semibold text-[#2F4A3A]' : 'text-[#627467]'
                           }`}
                         >
                           {i % chart.labelEvery === 0 || last ? dm(d.date) : ''}
@@ -540,7 +540,7 @@ export default function AdminRevenuePage() {
                 </div>
               </div>
 
-              <p className="mt-4 text-xs text-[#82776E]">
+              <p className="mt-4 text-xs text-[#627467]">
                 {chart.best.revenue > 0
                   ? `Ngày ${dm(chart.best.date)} cao nhất: ${formatVnd(chart.best.revenue)}`
                   : 'Chưa có doanh thu trong kỳ này.'}
@@ -550,12 +550,12 @@ export default function AdminRevenuePage() {
             {/* ===== Biểu đồ tròn theo danh mục ===== */}
             <Card>
               <h2 className="font-semibold">Cơ cấu doanh thu</h2>
-              <p className="mb-4 text-xs text-[#82776E]">
+              <p className="mb-4 text-xs text-[#627467]">
                 Theo danh mục sản phẩm · {PRESET_LABEL[preset].toLowerCase()}
               </p>
 
               {donutTotal === 0 ? (
-                <p className="py-10 text-center text-sm text-[#82776E]">
+                <p className="py-10 text-center text-sm text-[#627467]">
                   Chưa có dữ liệu trong kỳ này.
                 </p>
               ) : (
@@ -572,17 +572,17 @@ export default function AdminRevenuePage() {
                             />
                             <span className="min-w-0">
                               <span className="block truncate font-medium">{it.name}</span>
-                              <span className="text-[#82776E]">{formatVnd(it.value)}</span>
+                              <span className="text-[#627467]">{formatVnd(it.value)}</span>
                             </span>
                           </span>
-                          <span className="shrink-0 text-[#82776E]">
+                          <span className="shrink-0 text-[#627467]">
                             {formatPercent((it.value / donutTotal) * 100)}
                           </span>
                         </li>
                       ))}
                     </ul>
                   </div>
-                  <p className="mt-4 border-t border-[#F1ECE5] pt-3 text-xs text-[#82776E]">
+                  <p className="mt-4 border-t border-[#E8EEDD] pt-3 text-xs text-[#627467]">
                     {donutItems[0].name} dẫn đầu, đóng góp{' '}
                     {formatPercent((donutItems[0].value / donutTotal) * 100)} giá trị món bán ra
                     trong kỳ. Tính theo giá trị món, chưa trừ giảm giá và chưa gồm phí vận chuyển.
@@ -594,28 +594,28 @@ export default function AdminRevenuePage() {
 
           <div className="mb-4 grid grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
             {/* ===== Sản phẩm bán chạy ===== */}
-            <div className="overflow-hidden rounded-xl border border-[#E7E1DA] bg-white">
+            <div className="overflow-hidden rounded-2xl border border-[#CBD7C8] bg-white shadow-[0_8px_24px_rgba(47,74,58,0.10)]">
               <div className="flex items-center justify-between px-5 py-4">
                 <h2 className="font-semibold">Sản phẩm bán chạy</h2>
-                <span className="text-xs text-[#82776E]">
+                <span className="text-xs text-[#627467]">
                   {formatDate(data.from)} – {formatDate(data.to)}
                 </span>
               </div>
-              <div className="grid grid-cols-[minmax(0,1.6fr)_80px_140px_90px] gap-4 border-y border-[#E7E1DA] bg-[#FBF8F4] px-5 py-3 text-xs text-[#82776E]">
+              <div className="grid grid-cols-[minmax(0,1.6fr)_80px_140px_90px] gap-4 border-y border-[#CBD7C8] bg-[#F8F4EA] px-5 py-3 text-xs text-[#627467]">
                 <span>Sản phẩm</span>
                 <span>Số ly</span>
                 <span>Doanh thu</span>
                 <span>Tỷ trọng</span>
               </div>
               {data.productRows.length === 0 && (
-                <p className="p-8 text-center text-sm text-[#82776E]">
+                <p className="p-8 text-center text-sm text-[#627467]">
                   Chưa có sản phẩm nào được bán trong kỳ này.
                 </p>
               )}
               {data.productRows.slice(0, 4).map((p) => (
                 <div
                   key={p.name}
-                  className="grid grid-cols-[minmax(0,1.6fr)_80px_140px_90px] gap-4 border-b border-[#F1ECE5] px-5 py-3 text-sm"
+                  className="grid grid-cols-[minmax(0,1.6fr)_80px_140px_90px] gap-4 border-b border-[#E8EEDD] px-5 py-3 text-sm"
                 >
                   <span className="truncate font-medium">{p.name}</span>
                   <span>{formatNumber(p.qty)}</span>
@@ -632,7 +632,7 @@ export default function AdminRevenuePage() {
                 const qty = rest.reduce((s, p) => s + p.qty, 0);
                 const revenue = rest.reduce((s, p) => s + p.revenue, 0);
                 return (
-                  <div className="flex items-center justify-between px-5 py-3 text-xs text-[#82776E]">
+                  <div className="flex items-center justify-between px-5 py-3 text-xs text-[#627467]">
                     <span>
                       Các sản phẩm khác · {formatNumber(qty)} ly
                     </span>
@@ -650,7 +650,7 @@ export default function AdminRevenuePage() {
             {/* ===== Tổng kết trong kỳ ===== */}
             <Card>
               <h2 className="font-semibold">Tổng kết trong kỳ</h2>
-              <p className="mb-4 text-xs text-[#82776E]">
+              <p className="mb-4 text-xs text-[#627467]">
                 {formatDate(data.from)} – {formatDate(data.to)}
               </p>
               {(() => {
@@ -671,8 +671,8 @@ export default function AdminRevenuePage() {
                   </div>
                 );
               })()}
-              <div className="mt-4 border-t border-[#E7E1DA] pt-4">
-                <p className="text-xs text-[#82776E]">Doanh thu ghi nhận</p>
+              <div className="mt-4 border-t border-[#CBD7C8] pt-4">
+                <p className="text-xs text-[#627467]">Doanh thu ghi nhận</p>
                 <p className="mt-1 text-[26px] font-semibold leading-tight">
                   {formatVnd(data.cur.revenue)}
                 </p>
@@ -686,7 +686,7 @@ export default function AdminRevenuePage() {
             </Card>
           </div>
 
-          <p className="text-xs text-[#82776E]">
+          <p className="text-xs text-[#627467]">
             Chỉ tính đơn đã hoàn thành, theo ngày tạo đơn.
             {updatedAt ? ` Cập nhật lúc ${formatClock(updatedAt)}.` : ''}
           </p>
