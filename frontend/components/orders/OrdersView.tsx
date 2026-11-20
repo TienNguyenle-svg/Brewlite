@@ -3,17 +3,25 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ApiError,
   cancelMyOrder,
+  createPayment,
   getAccessToken,
   getMyOrders,
   getProduct,
   getProducts,
+  PENDING_PAYMENT_ORDER_KEY,
   type CustomerOrder,
 } from "@/lib/api";
 import { formatOrderCode } from "@/lib/order-code";
 import type { ApiProduct } from "@/lib/types";
 import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 import { sizePrice, type SizeId } from "@/lib/pricing";
+import {
+  clearRetryPaymentKey,
+  getRetryPaymentKey,
+  setRetryPaymentRedirected,
+} from "@/lib/payment-retry";
 
 // ===== KIỂU DỮ LIỆU CỦA GIAO DIỆN =====
 // Sau này API trả về dữ liệu dạng khác thì chỉ cần đổi sang dạng này
@@ -97,7 +105,7 @@ const STATUS_INFO: Record<
   CANCELLED: {
     label: "Đã hủy",
     badge: "bg-red-100 text-red-700",
-    message: "Đơn hàng này đã được hủy.",
+    message: "Đơn hàng đã bị hủy. Vui lòng đặt đơn mới.",
   },
 };
 
@@ -163,12 +171,14 @@ function OrderCard({
   order,
   busy,
   onReorder,
+  onRetryPayment,
   onCancel,
   now,
 }: {
   order: OrderView;
   busy: boolean;
   onReorder: (order: OrderView) => void;
+  onRetryPayment: (order: OrderView) => void;
   onCancel: (order: OrderView) => void;
   now: number;
 }) {
@@ -263,18 +273,30 @@ function OrderCard({
               Xem hóa đơn
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => onReorder(order)}
-            disabled={busy}
-            className={`rounded-lg px-3 py-2 text-xs font-medium ${
-              isCompleted
-                ? "bg-stone-800 text-white hover:bg-stone-900"
-                : "border border-gray-200 bg-white text-gray-700 hover:bg-stone-50"
-            }`}
-          >
-            {busy ? "Đang xử lý..." : "↻ Đặt lại"}
-          </button>
+          {order.status === "PAYMENT_FAILED" && (
+            <button
+              type="button"
+              onClick={() => onRetryPayment(order)}
+              disabled={busy}
+              className="rounded-lg bg-[#39281F] px-3 py-2 text-xs font-medium text-white hover:bg-[#513A2D] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy ? "Đang xử lý..." : "Thanh toán lại"}
+            </button>
+          )}
+          {order.status !== "PAYMENT_FAILED" && (
+            <button
+              type="button"
+              onClick={() => onReorder(order)}
+              disabled={busy}
+              className={`rounded-lg px-3 py-2 text-xs font-medium ${
+                isCompleted
+                  ? "bg-stone-800 text-white hover:bg-stone-900"
+                  : "border border-gray-200 bg-white text-gray-700 hover:bg-stone-50"
+              }`}
+            >
+              {busy ? "Đang xử lý..." : "↻ Đặt lại"}
+            </button>
+          )}
           {order.status === "PAID" && (
             <button
               type="button"
@@ -502,6 +524,48 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
     }
   };
 
+  const handleRetryPayment = async (order: OrderView) => {
+    setBusyOrderId(order.id);
+    setActionError(null);
+    try {
+      const idempotencyKey = getRetryPaymentKey(order.id);
+      setRetryPaymentRedirected(false);
+      const payment = await createPayment({ orderId: order.id }, idempotencyKey);
+
+      sessionStorage.setItem(PENDING_PAYMENT_ORDER_KEY, order.id);
+      if (payment.status === "SUCCEEDED") {
+        clearRetryPaymentKey();
+        router.push(
+          `/payment/result?status=success&orderId=${encodeURIComponent(order.id)}`,
+        );
+        return;
+      }
+
+      if (!payment.paymentUrl) {
+        throw new ApiError(
+          "Backend không trả về đường dẫn thanh toán VNPay.",
+          502,
+        );
+      }
+
+      const paymentUrl = new URL(payment.paymentUrl);
+      if (paymentUrl.protocol !== "https:") {
+        throw new ApiError("Đường dẫn thanh toán VNPay không hợp lệ.", 502);
+      }
+
+      setRetryPaymentRedirected(true);
+      window.location.assign(paymentUrl.toString());
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error
+          ? cause.message
+          : "Không thể khởi tạo lại thanh toán.",
+      );
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
+
   useEffect(() => {
     let active = true;
     let refreshing = false;
@@ -710,6 +774,7 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
                   order={o}
                   busy={busyOrderId === o.id}
                   onReorder={handleReorder}
+                  onRetryPayment={handleRetryPayment}
                   onCancel={handleCancel}
                   now={now}
                 />
@@ -731,6 +796,7 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
                     order={o}
                     busy={busyOrderId === o.id}
                     onReorder={handleReorder}
+                    onRetryPayment={handleRetryPayment}
                     onCancel={handleCancel}
                     now={now}
                   />
