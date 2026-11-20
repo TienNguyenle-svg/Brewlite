@@ -110,8 +110,12 @@ export class PaymentsController {
       this.config.get<string>('FRONTEND_URL') || 'http://localhost:3000'
     ).replace(/\/+$/, '');
 
-    const redirectUrl = new URL(`${frontendUrl}/payment/result`);
-    redirectUrl.searchParams.set('status', result.status);
+    const resultPage =
+      result.status === 'cancelled' ? '/payment/cancelled' : '/payment/result';
+    const redirectUrl = new URL(`${frontendUrl}${resultPage}`);
+    if (result.status !== 'cancelled') {
+      redirectUrl.searchParams.set('status', result.status);
+    }
     redirectUrl.searchParams.set('orderId', result.orderId);
 
     return response.redirect(302, redirectUrl.toString());
