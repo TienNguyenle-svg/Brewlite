@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getLoyalty } from "@/lib/api";
+import { getLoyalty, getProducts } from "@/lib/api"; // <-- Thêm getProducts
 import { getToken, saveSession, useUser } from "@/lib/auth";
 import { useCart } from "@/lib/cart-store";
 import { money } from "@/lib/format";
@@ -21,6 +21,20 @@ export default function CartView() {
     message: string;
   } | null>(null);
 
+  // State kiểm tra sản phẩm còn bán hay không
+  const [availableIds, setAvailableIds] = useState<Set<string>>(new Set());
+  const [checkingProducts, setCheckingProducts] = useState(true);
+
+  // 1. Lấy danh sách sản phẩm đang bán
+  useEffect(() => {
+    getProducts()
+      .then((products) => {
+        setAvailableIds(new Set(products.map((p) => p.id)));
+      })
+      .finally(() => setCheckingProducts(false));
+  }, []);
+
+  // 2. Logic lấy điểm thưởng (giữ nguyên)
   useEffect(() => {
     if (!user) return;
 
@@ -36,15 +50,13 @@ export default function CartView() {
         }
       } catch (error) {
         if (active) {
-          setLoyaltyError(
-            {
-              userId: user.id,
-              message:
-                error instanceof Error
-                  ? error.message
-                  : "Không thể tải điểm thưởng.",
-            },
-          );
+          setLoyaltyError({
+            userId: user.id,
+            message:
+              error instanceof Error
+                ? error.message
+                : "Không thể tải điểm thưởng.",
+          });
         }
       }
     })();
@@ -64,19 +76,45 @@ export default function CartView() {
     !!user && loyalty?.userId !== user.id && !loyaltyErrorMessage;
   const canRedeemPoints = availablePoints >= 100;
 
+  // Kiểm tra xem có món nào ngừng bán trong giỏ không
+  const hasUnavailableItems = cart.items.some(
+    (item) => !availableIds.has(item.productId)
+  );
+
   return (
     <div className="mt-[42px] grid items-start gap-9 lg:grid-cols-[minmax(0,1fr)_440px]">
       <section className="rounded-[18px] border border-[#E3DACF] bg-white px-5 pb-8 pt-[26px] sm:px-8">
         <h2 className="pb-[19px] text-xl font-semibold leading-6">
           Số lượng ({cart.count})
         </h2>
+
+        {/* CẢNH BÁO ĐỎ NẾU CÓ MÓN NGỪNG BÁN */}
+        {hasUnavailableItems && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            Một số món trong giỏ hàng đã ngừng bán. Vui lòng xóa các món được đánh dấu để tiếp tục thanh toán.
+          </div>
+        )}
+
         <div className="border-t border-[#E3DACF]">
           {cart.items.length === 0 && (
             <p className="py-10 text-sm text-[#82776E]">Giỏ hàng của bạn đang trống.</p>
           )}
-          {cart.items.map((item) => (
-            <CartItemRow key={item.id} item={item} onSetQty={cart.setQty} />
-          ))}
+          {cart.items.map((item) => {
+            const isUnavailable = !availableIds.has(item.productId);
+            return (
+              <div key={item.id} className={isUnavailable ? "opacity-60" : ""}>
+                <CartItemRow
+                  item={item}
+                  onSetQty={cart.setQty}
+                />
+                {isUnavailable && (
+                  <p className="-mt-4 mb-4 px-1 text-xs font-semibold text-red-600">
+                    (Món này đã ngừng bán)
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
         <Link
           href="/"
@@ -167,6 +205,14 @@ export default function CartView() {
             className="mt-[22px] flex h-12 w-full cursor-not-allowed items-center justify-center rounded-xl bg-[#39281F] text-sm font-semibold text-white opacity-50"
           >
             Đặt hàng
+          </button>
+        ) : hasUnavailableItems ? (
+          <button
+            type="button"
+            disabled
+            className="mt-[22px] flex h-12 w-full cursor-not-allowed items-center justify-center rounded-xl bg-gray-300 text-sm font-semibold text-gray-500"
+          >
+            Vui lòng xóa món ngừng bán
           </button>
         ) : (
           <Link

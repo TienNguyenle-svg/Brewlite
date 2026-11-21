@@ -58,7 +58,7 @@ export type OrderReceipt = {
 
 export type CustomerOrder = {
   id: string;
-  status:
+  status: 
     | "PENDING"
     | "PAID"
     | "PAYMENT_FAILED"
@@ -74,6 +74,12 @@ export type CustomerOrder = {
     qty: number;
     lineTotal: number;
     productId: string;
+    product: {         
+      id: string;
+      name: string;
+      imageUrl: string | null;
+      isActive: boolean;
+    };
     toppings: Array<{
       id: string;
       orderItemId: string;

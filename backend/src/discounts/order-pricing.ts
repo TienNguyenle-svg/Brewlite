@@ -43,7 +43,6 @@ export function calcMaxRedeemPoints(amountAfterPromotion: number): number {
   return Math.max(0, Math.min(byPercent, byMinPayable));
 }
 
-/** Điểm được cộng khi thanh toán thành công `amountPaid` đồng (mỗi 1.000đ trọn = 1 điểm). */
 export function calcEarnedPoints(amountPaid: number): number {
   return Math.floor(amountPaid / EARN_BLOCK_VND) * EARN_POINTS_PER_BLOCK;
 }

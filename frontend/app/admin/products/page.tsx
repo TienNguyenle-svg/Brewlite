@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { ApiError } from '../../../lib/api';
 import {
   type AdminProduct,
   type Ingredient,
   createProduct,
   deleteProduct,
+  restoreProduct, //
   fetchInventory,
   fetchProducts,
   formatVnd,
@@ -37,8 +38,6 @@ import {
 
 const PAGE_SIZE = 8;
 const GENERIC_ERROR = 'Đã có lỗi xảy ra, vui lòng thử lại';
-const DELETE_BLOCKED =
-  'Không thể xóa: sản phẩm đang được dùng trong đơn hàng, công thức hoặc topping.';
 
 const GRID =
   'grid min-w-[1050px] grid-cols-[120px_minmax(260px,1.8fr)_150px_145px_150px_120px] items-center gap-5 px-7';
@@ -70,7 +69,6 @@ function validate(form: FormState, isEdit: boolean): FormErrors {
     errors.price = 'Giá phải là số nguyên không âm';
   }
 
-  // Backend chỉ nhận công thức khi tạo mới
   if (!isEdit) {
     const bad = form.recipes.some(
       (r) => !r.ingredientId || !(Number(r.amount.replace(',', '.')) > 0),
@@ -86,7 +84,6 @@ function validate(form: FormState, isEdit: boolean): FormErrors {
   return errors;
 }
 
-// Ô icon vuông; nếu sản phẩm có ảnh thì phủ ảnh lên trên (lỗi ảnh thì hiện lại icon)
 function Tile({ src, tea, size }: { src: string | null; tea: boolean; size: number }) {
   return (
     <div
@@ -95,7 +92,6 @@ function Tile({ src, tea, size }: { src: string | null; tea: boolean; size: numb
     >
       {tea ? <LeafIcon size={16} /> : <CupIcon size={16} />}
       {src && (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt=""
@@ -123,7 +119,6 @@ export default function AdminProductsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
 
-  // modal: null = đóng; { product: null } = thêm mới; { product } = sửa
   const [modal, setModal] = useState<{ product: AdminProduct | null } | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -156,7 +151,6 @@ export default function AdminProductsPage() {
     };
   }, [reloadKey]);
 
-  // Mã SP001, SP002... đánh số theo thứ tự tên (backend chỉ có ID dạng UUID)
   const codeById = useMemo(
     () =>
       new Map(
@@ -218,6 +212,32 @@ export default function AdminProductsPage() {
     }));
   }
 
+  function handleImageFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 600;
+        const scale = Math.min(1, MAX_WIDTH / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        setForm((f) => ({ ...f, imageUrl: dataUrl }));
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (saving || !modal) return;
@@ -264,15 +284,22 @@ export default function AdminProductsPage() {
     try {
       await deleteProduct(deleting.id);
       setDeleting(null);
-      toast.show('Đã xóa sản phẩm');
+      toast.show('Đã ngừng bán sản phẩm');
       reload();
     } catch (err) {
-      // Backend chưa bắt lỗi khóa ngoại nên món đang được dùng sẽ trả lỗi 500
-      setDeleteError(
-        err instanceof ApiError && err.status !== 500 ? err.message : DELETE_BLOCKED,
-      );
+      setDeleteError(err instanceof ApiError ? err.message : GENERIC_ERROR);
     } finally {
       setDeleteBusy(false);
+    }
+  }
+
+  async function handleRestore(id: string) {
+    try {
+      await restoreProduct(id);
+      toast.show('Đã bán lại sản phẩm');
+      reload();
+    } catch (err) {
+      toast.show(err instanceof ApiError ? err.message : GENERIC_ERROR);
     }
   }
 
@@ -405,21 +432,34 @@ export default function AdminProductsPage() {
                     type="button"
                     aria-label={`Sửa ${p.name}`}
                     onClick={() => openEdit(p)}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#B7CBB5] bg-white text-[#2F4A3A] shadow-sm transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:border-[#2F4A3A] hover:bg-[#DCEBDD] hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2F4A3A]"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#B7CBB5] bg-white text-[#2F4A3A] shadow-sm transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:border-[#2F4A3A] hover:bg-[#DCEBDD] hover:shadow-md"
                   >
                     <PencilIcon size={14} />
                   </button>
-                  <button
-                    type="button"
-                    aria-label={`Xóa ${p.name}`}
-                    onClick={() => {
-                      setDeleteError('');
-                      setDeleting(p);
-                    }}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#C0443B] text-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:bg-[#A8322C] hover:shadow-[0_6px_14px_rgba(192,68,59,0.25)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C0443B]"
-                  >
-                    <TrashIcon size={14} />
-                  </button>
+                  
+                  {/* NÚT NGỪNG BÁN / BÁN LẠI */}
+                  {p.isActive ? (
+                    <button
+                      type="button"
+                      aria-label={`Ngừng bán ${p.name}`}
+                      onClick={() => {
+                        setDeleteError('');
+                        setDeleting(p);
+                      }}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#C0443B] text-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:bg-[#A8322C]"
+                    >
+                      <TrashIcon size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label={`Bán lại ${p.name}`}
+                      onClick={() => handleRestore(p.id)}
+                      className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-600 text-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:bg-green-700"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    </button>
+                  )}
                 </span>
               </div>
             );
@@ -478,19 +518,31 @@ export default function AdminProductsPage() {
               </Field>
             </div>
 
-            <Field label="Đường dẫn ảnh">
+            <Field label="Hình ảnh sản phẩm">
               <div className="flex items-center gap-3">
-                <input
-                  value={form.imageUrl}
-                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                  placeholder="/images/ca-phe-trung.jpg"
-                  className={fieldClass()}
-                />
                 <Tile
                   src={form.imageUrl.trim() || null}
                   tea={isTea(form.category)}
-                  size={44}
+                  size={52}
                 />
+                <label className={`${btnOutline} cursor-pointer text-xs`}>
+                  Chọn ảnh từ máy
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                  />
+                </label>
+                {form.imageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, imageUrl: '' })}
+                    className="text-xs font-medium text-[#C0443B] hover:underline"
+                  >
+                    Xóa ảnh
+                  </button>
+                )}
               </div>
             </Field>
 
@@ -591,12 +643,12 @@ export default function AdminProductsPage() {
         </Modal>
       )}
 
-      {/* ===== Hộp thoại xác nhận xóa ===== */}
+      {/* ===== Hộp thoại xác nhận Ngừng bán ===== */}
       {deleting && (
         <Modal width={400} onClose={() => !deleteBusy && setDeleting(null)}>
-          <h2 className="mb-2 text-lg font-semibold">Xóa sản phẩm?</h2>
+          <h2 className="mb-2 text-lg font-semibold">Ngừng bán sản phẩm?</h2>
           <p className="mb-4 text-sm text-[#617466]">
-            Bạn có chắc muốn xóa &quot;{deleting.name}&quot;? Thao tác này không thể hoàn tác.
+            Bạn có chắc muốn ngừng bán &quot;{deleting.name}&quot;? Sản phẩm sẽ bị ẩn khỏi menu nhưng vẫn giữ lại lịch sử đơn hàng.
           </p>
           {deleteError && (
             <div className="mb-4">
@@ -618,7 +670,7 @@ export default function AdminProductsPage() {
               onClick={handleDelete}
               className={btnDanger}
             >
-              {deleteBusy ? 'Đang xóa...' : 'Xóa'}
+              {deleteBusy ? 'Đang xử lý...' : 'Ngừng bán'}
             </button>
           </div>
         </Modal>

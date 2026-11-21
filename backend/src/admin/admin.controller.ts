@@ -165,4 +165,15 @@ export class AdminController {
   getRevenueReport() {
     return this.adminService.getRevenueReport();
   }
+  
+  @Patch('products/:id/restore')
+  @ApiOperation({ summary: 'Bán lại sản phẩm (Khôi phục)' })
+  restoreProduct(@Param('id') id: string) {
+    return this.adminService.restoreProduct(id);
+  }
+  @Get('products')
+  @ApiOperation({ summary: 'Lấy tất cả sản phẩm (bao gồm ngừng bán)' })
+  getAllProducts() {
+    return this.adminService.getAllProducts();
+  }
 }

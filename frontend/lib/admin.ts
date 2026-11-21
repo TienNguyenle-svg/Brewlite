@@ -36,6 +36,7 @@ export type AdminProduct = {
   category: string;
   soldCount: number;
   isAvailable: boolean;
+  isActive: boolean;    
   recipes: Recipe[];
 };
 
@@ -43,12 +44,10 @@ export type ProductPayload = {
   name: string;
   price: number;
   imageUrl?: string;
-  category?: string; // backend chưa khai báo field này, cần thử xem có lưu không
+  category?: string; 
   recipes?: { ingredientId: string; amount: number }[];
 };
 
-// Sửa sản phẩm: không sửa được công thức. Backend khai báo tên, giá, ảnh,
-// còn category chưa khai báo nhưng service truyền thẳng body vào Prisma nên nhiều khả năng vẫn lưu được.
 export type ProductUpdatePayload = {
   name?: string;
   price?: number;
@@ -133,8 +132,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ===== SẢN PHẨM =====
 /** GET /products — công khai, dùng để liệt kê trong bảng admin */
-export const fetchProducts = (sort = 'name_asc') =>
-  request<AdminProduct[]>(`/products?sort=${sort}`);
+export const fetchProducts = () => request<AdminProduct[]>('/admin/products');
 
 /** POST /admin/products — thêm sản phẩm kèm công thức */
 export const createProduct = (data: ProductPayload) =>
@@ -150,9 +148,13 @@ export const updateProduct = (id: string, data: ProductUpdatePayload) =>
     body: JSON.stringify(data),
   });
 
-/** DELETE /admin/products/:id — có thể lỗi nếu món đã nằm trong đơn, công thức hoặc topping */
+/** DELETE /admin/products/:id — Ngừng bán sản phẩm (Xóa mềm) */
 export const deleteProduct = (id: string) =>
   request<AdminProduct>(`/admin/products/${id}`, { method: 'DELETE' });
+
+/** PATCH /admin/products/:id/restore — Bán lại sản phẩm */
+export const restoreProduct = (id: string) =>
+  request<AdminProduct>(`/admin/products/${id}/restore`, { method: 'PATCH' });
 
 // ===== KHO =====
 /** GET /admin/inventory */
