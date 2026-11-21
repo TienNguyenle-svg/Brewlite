@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { money } from "@/lib/format";
 import type { CartItem } from "@/lib/cart-store";
 
@@ -9,24 +10,39 @@ export default function CartItemRow({
   item: CartItem;
   onSetQty: (id: string, qty: number) => void;
 }) {
+  const editUrl = `/products/${item.productId}?editItem=${encodeURIComponent(item.id)}`;
+
   return (
     <div className="flex gap-4 border-b border-[#D9CBAA] py-[25px] last:border-b-0 sm:gap-[22px]">
-      <Image
-        src={item.imageUrl}
-        alt={item.name}
-        width={112}
-        height={112}
-        unoptimized
-        className="size-20 shrink-0 rounded-[14px] object-cover sm:size-28"
-      />
+      <Link
+        href={editUrl}
+        aria-label={`Chỉnh sửa ${item.name}`}
+        className="shrink-0"
+      >
+        <Image
+          src={item.imageUrl}
+          alt={item.name}
+          width={112}
+          height={112}
+          unoptimized
+          className="size-20 rounded-[14px] object-cover transition hover:opacity-80 sm:size-28"
+        />
+      </Link>
+
       <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 sm:flex-row">
         <div className="flex min-w-0 flex-col">
-          <p className="text-[17px] font-semibold leading-[21px]">{item.name}</p>
+          <Link
+            href={editUrl}
+            className="w-fit text-[17px] font-semibold leading-[21px] transition hover:text-[#2F4A3A] hover:underline"
+          >
+            {item.name}
+          </Link>
           <p className="mt-[11px] text-xs text-[#82776E]">{item.customization}</p>
           <p className="mt-[19px] text-[10px] font-semibold leading-3 text-[#2F4A3A]">
             {item.category}
           </p>
         </div>
+
         <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-between">
           <p className="text-base font-semibold leading-[19px]">
             {money(item.price * item.qty)}

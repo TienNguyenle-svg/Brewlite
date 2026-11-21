@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Product as StoreProduct } from "@/lib/types";
 import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 import { sizePrice, type SizeId } from "@/lib/pricing";
@@ -69,12 +70,63 @@ export default function ProductDetailView({
   product: Product;
 }) {
   const toppings = product.toppings ?? [];
+  const router = useRouter();
 
+  const [editItemId, setEditItemId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [sizeId, setSizeId] = useState<SizeId>("M");
   const [toppingIds, setToppingIds] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
+
+  // Nếu mở từ giỏ hàng, khôi phục cấu hình của đúng dòng món cần chỉnh sửa.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadEditingItem() {
+      const params = new URLSearchParams(window.location.search);
+      const requestedItemId = params.get("editItem");
+
+      if (!requestedItemId) return;
+
+      await ensureCartHydrated();
+      if (cancelled) return;
+
+      const item = useCartStore
+        .getState()
+        .items.find(
+          (cartItem) =>
+            cartItem.id === requestedItemId &&
+            cartItem.productId === product.id,
+        );
+
+      if (!item) {
+        window.alert("Không tìm thấy món cần chỉnh sửa trong giỏ hàng.");
+        router.replace("/cart");
+        return;
+      }
+
+      setEditItemId(item.id);
+      setEditing(true);
+      setSizeId(item.size);
+      setToppingIds(item.toppingIds ?? []);
+      setNote(item.summaryNote ?? "");
+      setQuantity(item.qty);
+    }
+
+    loadEditingItem().catch((error) => {
+      console.error("Không thể tải món cần chỉnh sửa:", error);
+      if (!cancelled) {
+        window.alert("Không thể tải thông tin món. Vui lòng thử lại.");
+        router.replace("/cart");
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id, router]);
 
   // Reset trạng thái khi quay lại trang bằng Back
   useEffect(() => {
@@ -120,7 +172,7 @@ export default function ProductDetailView({
     ),
   ].join(" + ");
 
-  // Thêm vào giỏ hàng, không chuyển trang
+  // Thêm món mới hoặc cập nhật đúng món đang chỉnh sửa.
   async function handleAddToCart() {
     if (adding) return;
 
@@ -129,27 +181,51 @@ export default function ProductDetailView({
     try {
       await ensureCartHydrated();
 
-      useCartStore.getState().addItem(
-        product as unknown as StoreProduct,
-        size.id,
-        {
-          qty: quantity,
-          unitPrice,
-          toppings: selectedToppings.map((t) => ({
-            id: t.id,
-            name: t.name,
-            price: t.price,
-          })),
-          note,
+      const cart = useCartStore.getState();
+      const options = {
+        qty: quantity,
+        unitPrice,
+        toppings: selectedToppings.map((t) => ({
+          id: t.id,
+          name: t.name,
+          price: t.price,
+        })),
+        note,
+      };
+
+      if (editing && editItemId) {
+        const oldItemExists = cart.items.some(
+          (item) => item.id === editItemId && item.productId === product.id,
+        );
+
+        if (!oldItemExists) {
+          window.alert("Món này không còn trong giỏ hàng. Vui lòng thử lại.");
+          router.replace("/cart");
+          return;
         }
-      );
 
-      window.alert("Đã thêm sản phẩm vào giỏ hàng thành công!");
+        cart.updateItem(
+          editItemId,
+          product as unknown as StoreProduct,
+          size.id,
+          options,
+        );
+
+        window.alert("Đã cập nhật món trong giỏ hàng!");
+        router.push("/cart");
+      } else {
+        cart.addItem(
+          product as unknown as StoreProduct,
+          size.id,
+          options,
+        );
+
+        window.alert("Đã thêm sản phẩm vào giỏ hàng thành công!");
+      }
     } catch (err) {
-      console.error("Thêm vào giỏ hàng thất bại:", err);
-
+      console.error("Thao tác với giỏ hàng thất bại:", err);
       window.alert(
-        "Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại."
+        "Không thể cập nhật giỏ hàng. Vui lòng thử lại.",
       );
     } finally {
       setAdding(false);
@@ -328,7 +404,7 @@ export default function ProductDetailView({
                       <button
                         key={topping.id}
                         type="button"
-                        disabled={isOutOfStock}
+                        disabled={isOutOfStock && !isChecked}
                         onClick={() => toggleTopping(topping.id)}
                         aria-pressed={isChecked}
                         className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-4 text-sm transition-all duration-300 ease-out ${
@@ -449,8 +525,8 @@ export default function ProductDetailView({
                 className="flex-1 rounded-xl bg-[#2F4A3A] px-6 py-3.5 text-base font-bold text-white shadow-[0_6px_16px_rgba(47,74,58,0.2)] transition-all duration-200 hover:bg-[#263D2F] hover:shadow-[0_8px_20px_rgba(47,74,58,0.3)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {adding
-                  ? "Đang thêm..."
-                  : `Thêm vào giỏ hàng - ${formatVND(total)}`}
+                  ? "Đang xử lý..."
+                  : `${editing ? "Cập nhật giỏ hàng" : "Thêm vào giỏ hàng"} - ${formatVND(total)}`}
               </button>
             </div>
 
