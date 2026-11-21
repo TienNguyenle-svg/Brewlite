@@ -67,6 +67,7 @@ export type CustomerOrder = {
     | "COMPLETED"
     | "CANCELLED";
   createdAt: string;
+  paidAt: string | null;
   total: number;
   items: Array<{
     id: string;

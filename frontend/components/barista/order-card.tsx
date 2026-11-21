@@ -23,12 +23,12 @@ export function OrderCard({ order, busy, onAdvance }: Props) {
   const late = order.status !== 'READY' && minutes >= LATE_AFTER_MINUTES;
 
   return (
-    <article className="flex flex-col gap-3.5 rounded-2xl border border-[#E7E1DA] bg-white p-[18px]">
+    <article className="flex flex-col gap-3.5 rounded-2xl border border-[#D9CBAA] bg-white p-[18px]">
       <header className="flex items-start justify-between">
         <div>
           <Link
             href={`/barista/orders/${order.id}`}
-            className="text-base text-[#39281F] hover:underline"
+            className="text-base text-[#2E1F14] hover:text-[#2F4A3A] hover:underline"
           >
             Đơn #{orderCode(order)}
           </Link>
@@ -43,7 +43,7 @@ export function OrderCard({ order, busy, onAdvance }: Props) {
 
       <p className="text-[11px] text-[#82776E]">{order.user.email}</p>
 
-      <ul className="flex flex-col gap-3 border-t border-[#E7E1DA] pt-3">
+      <ul className="flex flex-col gap-3 border-t border-[#D9CBAA] pt-3">
         {order.items.map((item) => {
           const options = [item.size, ...item.toppings.map((t) => t.topping.name)]
             .filter(Boolean)
@@ -54,15 +54,15 @@ export function OrderCard({ order, busy, onAdvance }: Props) {
               <img
                 src={item.product.imageUrl ?? '/images/hero-1.jpg'}
                 alt={item.product.name}
-                className="h-[52px] w-[52px] rounded-[10px] bg-[#F1EDE7] object-cover"
+                className="h-[52px] w-[52px] rounded-[10px] bg-[#F3EAD8] object-cover"
               />
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-semibold text-[#39281F]">
+                <p className="text-[13px] font-semibold text-[#2E1F14]">
                   {item.qty} × {item.product.name}
                 </p>
                 {options && <p className="text-[11px] text-[#82776E]">{options}</p>}
                 {item.note && (
-                  <p className="text-[11px] text-[#B9672B]">Ghi chú: {item.note}</p>
+                  <p className="text-[11px] text-[#2F4A3A]">Ghi chú: {item.note}</p>
                 )}
               </div>
             </li>
@@ -72,7 +72,7 @@ export function OrderCard({ order, busy, onAdvance }: Props) {
 
       <p
         className={`rounded-[10px] px-3 py-2 text-[11px] ${
-          late ? 'bg-[#FAECE9] font-semibold text-[#A6564F]' : 'bg-[#FCFAF7] text-[#82776E]'
+          late ? 'bg-[#FAECE9] font-semibold text-[#A6564F]' : 'bg-[#F3EAD8] text-[#6B5240]'
         }`}
       >
         {minutes} phút kể từ khi đặt{late ? ' · đang trễ' : ''}

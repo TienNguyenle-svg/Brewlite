@@ -52,7 +52,7 @@ export default function BaristaHistoryPage() {
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2">
-        <p className="text-[11px] uppercase tracking-wide text-[#B9672B]">Quầy barista</p>
+        <p className="text-[11px] uppercase tracking-wide text-[#2F4A3A]">Quầy barista</p>
         <h1 className="text-4xl tracking-tight">Đơn đã hoàn thành</h1>
         <p className="text-sm text-[#82776E]">
           Các đơn đã giao cho khách, đơn mới nhất hiển thị trước.
@@ -75,7 +75,7 @@ export default function BaristaHistoryPage() {
             note: 'Từ lúc đặt đến lúc giao',
           },
         ].map((s) => (
-          <div key={s.label} className="flex flex-col gap-1 rounded-2xl border border-[#E7E1DA] bg-white px-6 py-5">
+          <div key={s.label} className="flex flex-col gap-1 rounded-2xl border border-[#D9CBAA] bg-white px-6 py-5">
             <span className="text-xs text-[#82776E]">{s.label}</span>
             <span className="text-3xl tracking-tight">{s.value}</span>
             <span className="text-[11px] text-[#82776E]">{s.note}</span>
@@ -83,9 +83,9 @@ export default function BaristaHistoryPage() {
         ))}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-[#E7E1DA] bg-white">
+      <section className="overflow-hidden rounded-2xl border border-[#D9CBAA] bg-white">
         <table className="w-full text-left text-[13px]">
-          <thead className="bg-[#FCFAF7] text-[11px] uppercase tracking-wider text-[#82776E]">
+          <thead className="bg-[#F3EAD8] text-[11px] uppercase tracking-wider text-[#6B5240]">
             <tr>
               {['Mã đơn', 'Giờ đặt', 'Khách', 'Món', 'Thời gian xử lý', 'Trạng thái'].map((h) => (
                 <th key={h} className="px-6 py-3 font-normal">
@@ -112,14 +112,14 @@ export default function BaristaHistoryPage() {
             {orders.map((o) => {
               const mins = processingMinutes(o);
               return (
-                <tr key={o.id} className="border-t border-[#E7E1DA]">
+                <tr key={o.id} className="border-t border-[#D9CBAA]">
                   <td className="px-6 py-4 font-semibold">#{orderCode(o)}</td>
                   <td className="px-6 py-4 text-[#82776E]">{formatTime(o.createdAt)}</td>
                   <td className="px-6 py-4 text-[#82776E]">{o.user.email}</td>
                   <td className="px-6 py-4">{summarize(o)}</td>
                   <td className="px-6 py-4 text-[#82776E]">{mins === null ? '—' : `${mins} phút`}</td>
                   <td className="px-6 py-4">
-                    <span className="rounded-full bg-[#EAF2EC] px-2.5 py-1 text-[11px] font-semibold text-[#41705A]">
+                    <span className="rounded-full bg-[#E8EFEA] px-2.5 py-1 text-[11px] font-semibold text-[#2F4A3A]">
                       Hoàn thành
                     </span>
                   </td>

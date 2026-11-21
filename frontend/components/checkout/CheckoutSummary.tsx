@@ -52,7 +52,7 @@ export default function CheckoutSummary({
         ))}
       </ul>
 
-      <div className="mt-[22px] border-t border-[#E3DACF] pt-[22px]">
+      <div className="mt-[22px] border-t border-[#D9CBAA] pt-[22px]">
         <dl className="flex flex-col gap-4 text-[13px]">
           <div className="flex justify-between">
             <dt className="text-[#82776E]">Tổng cộng</dt>
@@ -63,20 +63,20 @@ export default function CheckoutSummary({
             <dd className="font-medium">{money(cart.delivery)}</dd>
           </div>
           {cart.promo && (
-            <div className="flex justify-between text-[#406B4A]">
+            <div className="flex justify-between text-[#2F4A3A]">
               <dt>Giảm giá ({cart.promo.code})</dt>
               <dd className="font-medium">−{money(cart.discount)}</dd>
             </div>
           )}
           {cart.usePoints && cart.pointsDiscount > 0 && (
-            <div className="flex justify-between text-[#406B4A]">
+            <div className="flex justify-between text-[#2F4A3A]">
               <dt>Dùng điểm thưởng</dt>
               <dd className="font-medium">−{money(cart.pointsDiscount)}</dd>
             </div>
           )}
         </dl>
       </div>
-      <div className="mt-[22px] flex items-center justify-between border-t border-[#E3DACF] pt-[22px]">
+      <div className="mt-[22px] flex items-center justify-between border-t border-[#D9CBAA] pt-[22px]">
         <span className="text-[15px] font-semibold">Tổng cộng cần thanh toán</span>
         <span className="text-[22px] font-bold">{money(cart.total)}</span>
       </div>
@@ -86,7 +86,7 @@ export default function CheckoutSummary({
           type="checkbox"
           checked={agreed}
           onChange={(e) => onAgreedChange(e.target.checked)}
-          className="size-[18px] shrink-0 accent-[#B9672B]"
+          className="size-[18px] shrink-0 accent-[#2F4A3A]"
         />
         <span className="text-[10px] leading-[18px] text-[#82776E]">
           Tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật.
@@ -96,7 +96,7 @@ export default function CheckoutSummary({
       <button
         type="submit"
         disabled={!canSubmit}
-        className="mt-[32px] h-12 w-full rounded-xl bg-[#39281F] text-sm font-semibold text-white disabled:opacity-60"
+        className="mt-[32px] h-12 w-full rounded-xl bg-[#2F4A3A] text-sm font-semibold text-white transition-colors hover:bg-[#263D2F] disabled:opacity-60"
       >
         Đặt hàng
       </button>
@@ -105,7 +105,7 @@ export default function CheckoutSummary({
       </p>
       <Link
         href="/cart"
-        className="mt-[22px] flex h-12 items-center justify-center rounded-xl border border-[#E3DACF] bg-white text-sm font-semibold"
+        className="mt-[22px] flex h-12 items-center justify-center rounded-xl border border-[#D9CBAA] bg-white text-sm font-semibold text-[#2F4A3A] transition-colors hover:bg-[#E8EFEA]"
       >
         Quay lại giỏ hàng
       </Link>

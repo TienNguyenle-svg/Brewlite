@@ -297,7 +297,7 @@ export class OrdersService {
     return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
-        data: { status: 'PAID' },
+        data: { status: 'PAID', paidAt: new Date() },
       });
 
       for (const item of order.items) {

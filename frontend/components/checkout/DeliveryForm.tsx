@@ -4,7 +4,7 @@ export default function DeliveryForm() {
   return (
     <section className="rounded-[18px] bg-white p-5 sm:p-8">
       <h2 className="text-[21px] font-semibold leading-[25px]">Thông tin giao hàng</h2>
-      <p className="mt-2 text-xs text-[#82776E]">
+      <p className="mt-2 text-xs text-[#6B5240]">
         Vui lòng điền đầy đủ thông tin để chúng tôi có thể giao hàng đến bạn.
       </p>
       <div className="mt-[21px] grid gap-x-[26px] gap-y-[22px] sm:grid-cols-2">
@@ -55,7 +55,7 @@ export default function DeliveryForm() {
         </Field>
         <Field label="Ghi chú (tùy chọn)" className="sm:col-span-2">
           <input
-            className="h-9 w-full rounded-lg border border-[#E3DACF] bg-white px-4 text-[11px] outline-none placeholder:text-[#82776E] focus:border-[#B9672B]"
+            className="h-9 w-full rounded-lg border border-[#D9CBAA] bg-white px-4 text-[11px] outline-none placeholder:text-[#6B5240] focus:border-[#2F4A3A]"
             placeholder="Để ở quầy lễ tân, giảm lượng đường, v.v."
           />
         </Field>

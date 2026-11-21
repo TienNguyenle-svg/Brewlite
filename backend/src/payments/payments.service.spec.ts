@@ -584,7 +584,7 @@ describe('PaymentsService', () => {
       );
       expect(prisma.order.updateMany).toHaveBeenCalledWith({
         where: { id: 'order-1', status: 'PENDING' },
-        data: { status: 'PAID' },
+        data: { status: 'PAID', paidAt: expect.any(Date) },
       });
     });
   });
@@ -722,7 +722,7 @@ describe('PaymentsService', () => {
       });
       expect(prisma.order.updateMany).toHaveBeenCalledWith({
         where: { id: 'order-1', status: 'PENDING' },
-        data: { status: 'PAID' },
+        data: { status: 'PAID', paidAt: expect.any(Date) },
       });
       expect(discounts.settlePaidOrder).toHaveBeenCalledWith(prisma, {
         id: 'order-1',
@@ -848,7 +848,7 @@ describe('PaymentsService', () => {
       expect(prisma.order.updateMany).toHaveBeenCalledTimes(1);
       expect(prisma.order.updateMany).toHaveBeenCalledWith({
         where: { id: 'order-1', status: 'PENDING' },
-        data: { status: 'PAID' },
+        data: { status: 'PAID', paidAt: expect.any(Date) },
       });
     });
 
@@ -873,7 +873,7 @@ describe('PaymentsService', () => {
       });
       expect(prisma.order.updateMany).toHaveBeenNthCalledWith(2, {
         where: { id: 'order-1', status: 'PENDING' },
-        data: { status: 'PAID' },
+        data: { status: 'PAID', paidAt: expect.any(Date) },
       });
       expect(inventory.reserveOrder).not.toHaveBeenCalled();
       expect(inventory.settleOrder).toHaveBeenCalledWith(
@@ -927,9 +927,12 @@ describe('PaymentsService', () => {
       );
     });
 
-    it('thất bại lần thứ 3: đơn CANCELLED, không bị ghi đè về PAYMENT_FAILED', async () => {
+    it('thất bại lần thứ 3: trả trạng thái cancelled và đơn không bị ghi đè về PAYMENT_FAILED', async () => {
       prisma.payment.findUnique.mockResolvedValue(payment);
-      prisma.order.findUnique.mockResolvedValue(order);
+      prisma.order.findUnique
+        .mockResolvedValueOnce(order)
+        .mockResolvedValueOnce(order)
+        .mockResolvedValueOnce({ ...order, status: 'CANCELLED' });
       prisma.payment.findFirst.mockResolvedValue(null);
       prisma.payment.count.mockResolvedValue(3);
 
@@ -940,7 +943,7 @@ describe('PaymentsService', () => {
         }),
       );
 
-      expect(result.status).toBe('failed');
+      expect(result.status).toBe('cancelled');
       expect(prisma.order.updateMany).toHaveBeenCalledTimes(1);
       expect(prisma.order.updateMany).toHaveBeenCalledWith({
         where: { id: 'order-1', status: 'PENDING' },

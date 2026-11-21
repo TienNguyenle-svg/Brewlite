@@ -643,11 +643,19 @@ export class PaymentsService {
       }
 
       if (currentPayment.status === 'FAILED') {
-        return 'failed' as const;
+        return currentOrder.status === 'CANCELLED'
+          ? ('cancelled' as const)
+          : ('failed' as const);
       }
 
       await this.markPaymentFailed(tx, currentPayment.id, new Date());
-      return 'failed' as const;
+      const updatedOrder = await tx.order.findUnique({
+        where: { id: currentOrder.id },
+        select: { status: true },
+      });
+      return updatedOrder?.status === 'CANCELLED'
+        ? ('cancelled' as const)
+        : ('failed' as const);
     });
 
     return {
@@ -795,9 +803,14 @@ export class PaymentsService {
       );
     }
 
+    const data: Prisma.OrderUpdateManyMutationInput = { status: to };
+    if (to === 'PAID') {
+      data.paidAt = new Date();
+    }
+
     const result = await client.order.updateMany({
       where: { id: orderId, status: from },
-      data: { status: to },
+      data,
     });
 
     if (result.count > 0) {

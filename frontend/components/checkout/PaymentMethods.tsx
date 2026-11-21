@@ -32,15 +32,15 @@ export default function PaymentMethods({
               type="button"
               onClick={() => onChange(id)}
               className={`flex h-[70px] items-center gap-3 rounded-xl border px-[17px] text-left ${
-                on ? "border-[#B9672B] bg-[#F2E9DC]" : "border-[#E3DACF] bg-white"
+                on ? "border-[#2F4A3A] bg-[#E8EFEA]" : "border-[#D9CBAA] bg-white"
               }`}
             >
               <span
                 className={`flex size-[18px] shrink-0 items-center justify-center rounded-full border bg-white ${
-                  on ? "border-[#B9672B]" : "border-[#E3DACF]"
+                  on ? "border-[#2F4A3A]" : "border-[#D9CBAA]"
                 }`}
               >
-                {on && <span className="size-2 rounded-full bg-[#B9672B]" />}
+                {on && <span className="size-2 rounded-full bg-[#2F4A3A]" />}
               </span>
               <span className="flex flex-col gap-[7px]">
                 <span className="text-[13px] font-semibold leading-4">{title}</span>

@@ -9,41 +9,28 @@ import {
   PENDING_PAYMENT_ORDER_KEY,
 } from "@/lib/api";
 import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
+import {
+  clearRetryPaymentKey,
+  didRetryPaymentRedirect,
+  getRetryPaymentKey,
+  setRetryPaymentRedirected,
+} from "@/lib/payment-retry";
 
-type PaymentResultStatus = "loading" | "success" | "failed" | "invalid";
+type PaymentResultStatus =
+  | "loading"
+  | "success"
+  | "failed"
+  | "cancelled"
+  | "invalid";
 
-const RETRY_PAYMENT_KEY = "brewlite-payment-retry-key";
-const RETRY_PAYMENT_ORDER_KEY = "brewlite-payment-retry-order";
-const RETRY_PAYMENT_REDIRECTED_KEY = "brewlite-payment-retry-redirected";
-
-function getRetryPaymentKey(orderId: string): string {
-  const savedKey = sessionStorage.getItem(RETRY_PAYMENT_KEY);
-  const savedOrderId = sessionStorage.getItem(RETRY_PAYMENT_ORDER_KEY);
-  if (
-    savedOrderId === orderId &&
-    savedKey &&
-    /^PAY-\d{1,15}$/.test(savedKey)
-  ) {
-    return savedKey;
-  }
-
-  const randomDigits = crypto.getRandomValues(new Uint32Array(1))[0] % 100;
-  const key = `PAY-${Date.now()}${randomDigits.toString().padStart(2, "0")}`;
-  sessionStorage.setItem(RETRY_PAYMENT_KEY, key);
-  sessionStorage.setItem(RETRY_PAYMENT_ORDER_KEY, orderId);
-  return key;
-}
-
-function clearRetryPaymentKey() {
-  sessionStorage.removeItem(RETRY_PAYMENT_KEY);
-  sessionStorage.removeItem(RETRY_PAYMENT_ORDER_KEY);
-  sessionStorage.removeItem(RETRY_PAYMENT_REDIRECTED_KEY);
-}
-
-export default function PaymentResult() {
+export default function PaymentResult({
+  statusOverride,
+}: {
+  statusOverride?: "cancelled";
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const status = searchParams.get("status");
+  const status = statusOverride ?? searchParams.get("status");
   const orderId = searchParams.get("orderId");
 
   const [result, setResult] = useState<PaymentResultStatus>("loading");
@@ -71,14 +58,13 @@ export default function PaymentResult() {
           sessionStorage.removeItem(PENDING_PAYMENT_ORDER_KEY);
           clearRetryPaymentKey();
           setResult("success");
+        } else if (status === "cancelled") {
+          sessionStorage.removeItem(PENDING_PAYMENT_ORDER_KEY);
+          clearRetryPaymentKey();
+          setResult("cancelled");
         } else if (status === "failed") {
           setResult("failed");
-          if (
-            sessionStorage.getItem(RETRY_PAYMENT_ORDER_KEY) === orderId &&
-            sessionStorage.getItem(RETRY_PAYMENT_REDIRECTED_KEY) === "true"
-          ) {
-            clearRetryPaymentKey();
-          }
+          if (didRetryPaymentRedirect(orderId)) clearRetryPaymentKey();
         } else {
           setResult("invalid");
         }
@@ -100,7 +86,7 @@ export default function PaymentResult() {
     setRetryError(null);
     try {
       const idempotencyKey = getRetryPaymentKey(orderId);
-      sessionStorage.setItem(RETRY_PAYMENT_REDIRECTED_KEY, "false");
+      setRetryPaymentRedirected(false);
       const payment = await createPayment({ orderId }, idempotencyKey);
 
       if (payment.status === "SUCCEEDED") {
@@ -124,7 +110,7 @@ export default function PaymentResult() {
       }
 
       sessionStorage.setItem(PENDING_PAYMENT_ORDER_KEY, orderId);
-      sessionStorage.setItem(RETRY_PAYMENT_REDIRECTED_KEY, "true");
+      setRetryPaymentRedirected(true);
       window.location.assign(paymentUrl.toString());
     } catch (cause) {
       setRetryError(
@@ -151,6 +137,28 @@ export default function PaymentResult() {
   }
 
   const successful = result === "success";
+  const cancelled = result === "cancelled";
+  const resultLabel = successful
+    ? "Thanh toán thành công"
+    : result === "failed"
+      ? "Thanh toán chưa hoàn tất"
+      : cancelled
+        ? "Đơn hàng đã bị hủy"
+        : "Không xác định được giao dịch";
+  const resultHeading = successful
+    ? "Cảm ơn bạn đã đặt hàng!"
+    : result === "failed"
+      ? "Đơn hàng chưa được thanh toán"
+      : cancelled
+        ? "Đơn hàng đã bị hủy"
+        : "Không thể xác minh kết quả thanh toán";
+  const resultMessage = successful
+    ? "VNPay đã xác nhận giao dịch. Đơn hàng của bạn đang được xử lý."
+    : result === "failed"
+      ? "Đơn hàng này vẫn được giữ để bạn thử thanh toán lại trong thời hạn cho phép. Bạn không cần tạo đơn mới."
+      : cancelled
+        ? "Vui lòng đặt lại đơn mới."
+        : "Liên kết kết quả không khớp với lượt thanh toán hiện tại. Giỏ hàng được giữ nguyên.";
 
   return (
     <section
@@ -162,26 +170,12 @@ export default function PaymentResult() {
           successful ? "text-[#41705A]" : "text-[#A6564F]"
         }`}
       >
-        {successful
-          ? "Thanh toán thành công"
-          : result === "failed"
-            ? "Thanh toán chưa hoàn tất"
-            : "Không xác định được giao dịch"}
+        {resultLabel}
       </p>
       <h1 className="mt-2 text-2xl font-semibold">
-        {successful
-          ? "Cảm ơn bạn đã đặt hàng!"
-          : result === "failed"
-            ? "Đơn hàng chưa được thanh toán"
-            : "Không thể xác minh kết quả thanh toán"}
+        {resultHeading}
       </h1>
-      <p className="mt-3 text-sm text-[#82776E]">
-        {successful
-          ? "VNPay đã xác nhận giao dịch. Đơn hàng của bạn đang được xử lý."
-          : result === "failed"
-            ? "Đơn hàng này vẫn được giữ để bạn thử thanh toán lại trong thời hạn cho phép. Bạn không cần tạo đơn mới."
-            : "Liên kết kết quả không khớp với lượt thanh toán hiện tại. Giỏ hàng được giữ nguyên."}
-      </p>
+      <p className="mt-3 text-sm text-[#82776E]">{resultMessage}</p>
       {retryError && (
         <p role="alert" className="mt-3 text-sm text-[#A6564F]">
           {retryError}

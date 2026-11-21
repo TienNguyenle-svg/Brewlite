@@ -93,6 +93,7 @@ model Order {
   shippingFee Int          @default(15000) // Phí ship
   discountAmount Int       @default(0)     // Số tiền được giảm
   createdAt   DateTime     @default(now())
+  paidAt      DateTime?
   items       OrderItem[]
   payments    Payment[]
   promotionId String?

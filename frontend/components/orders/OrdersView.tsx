@@ -3,17 +3,25 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ApiError,
   cancelMyOrder,
+  createPayment,
   getAccessToken,
   getMyOrders,
   getProduct,
   getProducts,
+  PENDING_PAYMENT_ORDER_KEY,
   type CustomerOrder,
 } from "@/lib/api";
 import { formatOrderCode } from "@/lib/order-code";
 import type { ApiProduct } from "@/lib/types";
 import { ensureCartHydrated, useCartStore } from "@/lib/cart-store";
 import { sizePrice, type SizeId } from "@/lib/pricing";
+import {
+  clearRetryPaymentKey,
+  getRetryPaymentKey,
+  setRetryPaymentRedirected,
+} from "@/lib/payment-retry";
 
 // ===== KIỂU DỮ LIỆU CỦA GIAO DIỆN =====
 type UiStatus =
@@ -43,6 +51,7 @@ type OrderView = {
   id: string;
   code: string;
   createdAt: string;
+  paidAt: string | null;
   status: UiStatus;
   items: OrderItemView[];
   total: number;
@@ -96,7 +105,7 @@ const STATUS_INFO: Record<
   CANCELLED: {
     label: "Đã hủy",
     badge: "bg-red-100 text-red-700",
-    message: "Đơn hàng này đã được hủy.",
+    message: "Đơn hàng đã bị hủy. Vui lòng đặt đơn mới.",
   },
 };
 
@@ -160,16 +169,25 @@ function OrderCard({
   order,
   busy,
   onReorder,
+  onRetryPayment,
   onCancel,
+  now,
 }: {
   order: OrderView;
   busy: boolean;
   onReorder: (order: OrderView) => void;
+  onRetryPayment: (order: OrderView) => void;
   onCancel: (order: OrderView) => void;
+  now: number;
 }) {
   const info = STATUS_INFO[order.status];
   const step = STEP_OF[order.status];
   const isCompleted = order.status === "COMPLETED";
+  const paidAtMs = order.paidAt ? Date.parse(order.paidAt) : Number.NaN;
+  const preparationOverdue =
+    order.status === "PAID" &&
+    Number.isFinite(paidAtMs) &&
+    now - paidAtMs > 30 * 60 * 1000;
 
   return (
     <article className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -177,7 +195,7 @@ function OrderCard({
         <div>
           <h3 className="text-base text-gray-900">Đơn #{order.code}</h3>
           <p className="mt-0.5 text-xs text-gray-500">
-            {formatDateTime(order.createdAt)} · Nhận tại quán
+            {formatDateTime(order.createdAt)} · Giao tận nơi
           </p>
         </div>
         <span
@@ -231,6 +249,16 @@ function OrderCard({
         {info.message}
       </p>
 
+      {preparationOverdue && (
+        <p
+          role="status"
+          className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          Đơn hàng đã thanh toán hơn 30 phút nhưng quán chưa bắt đầu pha chế.
+          Vui lòng liên hệ BrewLite nếu cần hỗ trợ.
+        </p>
+      )}
+
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-gray-200 pt-4">
         <p className="text-sm text-gray-500">
           Tổng tiền{" "}
@@ -248,18 +276,30 @@ function OrderCard({
               Xem hóa đơn
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => onReorder(order)}
-            disabled={busy}
-            className={`rounded-lg px-3 py-2 text-xs font-medium ${
-              isCompleted
-                ? "bg-stone-800 text-white hover:bg-stone-900"
-                : "border border-gray-200 bg-white text-gray-700 hover:bg-stone-50"
-            }`}
-          >
-            {busy ? "Đang xử lý..." : "↻ Đặt lại"}
-          </button>
+          {order.status === "PAYMENT_FAILED" && (
+            <button
+              type="button"
+              onClick={() => onRetryPayment(order)}
+              disabled={busy}
+              className="rounded-lg bg-[#39281F] px-3 py-2 text-xs font-medium text-white hover:bg-[#513A2D] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {busy ? "Đang xử lý..." : "Thanh toán lại"}
+            </button>
+          )}
+          {order.status !== "PAYMENT_FAILED" && (
+            <button
+              type="button"
+              onClick={() => onReorder(order)}
+              disabled={busy}
+              className={`rounded-lg px-3 py-2 text-xs font-medium ${
+                isCompleted
+                  ? "bg-stone-800 text-white hover:bg-stone-900"
+                  : "border border-gray-200 bg-white text-gray-700 hover:bg-stone-50"
+              }`}
+            >
+              {busy ? "Đang xử lý..." : "↻ Đặt lại"}
+            </button>
+          )}
           {order.status === "PAID" && (
             <button
               type="button"
@@ -295,37 +335,37 @@ function HelpCard() {
   );
 }
 
-function PickupCard({ order }: { order?: OrderView }) {
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    STORE_ADDRESS
-  )}`;
+// function PickupCard({ order }: { order?: OrderView }) {
+//   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+//     STORE_ADDRESS
+//   )}`;
 
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5">
-      <p className="text-sm font-medium text-gray-900">Nhận tại quán</p>
-      <p className="mt-3 text-sm text-gray-900">BrewLite · Quận 1</p>
-      <p className="mt-1 text-xs leading-relaxed text-gray-500">
-        {STORE_ADDRESS}
-      </p>
+//   return (
+//     <div className="rounded-2xl border border-gray-200 bg-white p-5">
+//       <p className="text-sm font-medium text-gray-900">Nhận tại quán</p>
+//       <p className="mt-3 text-sm text-gray-900">BrewLite · Quận 1</p>
+//       <p className="mt-1 text-xs leading-relaxed text-gray-500">
+//         {STORE_ADDRESS}
+//       </p>
 
-      {order && (
-        <p className="mt-4 border-t border-gray-200 pt-4 text-xs leading-relaxed text-gray-500">
-          Đưa mã đơn #{order.code} cho nhân viên tại quầy. Quán sẽ báo khi món
-          của bạn sẵn sàng.
-        </p>
-      )}
+//       {order && (
+//         <p className="mt-4 border-t border-gray-200 pt-4 text-xs leading-relaxed text-gray-500">
+//           Đưa mã đơn #{order.code} cho nhân viên tại quầy. Quán sẽ báo khi món
+//           của bạn sẵn sàng.
+//         </p>
+//       )}
 
-      <a
-        href={mapsUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-4 block rounded-xl border border-gray-200 py-2.5 text-center text-sm font-medium text-gray-900 hover:bg-stone-50"
-      >
-        Chỉ đường
-      </a>
-    </div>
-  );
-}
+//       <a
+//         href={mapsUrl}
+//         target="_blank"
+//         rel="noreferrer"
+//         className="mt-4 block rounded-xl border border-gray-200 py-2.5 text-center text-sm font-medium text-gray-900 hover:bg-stone-50"
+//       >
+//         Chỉ đường
+//       </a>
+//     </div>
+//   );
+// }
 
 function UsualCard({ item }: { item: OrderItemView }) {
   const unitPrice = item.lineTotal / item.qty;
@@ -363,6 +403,7 @@ function toOrderView(
     id: order.id,
     code: formatOrderCode(order.id),
     createdAt: order.createdAt,
+    paidAt: order.paidAt,
     status: order.status,
     items: order.items.map((item) => ({
       id: item.id,
@@ -390,7 +431,9 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const handleReorder = async (order: OrderView) => {
     setBusyOrderId(order.id);
@@ -479,8 +522,51 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
     }
   };
 
+  const handleRetryPayment = async (order: OrderView) => {
+    setBusyOrderId(order.id);
+    setActionError(null);
+    try {
+      const idempotencyKey = getRetryPaymentKey(order.id);
+      setRetryPaymentRedirected(false);
+      const payment = await createPayment({ orderId: order.id }, idempotencyKey);
+
+      sessionStorage.setItem(PENDING_PAYMENT_ORDER_KEY, order.id);
+      if (payment.status === "SUCCEEDED") {
+        clearRetryPaymentKey();
+        router.push(
+          `/payment/result?status=success&orderId=${encodeURIComponent(order.id)}`,
+        );
+        return;
+      }
+
+      if (!payment.paymentUrl) {
+        throw new ApiError(
+          "Backend không trả về đường dẫn thanh toán VNPay.",
+          502,
+        );
+      }
+
+      const paymentUrl = new URL(payment.paymentUrl);
+      if (paymentUrl.protocol !== "https:") {
+        throw new ApiError("Đường dẫn thanh toán VNPay không hợp lệ.", 502);
+      }
+
+      setRetryPaymentRedirected(true);
+      window.location.assign(paymentUrl.toString());
+    } catch (cause) {
+      setActionError(
+        cause instanceof Error
+          ? cause.message
+          : "Không thể khởi tạo lại thanh toán.",
+      );
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
+
   useEffect(() => {
     let active = true;
+    let refreshing = false;
 
     const loadOrders = async () => {
       if (!getAccessToken()) {
@@ -538,9 +624,48 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
       }
     };
 
+    const refreshOrderStatuses = async () => {
+      if (refreshing) return;
+      refreshing = true;
+
+      try {
+        const customerOrders = await getMyOrders();
+        if (!active) return;
+
+        const ordersById = new Map(
+          customerOrders.map((order) => [order.id, order]),
+        );
+        setOrders((current) =>
+          current.map((order) => {
+            const latest = ordersById.get(order.id);
+            return latest
+              ? { ...order, status: latest.status, paidAt: latest.paidAt }
+              : order;
+          }),
+        );
+        setSyncError(null);
+      } catch (cause) {
+        if (active) {
+          setSyncError(
+            cause instanceof Error
+              ? cause.message
+              : "Không thể cập nhật trạng thái đơn hàng.",
+          );
+        }
+      } finally {
+        refreshing = false;
+      }
+    };
+
     void loadOrders();
+    const refreshTimer = window.setInterval(() => {
+      setNow(Date.now());
+      if (getAccessToken()) void refreshOrderStatuses();
+    }, 30_000);
+
     return () => {
       active = false;
+      window.clearInterval(refreshTimer);
     };
   }, []);
 
@@ -603,6 +728,11 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
           {actionError}
         </p>
       )}
+      {syncError && (
+        <p role="alert" className="mt-3 rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          {syncError}
+        </p>
+      )}
 
       <div className="mt-6 flex gap-6 border-b border-gray-200">
         {tabs.map((t) => (
@@ -638,7 +768,9 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
                   order={o}
                   busy={busyOrderId === o.id}
                   onReorder={handleReorder}
+                  onRetryPayment={handleRetryPayment}
                   onCancel={handleCancel}
+                  now={now}
                 />
               ))
             ) : (
@@ -658,7 +790,9 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
                     order={o}
                     busy={busyOrderId === o.id}
                     onReorder={handleReorder}
+                    onRetryPayment={handleRetryPayment}
                     onCancel={handleCancel}
+                    now={now}
                   />
                 ))
               ) : (
@@ -671,11 +805,11 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
         </div>
 
         <aside className="flex flex-col gap-4">
-          {tab === "active" ? (
+          {/* {tab === "active" ? (
             <PickupCard order={activeOrders[0]} />
           ) : (
             usualItem && <UsualCard item={usualItem} />
-          )}
+          )} */}
           <HelpCard />
         </aside>
       </div>

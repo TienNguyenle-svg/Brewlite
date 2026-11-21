@@ -146,6 +146,66 @@ test("a customer cancellation returns VNPay code 24 and marks payment failed", a
   expect(ingredient.reservedQuantity).toBe(0);
 });
 
+test("a customer can retry a failed order until the third failure cancels it", async ({
+  page,
+}) => {
+  const currentFixture = getReadyFixture();
+  await interceptVnpayResult(page, "24", "02");
+  await placeOrderThroughUi(page, currentFixture.productName);
+
+  await expect(page).toHaveURL(/\/payment\/result\?status=failed/);
+  await page.goto("/orders");
+  const failedOrder = page
+    .locator("article")
+    .filter({ hasText: "Thanh toán thất bại" });
+  await expect(
+    failedOrder.getByRole("button", { name: "Thanh toán lại" }),
+  ).toBeVisible();
+  await expect(
+    failedOrder.getByRole("button", { name: /Đặt lại/ }),
+  ).toHaveCount(0);
+  await failedOrder.getByRole("button", { name: "Thanh toán lại" }).click();
+  await expect(page).toHaveURL(/\/payment\/result\?status=failed/);
+  await expect(page.getByText("Thanh toán chưa hoàn tất")).toBeVisible();
+
+  await page.goto("/orders");
+  const retriedOrder = page
+    .locator("article")
+    .filter({ hasText: "Thanh toán thất bại" });
+  await expect(
+    retriedOrder.getByRole("button", { name: "Thanh toán lại" }),
+  ).toBeVisible();
+  await retriedOrder.getByRole("button", { name: "Thanh toán lại" }).click();
+  await expect(page).toHaveURL(/\/payment\/cancelled\?orderId=/);
+  await expect(
+    page.getByRole("heading", { name: "Đơn hàng đã bị hủy" }),
+  ).toBeVisible();
+  await expect(page.getByText("Vui lòng đặt lại đơn mới.")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Thanh toán lại đơn này" }),
+  ).toHaveCount(0);
+
+  await page.goto("/orders");
+  await page.getByRole("button", { name: /Đơn đã hủy/ }).click();
+  const cancelledOrder = page
+    .locator("article")
+    .filter({ hasText: "Đã hủy" });
+  await expect(
+    cancelledOrder.getByText("Đơn hàng đã bị hủy. Vui lòng đặt đơn mới."),
+  ).toBeVisible();
+  await expect(
+    cancelledOrder.getByRole("button", { name: "Thanh toán lại" }),
+  ).toHaveCount(0);
+
+  const orders = await database.findOrders(currentFixture.userId);
+  expect(orders).toHaveLength(1);
+  expect(orders[0].status).toBe("CANCELLED");
+  expect(orders[0].payments).toHaveLength(3);
+  expect(orders[0].payments.every(({ status }) => status === "FAILED")).toBe(
+    true,
+  );
+});
+
 function getReadyFixture(): ReadyE2EFixture {
   const currentFixture = fixture;
   if (!isReadyFixture(currentFixture)) {
@@ -198,7 +258,13 @@ async function placeOrderThroughUi(
     .click();
 
   await expect(page.getByRole("heading", { name: productName })).toBeVisible();
+  page.once("dialog", async (dialog) => {
+    await dialog.accept();
+  });
   await page.getByRole("button", { name: /Thêm vào giỏ hàng -/ }).click();
+  await page.getByRole("link", { name: /Giỏ hàng/ }).click();
+  await expect(page).toHaveURL(/\/cart$/);
+  await page.getByRole("link", { name: "Đặt hàng" }).click();
   await expect(page).toHaveURL(/\/checkout$/);
 
   await page.locator('input[name="receiverName"]').fill("Khách E2E");

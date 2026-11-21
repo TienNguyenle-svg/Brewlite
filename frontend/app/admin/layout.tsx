@@ -86,7 +86,13 @@ export default function AdminLayout({
     return () => clearTimeout(timer);
   }, [router]);
 
-  if (!ready) return null;
+  if (!ready) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#F3EAD8]">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#CBD7C8] border-t-[#2F4A3A]" />
+    </div>
+  );
+}
 
   async function handleLogout() {
     await logout();
