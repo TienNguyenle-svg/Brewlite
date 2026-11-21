@@ -560,14 +560,14 @@ describe('DiscountsService', () => {
       expect(prisma.loyaltyTransaction.create).toHaveBeenNthCalledWith(2, {
         data: {
           userId: 'user-1',
-          points: 80,
+          points: 8,
           reason: 'ORDER_PAID',
           orderId: 'order-1',
         },
       });
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        data: { loyaltyPoints: 4080 },
+        data: { loyaltyPoints: 4008 },
       });
     });
 
@@ -588,7 +588,7 @@ describe('DiscountsService', () => {
 
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        data: { loyaltyPoints: 410 },
+        data: { loyaltyPoints: 401 },
       });
     });
 
@@ -606,7 +606,7 @@ describe('DiscountsService', () => {
       expect(prisma.loyaltyTransaction.create).toHaveBeenCalledTimes(1);
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        data: { loyaltyPoints: 135 },
+        data: { loyaltyPoints: 103 },
       });
     });
 
@@ -615,7 +615,7 @@ describe('DiscountsService', () => {
       prisma.user.findUnique.mockResolvedValue({
         loyaltyPoints: 100,
         reservedPoints: 0,
-        pointsOwed: 40,
+        pointsOwed: 3,
       });
 
       await service.settlePaidOrder(prisma as never, {
@@ -628,7 +628,7 @@ describe('DiscountsService', () => {
       expect(prisma.loyaltyTransaction.create).toHaveBeenNthCalledWith(1, {
         data: {
           userId: 'user-1',
-          points: 10,
+          points: 2,
           reason: 'ORDER_PAID',
           orderId: 'order-2',
         },
@@ -636,7 +636,7 @@ describe('DiscountsService', () => {
       expect(prisma.loyaltyTransaction.create).toHaveBeenNthCalledWith(2, {
         data: {
           userId: 'user-1',
-          points: -40,
+          points: -3,
           reason: 'DEBT_SETTLEMENT',
           orderId: 'order-2',
         },
@@ -644,8 +644,8 @@ describe('DiscountsService', () => {
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
         data: {
-          loyaltyPoints: 110,
-          pointsOwed: { decrement: 40 },
+          loyaltyPoints: 102,
+          pointsOwed: { decrement: 3 },
         },
       });
     });
@@ -719,11 +719,11 @@ describe('DiscountsService', () => {
       });
       expect(prisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        data: { loyaltyPoints: 10 },
+        data: { loyaltyPoints: 1 },
       });
     });
 
-    it('đơn dưới 1.000đ không được cộng điểm', async () => {
+    it('đơn dưới 10.000đ không được cộng điểm', async () => {
       prisma.loyaltyTransaction.findFirst.mockResolvedValue(null);
       prisma.user.findUnique.mockResolvedValue({ loyaltyPoints: 100 });
 
@@ -731,7 +731,7 @@ describe('DiscountsService', () => {
         id: 'order-1',
         userId: 'user-1',
         pointsUsed: 0,
-        amountPaid: 900,
+        amountPaid: 9000,
       });
 
       expect(prisma.loyaltyTransaction.create).not.toHaveBeenCalled();

@@ -55,10 +55,24 @@ export class AdminService {
     return this.prisma.product.update({ where: { id }, data });
   }
 
+  // Ngừng bán sản phẩm (Xóa mềm)
   async deleteProduct(id: string) {
     const product = await this.prisma.product.findUnique({ where: { id } });
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-    return this.prisma.product.delete({ where: { id } });
+    return this.prisma.product.update({
+      where: { id },
+      data: { isActive: false },
+    });
+  }
+
+  // Bán lại sản phẩm (Khôi phục)
+  async restoreProduct(id: string) {
+    const product = await this.prisma.product.findUnique({ where: { id } });
+    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
+    return this.prisma.product.update({
+      where: { id },
+      data: { isActive: true },
+    });
   }
 
   // ===== QUẢN LÝ KHO =====
@@ -227,5 +241,12 @@ export class AdminService {
       originalRevenue: completedStats._sum.subtotal || 0, // Thống kê: Doanh thu gốc
       totalCancelledOrders,                               // Thống kê: Tổng đơn bị hủy
     };
+  }
+
+  async getAllProducts() {
+    return this.prisma.product.findMany({
+      orderBy: { name: 'asc' },
+      include: { recipes: { include: { ingredient: true } } }
+    });
   }
 }

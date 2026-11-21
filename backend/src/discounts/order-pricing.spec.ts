@@ -67,12 +67,14 @@ describe('order-pricing', () => {
   });
 
   describe('calcEarnedPoints', () => {
-    it('mỗi 1.000đ trọn = 1 điểm, phần lẻ dưới 1.000đ không tính', () => {
-      expect(calcEarnedPoints(89000)).toBe(89);
-      expect(calcEarnedPoints(35000)).toBe(35);
-      expect(calcEarnedPoints(45500)).toBe(45);
-      expect(calcEarnedPoints(1000)).toBe(1);
-      expect(calcEarnedPoints(999)).toBe(0);
+    // Mỗi 10.000đ trọn = 1 điểm
+    it('mỗi 10.000đ trọn = 1 điểm, phần lẻ dưới 10.000đ không tính', () => {
+      expect(calcEarnedPoints(89000)).toBe(8);   // 8 * 10k = 80k, dư 9k
+      expect(calcEarnedPoints(35000)).toBe(3);   // 3 * 10k = 30k, dư 5k
+      expect(calcEarnedPoints(45500)).toBe(4);   // 4 * 10k = 40k, dư 5.5k
+      expect(calcEarnedPoints(10000)).toBe(1);   // Vừa đủ 1 block
+      expect(calcEarnedPoints(9999)).toBe(0);    // Chưa đủ 1 block
+      expect(calcEarnedPoints(95000)).toBe(9);   // 9 * 10k = 90k, dư 5k
     });
   });
 });

@@ -1,10 +1,34 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { getProducts } from "@/lib/api";
 import Hero from "@/components/Hero";
 import MenuSection from "@/components/MenuSection";
 
 async function MenuContent() {
-  const products = await getProducts();
+  let products = null;
+
+  try {
+    products = await getProducts();
+  } catch {
+    products = null;
+  }
+
+  if (!products) {
+    return (
+      <div className="py-12 text-center text-stone-600">
+        <p className="mb-3">
+          Máy chủ đang khởi động hoặc tạm thời gián đoạn. Vui lòng tải lại trang sau vài giây.
+        </p>
+        <Link
+          href="/"
+          className="inline-block rounded-lg bg-[#2F4A3A] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+        >
+          Tải lại menu
+        </Link>
+      </div>
+    );
+  }
+
   return <MenuSection products={products} />;
 }
 

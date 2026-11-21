@@ -24,7 +24,6 @@ import {
 } from "@/lib/payment-retry";
 
 // ===== KIỂU DỮ LIỆU CỦA GIAO DIỆN =====
-// Sau này API trả về dữ liệu dạng khác thì chỉ cần đổi sang dạng này
 type UiStatus =
   | "PENDING"
   | "PAID"
@@ -39,6 +38,7 @@ type OrderItemView = {
   productId: string;
   name: string;
   imageUrl?: string;
+  isActive: boolean; // <--- Đã thêm trường này
   qty: number;
   size: string;
   toppings: string[];
@@ -110,7 +110,6 @@ const STATUS_INFO: Record<
 };
 
 const STEPS = ["Đã xác nhận", "Đang pha chế", "Sẵn sàng nhận", "Đã nhận"];
-// Trạng thái nào đang ở bước số mấy (PENDING chưa hiện thanh tiến trình)
 const STEP_OF: Partial<Record<UiStatus, number>> = { PREPARING: 2, READY: 3 };
 
 const STORE_ADDRESS = "28 Nguyễn Thiệp, Bến Nghé, Quận 1, TP. Hồ Chí Minh";
@@ -120,7 +119,6 @@ function formatVND(n: number) {
   return n.toLocaleString("vi-VN") + "₫";
 }
 
-// "2026-10-14T10:42:00+07:00" -> "14/10/2026 · 10:42"
 function formatDateTime(iso: string) {
   const parts = new Intl.DateTimeFormat("vi-VN", {
     timeZone: "Asia/Ho_Chi_Minh",
@@ -220,6 +218,11 @@ function OrderCard({
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-gray-900">
                 {item.qty} × {item.name}
+                {!item.isActive && (
+                  <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-[10px] text-red-600">
+                    Ngừng bán
+                  </span>
+                )}
               </p>
               <p className="text-xs text-gray-500">
                 {item.size} ·{" "}
@@ -381,7 +384,6 @@ function UsualCard({ item }: { item: OrderItemView }) {
         {item.name}, {item.size}
         {item.toppings.length > 0 ? `, thêm ${item.toppings.join(" & ")}` : ""}.
       </p>
-      {/* Tạm thời nút này chưa có chức năng */}
       <button
         type="button"
         className="mt-4 w-full rounded-xl bg-stone-800 py-3 text-sm font-medium text-white hover:bg-stone-900"
@@ -406,8 +408,9 @@ function toOrderView(
     items: order.items.map((item) => ({
       id: item.id,
       productId: item.productId,
-      name: productsById.get(item.productId)?.name ?? "Sản phẩm",
-      imageUrl: productsById.get(item.productId)?.imageUrl ?? "/window.svg",
+      name: item.product?.name ?? productsById.get(item.productId)?.name ?? "Sản phẩm",
+      imageUrl: item.product?.imageUrl ?? productsById.get(item.productId)?.imageUrl ?? "/window.svg",
+      isActive: item.product ? item.product.isActive : true, // <--- Lấy từ API
       qty: item.qty,
       size: item.size,
       toppings: item.toppings.map(
@@ -438,63 +441,58 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
 
     try {
       await ensureCartHydrated();
-      const itemWithToppings = order.items.find(
-        (item) => item.toppingIds.length > 0,
-      );
-      const [products, productWithToppings] = await Promise.all([
-        getProducts(),
-        itemWithToppings ? getProduct(itemWithToppings.productId) : Promise.resolve(null),
-      ]);
-      const productsById = new Map(products.map((product) => [product.id, product]));
-      const toppingsById = new Map(
-        (productWithToppings?.toppings ?? []).map((topping) => [topping.id, topping]),
-      );
       const validSizes: SizeId[] = ["S", "M", "L"];
-
-      const itemsToAdd = order.items.map((item) => {
-        const product = productsById.get(item.productId);
-        if (!product) {
-          throw new Error(`Món “${item.name}” hiện không còn trong thực đơn.`);
-        }
-        if (!validSizes.includes(item.size as SizeId)) {
-          throw new Error(`Size của món “${item.name}” không còn hợp lệ.`);
-        }
-
-        const size = item.size as SizeId;
-        const toppings = item.toppingIds.map((toppingId) => {
-          const topping = toppingsById.get(toppingId);
-          if (!topping) {
-            throw new Error(`Topping của món “${item.name}” hiện không còn.`);
-          }
-          return { id: topping.id, name: topping.name, price: topping.price };
-        });
-
-        return {
-          product,
-          size,
-          qty: item.qty,
-          toppings,
-          unitPrice:
-            sizePrice(product.price, size) +
-            toppings.reduce((total, topping) => total + topping.price, 0),
-        };
-      });
+      let addedCount = 0;
+      let skippedCount = 0;
 
       const cart = useCartStore.getState();
-      for (const item of itemsToAdd) {
-        cart.addItem(item.product, item.size, {
+      for (const item of order.items) {
+        // Nếu sản phẩm đã ngừng bán, bỏ qua
+        if (!item.isActive) {
+          skippedCount++;
+          continue;
+        }
+
+        // Nếu size không hợp lệ, bỏ qua
+        if (!validSizes.includes(item.size as SizeId)) {
+          skippedCount++;
+          continue;
+        }
+
+        // Lấy thông tin sản phẩm và topping
+        const product = await getProduct(item.productId);
+        const size = item.size as SizeId;
+        
+        // Mapping toppings
+        const toppings = item.toppingIds.map((toppingId) => {
+          const topping = product.toppings?.find((t) => t.id === toppingId);
+          if (!topping) return null;
+          return { id: topping.id, name: topping.name, price: topping.price };
+        }).filter((t): t is NonNullable<typeof t> => t !== null);
+
+        const unitPrice = sizePrice(product.price, size) + toppings.reduce((sum, t) => sum + t.price, 0);
+
+        // Thêm vào giỏ
+        cart.addItem(product, size, {
           qty: item.qty,
-          unitPrice: item.unitPrice,
-          toppings: item.toppings,
+          unitPrice,
+          toppings,
         });
+        addedCount++;
+      }
+
+      // Hiển thị thông báo
+      if (addedCount === 0) {
+        setActionError("Các món trong đơn cũ đã ngừng bán nên không được thêm vào giỏ.");
+        return;
+      } else if (skippedCount > 0) {
+        setActionError("Một số món trong đơn cũ đã ngừng bán nên không được thêm vào giỏ.");
       }
 
       router.push("/cart");
     } catch (cause) {
       setActionError(
-        cause instanceof Error
-          ? cause.message
-          : "Không thể đặt lại đơn hàng này.",
+        cause instanceof Error ? cause.message : "Không thể đặt lại đơn hàng này."
       );
     } finally {
       setBusyOrderId(null);
@@ -674,7 +672,6 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
   const activeOrders = orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
   const historyOrders = orders.filter((o) => !ACTIVE_STATUSES.includes(o.status));
 
-  // Đơn vừa đặt xong (nếu URL có ?placed=...)
   const placedOrder = placedId
     ? orders.find((o) => o.id === placedId || o.code === placedId)
     : undefined;
@@ -689,7 +686,6 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
 
   return (
     <main className="mx-auto max-w-[1100px] px-6 py-6">
-      {/* Thanh báo đặt hàng thành công */}
       {placedOrder && (
         <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl bg-emerald-50 px-5 py-4">
           <div className="flex items-center gap-3">
@@ -738,7 +734,6 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
         </p>
       )}
 
-      {/* Hai tab */}
       <div className="mt-6 flex gap-6 border-b border-gray-200">
         {tabs.map((t) => (
           <button
@@ -760,7 +755,6 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        {/* Cột trái: danh sách đơn */}
         <div className="flex flex-col gap-4">
           {loading ? (
             <p className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
@@ -810,7 +804,6 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
           )}
         </div>
 
-        {/* Cột phải */}
         <aside className="flex flex-col gap-4">
           {/* {tab === "active" ? (
             <PickupCard order={activeOrders[0]} />

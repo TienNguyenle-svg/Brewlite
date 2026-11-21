@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { ApiError } from '../../../lib/api';
 import {
   type AdminProduct,
   type Ingredient,
   createProduct,
   deleteProduct,
+  restoreProduct,
   fetchInventory,
   fetchProducts,
   formatVnd,
@@ -170,7 +171,7 @@ export default function AdminProductsClient() {
     [products],
   );
 
-  const availableCount = products.filter((p) => p.isAvailable).length;
+  const availableCount = products.filter((p) => p.isAvailable && p.isActive).length;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -179,7 +180,8 @@ export default function AdminProductsClient() {
         (!q || p.name.toLowerCase().includes(q)) &&
         (!categoryFilter || p.category === categoryFilter) &&
         (!statusFilter ||
-          (statusFilter === 'available' ? p.isAvailable : !p.isAvailable)),
+          (statusFilter === 'available' ? p.isAvailable && p.isActive :
+            statusFilter === 'soldout' ? !p.isAvailable && p.isActive : !p.isActive)),
     );
   }, [products, search, categoryFilter, statusFilter]);
 
@@ -216,6 +218,46 @@ export default function AdminProductsClient() {
       ...f,
       recipes: f.recipes.map((r, idx) => (idx === i ? { ...r, ...patch } : r)),
     }));
+  }
+
+  // Chọn ảnh từ máy tính, tự thu nhỏ để giảm dung lượng trước khi lưu.
+  function handleImageFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setServerError('Vui lòng chọn tệp hình ảnh.');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxWidth = 600;
+        const scale = Math.min(1, maxWidth / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const context = canvas.getContext('2d');
+        if (!context) {
+          setServerError('Không thể xử lý ảnh này.');
+          return;
+        }
+        context.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setForm((current) => ({
+          ...current,
+          imageUrl: canvas.toDataURL('image/jpeg', 0.75),
+        }));
+        setServerError('');
+      };
+      img.onerror = () => setServerError('Không thể đọc ảnh đã chọn.');
+      img.src = String(event.target?.result ?? '');
+    };
+    reader.onerror = () => setServerError('Không thể đọc tệp ảnh.');
+    reader.readAsDataURL(file);
+    e.target.value = '';
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -262,9 +304,14 @@ export default function AdminProductsClient() {
     setDeleteBusy(true);
     setDeleteError('');
     try {
-      await deleteProduct(deleting.id);
+      if (deleting.isActive) {
+        await deleteProduct(deleting.id);
+        toast.show('Đã ngừng bán sản phẩm');
+      } else {
+        await restoreProduct(deleting.id);
+        toast.show('Đã mở bán lại sản phẩm');
+      }
       setDeleting(null);
-      toast.show('Đã xóa sản phẩm');
       reload();
     } catch (err) {
       // Backend chưa bắt lỗi khóa ngoại nên món đang được dùng sẽ trả lỗi 500
@@ -328,6 +375,7 @@ export default function AdminProductsClient() {
           <option value="">Tất cả trạng thái</option>
           <option value="available">Còn hàng</option>
           <option value="soldout">Hết hàng</option>
+          <option value="inactive">Đã ngừng bán</option>
         </select>
         <span className="ml-auto text-sm font-semibold text-[#526B59]">
           {products.length} sản phẩm · {availableCount} còn hàng
@@ -396,8 +444,8 @@ export default function AdminProductsClient() {
                 </span>
                 <span className="text-[17px] font-extrabold text-[#2F4A3A]">{formatVnd(p.price)}</span>
                 <span>
-                  <Badge tone={p.isAvailable ? 'success' : 'danger'} dot>
-                    {p.isAvailable ? 'Còn hàng' : 'Hết hàng'}
+                  <Badge tone={!p.isActive ? 'danger' : p.isAvailable ? 'success' : 'neutral'} dot>
+                    {!p.isActive ? 'Ngừng bán' : p.isAvailable ? 'Còn hàng' : 'Hết hàng'}
                   </Badge>
                 </span>
                 <span className="flex items-center gap-3">
@@ -411,14 +459,14 @@ export default function AdminProductsClient() {
                   </button>
                   <button
                     type="button"
-                    aria-label={`Xóa ${p.name}`}
+                    aria-label={`${p.isActive ? 'Ngừng bán' : 'Bán lại'} ${p.name}`}
                     onClick={() => {
                       setDeleteError('');
                       setDeleting(p);
                     }}
                     className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#C0443B] text-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:scale-110 hover:bg-[#A8322C] hover:shadow-[0_6px_14px_rgba(192,68,59,0.25)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C0443B]"
                   >
-                    <TrashIcon size={14} />
+                    {p.isActive ? <TrashIcon size={14} /> : <span className="text-xs font-bold">Bán lại</span>}
                   </button>
                 </span>
               </div>
@@ -478,19 +526,31 @@ export default function AdminProductsClient() {
               </Field>
             </div>
 
-            <Field label="Đường dẫn ảnh">
+            <Field label="Ảnh sản phẩm">
               <div className="flex items-center gap-3">
-                <input
-                  value={form.imageUrl}
-                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                  placeholder="/images/ca-phe-trung.jpg"
-                  className={fieldClass()}
-                />
                 <Tile
                   src={form.imageUrl.trim() || null}
                   tea={isTea(form.category)}
-                  size={44}
+                  size={64}
                 />
+                <div className="min-w-0 flex-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    className="block w-full text-sm text-[#526B59] file:mr-3 file:rounded-lg file:border-0 file:bg-[#E8F0E5] file:px-3 file:py-2 file:font-semibold file:text-[#2F4A3A] hover:file:bg-[#DCEBDD]"
+                  />
+                  {form.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setForm((current) => ({ ...current, imageUrl: '' }))}
+                      className="mt-2 text-xs font-semibold text-[#C0443B] hover:underline"
+                    >
+                      Xóa ảnh đã chọn
+                    </button>
+                  )}
+                  <p className="mt-1 text-xs text-[#617466]">Chọn ảnh từ máy tính (ảnh sẽ được thu nhỏ tự động).</p>
+                </div>
               </div>
             </Field>
 
@@ -594,9 +654,9 @@ export default function AdminProductsClient() {
       {/* ===== Hộp thoại xác nhận xóa ===== */}
       {deleting && (
         <Modal width={400} onClose={() => !deleteBusy && setDeleting(null)}>
-          <h2 className="mb-2 text-lg font-semibold">Xóa sản phẩm?</h2>
+          <h2 className="mb-2 text-lg font-semibold">{deleting.isActive ? 'Ngừng bán sản phẩm?' : 'Mở bán lại sản phẩm?'}</h2>
           <p className="mb-4 text-sm text-[#617466]">
-            Bạn có chắc muốn xóa &quot;{deleting.name}&quot;? Thao tác này không thể hoàn tác.
+            {deleting.isActive ? `Bạn có chắc muốn ngừng bán “${deleting.name}”? Sản phẩm sẽ được ẩn khỏi danh sách bán.` : `Bạn có muốn mở bán lại “${deleting.name}” không?`}
           </p>
           {deleteError && (
             <div className="mb-4">
@@ -618,7 +678,7 @@ export default function AdminProductsClient() {
               onClick={handleDelete}
               className={btnDanger}
             >
-              {deleteBusy ? 'Đang xóa...' : 'Xóa'}
+              {deleteBusy ? 'Đang xử lý...' : deleting.isActive ? 'Ngừng bán' : 'Bán lại'}
             </button>
           </div>
         </Modal>

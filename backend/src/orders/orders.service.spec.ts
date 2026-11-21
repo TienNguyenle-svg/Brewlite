@@ -30,6 +30,7 @@ describe('OrdersService', () => {
     prisma.product.findUnique.mockResolvedValue({
       id: 'product-1',
       price: 10000,
+      isActive: true,
     });
     prisma.$transaction.mockImplementation(
       (callback: (tx: typeof prisma) => unknown) => callback(prisma),

@@ -1,10 +1,8 @@
 import type { OrderStatus } from '@prisma/client';
 
-/** Cộng điểm: cứ mỗi EARN_BLOCK_VND của đơn thanh toán thành công = EARN_POINTS_PER_BLOCK điểm. */
-export const EARN_BLOCK_VND = 1000;
+export const EARN_BLOCK_VND = 10000;
 export const EARN_POINTS_PER_BLOCK = 1;
 
-/** 1 điểm khi dùng để trừ tiền = 1đ (100 điểm = 100đ). Tích điểm 1.000đ = 1 điểm nên hoàn khoảng 0,1% giá trị đơn. */
 export const POINT_VALUE_VND = 1;
 
 export const MIN_REDEEM_POINTS = 100;

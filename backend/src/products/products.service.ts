@@ -19,6 +19,7 @@ export class ProductsService {
     // Nếu sort === 'best_seller' hoặc không truyền gì -> orderBy = { soldCount: 'desc' }
 
     const products = await this.prisma.product.findMany({
+      where: { isActive: true }, 
       orderBy,
       include: {
         recipes: {
@@ -73,7 +74,7 @@ export class ProductsService {
 
   async findOne(id: string) {
     const product = await this.prisma.product.findUnique({
-      where: { id },
+      where: { id, isActive: true },
       include: {
         recipes: {
           include: {

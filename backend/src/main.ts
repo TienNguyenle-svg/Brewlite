@@ -1,17 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.useBodyParser('json', { limit: '5mb' });
+  app.useBodyParser('urlencoded', { extended: true, limit: '5mb' });
+
   // Bật CORS (nên giới hạn origin khi lên production, nhưng tạm thời để mở)
   app.enableCors({
     origin: '*', // Sẽ thay bằng URL frontend sau
     credentials: true,
   });
-  
+
   app.useGlobalPipes(new ValidationPipe());
 
   const config = new DocumentBuilder()

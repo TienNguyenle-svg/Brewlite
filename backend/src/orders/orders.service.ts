@@ -11,6 +11,16 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InventoryService } from '../inventory/inventory.service';
 import { DiscountsService } from '../discounts/discounts.service';
+import {
+  FREE_SHIPPING_THRESHOLD_VND,
+  MIN_REDEEM_POINTS,
+  POINT_VALUE_VND,
+  SHIPPING_FEE_VND,
+} from '../discounts/discounts.constants';
+import {
+  calcEarnedPoints,
+  calcMaxRedeemPoints,
+} from '../discounts/order-pricing';
 
 @Injectable()
 export class OrdersService {
@@ -65,14 +75,18 @@ export class OrdersService {
       const product = await this.prisma.product.findUnique({
         where: { id: item.productId },
       });
-      if (!product) throw new BadRequestException('Sản phẩm không tồn tại');
+      if (!product || !product.isActive) {
+        throw new BadRequestException(`Sản phẩm ${item.productId} đã ngừng bán`);
+      }
 
       const multiplier = this.getSizeMultiplier(item.size);
 
       let toppingPriceTotal = 0;
       const itemToppingsData: any[] = [];
       if (item.toppingIds && item.toppingIds.length > 0) {
-        const toppings = await this.prisma.topping.findMany({ where: { id: { in: item.toppingIds } } });
+        const toppings = await this.prisma.topping.findMany({
+          where: { id: { in: item.toppingIds } },
+        });
         for (const topping of toppings) {
           toppingPriceTotal += topping.price;
           itemToppingsData.push({ toppingId: topping.id, price: topping.price });
@@ -84,9 +98,12 @@ export class OrdersService {
       subTotal += lineTotal;
 
       orderItems.push({
-        productId: item.productId, size: item.size, qty: item.qty,
-        unitPrice: finalProductPrice, lineTotal,
-        toppings: { create: itemToppingsData }
+        productId: item.productId,
+        size: item.size,
+        qty: item.qty,
+        unitPrice: finalProductPrice,
+        lineTotal,
+        toppings: { create: itemToppingsData },
       });
     }
 
@@ -95,14 +112,25 @@ export class OrdersService {
     let promotionId = null;
 
     if (dto.promotionCode) {
-      const promo = await this.prisma.promotion.findUnique({ where: { code: dto.promotionCode } });
-      if (!promo || !promo.active || (promo.expiredAt && promo.expiredAt < new Date())) {
+      const promo = await this.prisma.promotion.findUnique({
+        where: { code: dto.promotionCode },
+      });
+      if (
+        !promo ||
+        !promo.active ||
+        (promo.expiredAt && promo.expiredAt < new Date())
+      ) {
         throw new BadRequestException('Mã không hợp lệ hoặc đã hết hạn');
       }
       if (subTotal < promo.minOrder) {
-        throw new BadRequestException(`Đơn hàng chưa đạt tối thiểu ${promo.minOrder}đ`);
+        throw new BadRequestException(
+          `Đơn hàng chưa đạt tối thiểu ${promo.minOrder}đ`,
+        );
       }
-      discountAmount = promo.type === 'PERCENT' ? Math.round((subTotal * promo.discount) / 100) : promo.discount;
+      discountAmount =
+        promo.type === 'PERCENT'
+          ? Math.round((subTotal * promo.discount) / 100)
+          : promo.discount;
       promotionId = promo.id;
     }
 
@@ -110,15 +138,31 @@ export class OrdersService {
     let pointsDiscount = 0;
     let pointsUsed = 0;
     if (dto.usePoints === true) {
-      if (user.loyaltyPoints < 100) {
-        throw new BadRequestException('Cần tối thiểu 100 điểm thưởng để sử dụng tính năng này');
+      const availablePoints = Math.max(
+        0,
+        user.loyaltyPoints -
+          (user.reservedPoints ?? 0) -
+          (user.pointsOwed ?? 0),
+      );
+      if (availablePoints < MIN_REDEEM_POINTS) {
+        throw new BadRequestException(
+          `Cần tối thiểu ${MIN_REDEEM_POINTS} điểm thưởng để sử dụng tính năng này`,
+        );
       }
-      const maxAllowedDiscount = subTotal - discountAmount;
-      pointsUsed = Math.min(user.loyaltyPoints, maxAllowedDiscount);
-      pointsDiscount = pointsUsed; // 1 điểm = 1 VNĐ
+
+      const maxPoints = calcMaxRedeemPoints(subTotal - discountAmount);
+      if (maxPoints < MIN_REDEEM_POINTS) {
+        throw new BadRequestException(
+          `Đơn hàng cần đủ điều kiện để áp dụng tối thiểu ${MIN_REDEEM_POINTS} điểm`,
+        );
+      }
+
+      pointsUsed = Math.min(availablePoints, maxPoints);
+      pointsDiscount = pointsUsed * POINT_VALUE_VND;
     }
 
-    const shippingFee = subTotal >= 100000 ? 0 : 15000;
+    const shippingFee =
+      subTotal >= FREE_SHIPPING_THRESHOLD_VND ? 0 : SHIPPING_FEE_VND;
     const finalTotal = subTotal - discountAmount - pointsDiscount + shippingFee;
 
     // 4. TRANSACTION: TẠO ĐƠN, GIỮ KHO VÀ GIỮ ĐIỂM
@@ -166,12 +210,11 @@ export class OrdersService {
             const updated = await tx.$executeRaw`
               UPDATE "User"
               SET "reservedPoints" = "reservedPoints" + ${pointsUsed}
-              WHERE "id" = ${user.id} AND ("loyaltyPoints" - "reservedPoints") >= ${pointsUsed}
+              WHERE "id" = ${user.id}
+                AND ("loyaltyPoints" - "reservedPoints" - "pointsOwed") >= ${pointsUsed}
             `;
             if (updated === 0) {
-              throw new BadRequestException(
-                'Không đủ điểm thưởng khả dụng.',
-              );
+              throw new BadRequestException('Không đủ điểm thưởng khả dụng.');
             }
           }
 
@@ -244,17 +287,18 @@ export class OrdersService {
   async markAsPaid(orderId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: true }
+      include: { items: true },
     });
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
-    if (order.status !== 'PENDING') throw new BadRequestException('Đơn hàng không ở trạng thái chờ thanh toán');
+    if (order.status !== 'PENDING') {
+      throw new BadRequestException('Đơn hàng không ở trạng thái chờ thanh toán');
+    }
 
     return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const updatedOrder = await tx.order.update({
         where: { id: orderId },
         data: { status: 'PAID', paidAt: new Date() },
       });
-
 
       for (const item of order.items) {
         await tx.product.update({
@@ -267,9 +311,9 @@ export class OrdersService {
       if (order.pointsUsed > 0) {
         await tx.user.update({
           where: { id: order.userId },
-          data: { 
+          data: {
             loyaltyPoints: { decrement: order.pointsUsed },
-            reservedPoints: { decrement: order.pointsUsed }
+            reservedPoints: { decrement: order.pointsUsed },
           },
         });
         await tx.loyaltyTransaction.create({
@@ -278,18 +322,17 @@ export class OrdersService {
             points: -order.pointsUsed,
             reason: `Dùng điểm cho đơn ${order.id}`,
             orderId: order.id,
-          }
+          },
         });
       }
 
-      // CỘNG ĐIỂM THƯỞNG KHI THANH TOÁN THÀNH CÔNG: 1.000đ = 1 điểm
-      const earnedPoints = Math.floor(order.subtotal / 1000);
+      const earnedPoints = calcEarnedPoints(order.subtotal);
       if (earnedPoints > 0) {
         await tx.user.update({
           where: { id: order.userId },
           data: {
-            loyaltyPoints: { increment: earnedPoints }
-          }
+            loyaltyPoints: { increment: earnedPoints },
+          },
         });
         await tx.loyaltyTransaction.create({
           data: {
@@ -297,7 +340,7 @@ export class OrdersService {
             points: earnedPoints,
             reason: `Cộng điểm tích lũy từ đơn ${order.id}`,
             orderId: order.id,
-          }
+          },
         });
       }
 
@@ -306,17 +349,17 @@ export class OrdersService {
   }
 
   async cancelOrder(orderId: string, requestingUserId?: string) {
-    const order = await this.prisma.order.findUnique({ 
+    const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: true, payments: true } 
+      include: { items: true, payments: true },
     });
-    
+
     if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
 
     if (requestingUserId && order.userId !== requestingUserId) {
       throw new NotFoundException('Không tìm thấy đơn hàng');
     }
-    
+
     if (order.status !== 'PAID' && order.status !== 'PENDING') {
       throw new BadRequestException('Chỉ có thể hủy đơn PENDING hoặc PAID.');
     }
@@ -332,31 +375,36 @@ export class OrdersService {
           });
         }
 
-        const users = await tx.$queryRaw<any[]>`SELECT "loyaltyPoints", "pointsOwed" FROM "User" WHERE "id" = ${order.userId} FOR UPDATE`;
-        
+        const users = await tx.$queryRaw<
+          any[]
+        >`SELECT "loyaltyPoints", "pointsOwed" FROM "User" WHERE "id" = ${order.userId} FOR UPDATE`;
+
         if (users.length > 0) {
           let currentPoints = users[0].loyaltyPoints;
           let currentOwed = users[0].pointsOwed;
 
           const transactions = await tx.loyaltyTransaction.findMany({
-            where: { orderId: order.id }
+            where: { orderId: order.id },
           });
 
           let totalRedeem = 0;
           let totalEarn = 0;
 
-          transactions.forEach(t => {
+          transactions.forEach((t) => {
             const reason = t.reason.toUpperCase();
             if (reason.includes('DÙNG ĐIỂM') || reason.includes('REDEEM')) {
               totalRedeem += t.points;
-            } 
-            else if (reason.includes('CỘNG ĐIỂM') || reason.includes('EARN') || reason.includes('TÍCH LŨY')) {
+            } else if (
+              reason.includes('CỘNG ĐIỂM') ||
+              reason.includes('EARN') ||
+              reason.includes('TÍCH LŨY')
+            ) {
               totalEarn += t.points;
             }
           });
 
           // Hoàn lại điểm khách đã dùng lúc đặt hàng
-          const pointsToRefund = -totalRedeem; 
+          const pointsToRefund = -totalRedeem;
           if (pointsToRefund > 0) {
             currentPoints += pointsToRefund;
             await tx.loyaltyTransaction.create({
@@ -365,15 +413,15 @@ export class OrdersService {
                 points: pointsToRefund,
                 reason: `REDEEM_REFUND: Hoàn điểm đã dùng cho đơn ${order.id}`,
                 orderId: order.id,
-              }
+              },
             });
           }
 
           // Thu hồi lại điểm đã cộng khi thanh toán thành công (nếu user không đủ điểm sẽ ghi nhận vào pointsOwed)
-          const pointsToRevoke = totalEarn; 
+          const pointsToRevoke = totalEarn;
           if (pointsToRevoke > 0) {
             const actualRevoke = Math.min(pointsToRevoke, currentPoints);
-            const debt = pointsToRevoke - actualRevoke; 
+            const debt = pointsToRevoke - actualRevoke;
 
             currentPoints -= actualRevoke;
             currentOwed += debt;
@@ -385,16 +433,16 @@ export class OrdersService {
                   points: -actualRevoke,
                   reason: `EARN_REVOKE: Thu hồi điểm cộng từ đơn ${order.id}`,
                   orderId: order.id,
-                }
+                },
               });
             }
           }
 
           await tx.user.update({
             where: { id: order.userId },
-            data: { 
+            data: {
               loyaltyPoints: currentPoints,
-              pointsOwed: currentOwed 
+              pointsOwed: currentOwed,
             },
           });
         }
@@ -403,17 +451,16 @@ export class OrdersService {
         if (payment) {
           await tx.payment.update({
             where: { id: payment.id },
-            data: { status: 'REFUNDED' } 
+            data: { status: 'REFUNDED' },
           });
         }
-      } 
-      else if (order.status === 'PENDING') {
+      } else if (order.status === 'PENDING') {
         await this.inventoryService.releaseOrder(tx, orderId);
 
         if (order.pointsUsed > 0) {
           await tx.user.update({
             where: { id: order.userId },
-            data: { reservedPoints: { decrement: order.pointsUsed } }, 
+            data: { reservedPoints: { decrement: order.pointsUsed } },
           });
         }
       }
@@ -428,7 +475,7 @@ export class OrdersService {
   @Cron(CronExpression.EVERY_MINUTE)
   async handleTimeoutPendingOrders() {
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    
+
     const expiredOrders = await this.prisma.order.findMany({
       where: {
         status: 'PENDING',
@@ -438,7 +485,7 @@ export class OrdersService {
 
     for (const order of expiredOrders) {
       try {
-        await this.cancelOrder(order.id); 
+        await this.cancelOrder(order.id);
       } catch (error) {
         console.error(`[Cronjob] Lỗi khi hủy đơn timeout ${order.id}:`, error);
       }
@@ -448,7 +495,14 @@ export class OrdersService {
   async findMyOrders(userId: string) {
     return this.prisma.order.findMany({
       where: { userId: userId },
-      include: { items: { include: { toppings: true } } },
+      include: { 
+        items: { 
+          include: { 
+            product: true, 
+            toppings: true 
+          } 
+        } 
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
