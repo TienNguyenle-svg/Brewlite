@@ -243,10 +243,35 @@ export class AdminService {
     };
   }
 
-  async getAllProducts() {
-    return this.prisma.product.findMany({
-      orderBy: { name: 'asc' },
-      include: { recipes: { include: { ingredient: true } } }
-    });
-  }
+
+async getAllProducts() {
+  const products = await this.prisma.product.findMany({
+    orderBy: { name: 'asc' },
+    include: {
+      recipes: {
+        include: {
+          ingredient: {
+            select: {
+              id: true,
+              name: true,
+              stock: true,
+              reservedQuantity: true,
+              unit: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return products.map((product) => ({
+    ...product,
+    isAvailable: product.recipes.every(
+      (recipe) =>
+        recipe.ingredient.stock - recipe.ingredient.reservedQuantity >=
+        recipe.amount,
+    ),
+  }));
+}
+
 }

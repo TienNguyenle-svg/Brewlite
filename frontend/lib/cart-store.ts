@@ -38,6 +38,12 @@ interface CartState {
     size?: CartItem["size"],
     options?: AddItemOptions,
   ) => void;
+  updateItem: (
+    oldId: string,
+    product: Product,
+    size: CartItem["size"],
+    options?: AddItemOptions,
+  ) => void;
   setQty: (id: string, qty: number) => void;
   setUsePoints: (value: boolean) => void;
   applyPromo: (code: string) => Promise<PromoResult>;
@@ -96,6 +102,62 @@ export const useCartStore = create<CartState>()(
             : [...get().items, item],
           promo: null,
         });
+      },
+      updateItem: (oldId, product, size, options) => {
+        const items = get().items;
+        const oldItem = items.find((item) => item.id === oldId);
+
+        // Không còn món cũ trong giỏ (ví dụ người dùng đã xóa ở tab khác).
+        if (!oldItem) return;
+
+        const qty = Math.min(99, Math.max(1, options?.qty ?? oldItem.qty));
+        const toppings = options?.toppings ?? [];
+        const note = options?.note?.trim() ?? "";
+        const unitPrice = options?.unitPrice ?? sizePrice(product.price, size);
+
+        const toppingKey = toppings
+          .map((t) => t.id)
+          .sort()
+          .join(",");
+        const newId = `${product.id}:${size}:${toppingKey}:${note}`;
+
+        const customization = [
+          `Size ${size}`,
+          ...toppings.map((t) => t.name),
+        ].join(" · ");
+
+        const updatedItem: CartItem = {
+          id: newId,
+          productId: product.id,
+          name: product.name,
+          customization,
+          summaryNote: note,
+          category: oldItem.category,
+          price: unitPrice,
+          qty,
+          size,
+          toppingIds: toppings.map((t) => t.id),
+          imageUrl: product.imageUrl ?? oldItem.imageUrl ?? "/images/hero-1.jpg",
+        };
+
+        // Nếu cấu hình mới trùng một dòng khác, gộp số lượng vào dòng đó.
+        const duplicateItem = items.find(
+          (item) => item.id === newId && item.id !== oldId,
+        );
+
+        const nextItems = duplicateItem
+          ? items
+              .filter((item) => item.id !== oldId)
+              .map((item) =>
+                item.id === newId
+                  ? { ...item, qty: item.qty + qty }
+                  : item,
+              )
+          : items.map((item) =>
+              item.id === oldId ? updatedItem : item,
+            );
+
+        set({ items: nextItems, promo: null });
       },
       setQty: (id, qty) => {
         const items = get()
@@ -211,6 +273,7 @@ export function useCart() {
   const usePoints = useCartStore((s) => s.usePoints);
   const setUsePoints = useCartStore((s) => s.setUsePoints);
   const addItem = useCartStore((s) => s.addItem);
+  const updateItem = useCartStore((s) => s.updateItem);
   const setQty = useCartStore((s) => s.setQty);
   const applyPromo = useCartStore((s) => s.applyPromo);
   const removePromo = useCartStore((s) => s.removePromo);
@@ -253,6 +316,7 @@ export function useCart() {
     usePoints,
     setUsePoints,
     addItem,
+    updateItem,
     setQty,
     applyPromo,
     removePromo,
