@@ -42,7 +42,8 @@ export default function CheckoutView() {
   const placeOrder = async () => {
     const token = getAccessToken();
     if (!token) {
-      setError("Vui lòng đăng nhập tài khoản khách hàng trước khi thanh toán.");
+      window.alert("Vui lòng đăng nhập.");
+      setError(null);
       setConfirming(false);
       return;
     }
@@ -177,6 +178,11 @@ export default function CheckoutView() {
         className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_466px] lg:gap-10"
         onSubmit={(e) => {
           e.preventDefault();
+          if (!getAccessToken()) {
+            window.alert("Vui lòng đăng nhập.");
+            setError(null);
+            return;
+          }
           if (!canSubmit) return;
           const formData = new FormData(e.currentTarget);
           setDeliveryDetails({

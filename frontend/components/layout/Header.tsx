@@ -137,7 +137,7 @@ export default function Header() {
           </nav>
 
           <div className="flex items-center gap-3 text-[13px] md:gap-6">
-            <span className="hidden sm:inline">BrewLite · Quận 1</span>
+            <span className="hidden sm:inline">BrewLite · Quận 5</span>
             <button
               type="button"
               onClick={handleLogout}

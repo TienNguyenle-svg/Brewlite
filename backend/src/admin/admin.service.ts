@@ -6,8 +6,23 @@ export class AdminService {
   constructor(private prisma: PrismaService) {}
 
   // ===== QUẢN LÝ SẢN PHẨM =====
-  async createProduct(data: { name: string; price: number; imageUrl?: string; recipes?: { ingredientId: string; amount: number }[] }) {
+  async createProduct(data: { name: string; price: number; category?: string; imageUrl?: string; recipes?: { ingredientId: string; amount: number }[] }) {
     const { recipes, ...productData } = data;
+    if (!data.name?.trim() || !data.category?.trim() || !data.imageUrl?.trim()) {
+      throw new BadRequestException('Vui lòng nhập tên, danh mục và ảnh sản phẩm');
+    }
+    if (!Number.isInteger(data.price) || data.price < 0) {
+      throw new BadRequestException('Giá phải là số nguyên không âm');
+    }
+    if (!Array.isArray(recipes) || recipes.length === 0) {
+      throw new BadRequestException('Vui lòng thêm ít nhất một nguyên liệu và định lượng');
+    }
+    if (recipes.some((recipe) => !recipe?.ingredientId?.trim() || !Number.isFinite(recipe.amount) || recipe.amount <= 0)) {
+      throw new BadRequestException('Mỗi dòng công thức cần chọn nguyên liệu và định lượng lớn hơn 0');
+    }
+    if (new Set(recipes.map((recipe) => recipe.ingredientId)).size !== recipes.length) {
+      throw new BadRequestException('Mỗi nguyên liệu chỉ nên xuất hiện một lần');
+    }
 
     // 1. Kiểm tra trùng tên sản phẩm (không phân biệt hoa thường)
     const existingProduct = await this.prisma.product.findFirst({
@@ -17,17 +32,15 @@ export class AdminService {
       throw new BadRequestException(`Sản phẩm "${data.name}" đã tồn tại. Vui lòng chọn tên khác.`);
     }
 
-    const newProduct = await this.prisma.product.create({ data: productData });
-
-    if (recipes && recipes.length > 0) {
-      await this.prisma.recipe.createMany({
-        data: recipes.map((r) => ({
-          productId: newProduct.id,
-          ingredientId: r.ingredientId,
-          amount: r.amount,
-        })),
-      });
-    }
+    const newProduct = await this.prisma.product.create({
+      data: {
+        ...productData,
+        name: data.name.trim(),
+        category: data.category.trim(),
+        imageUrl: data.imageUrl.trim(),
+        recipes: { create: recipes },
+      },
+    });
 
     return this.prisma.product.findUnique({
       where: { id: newProduct.id },

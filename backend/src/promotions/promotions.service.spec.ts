@@ -411,27 +411,4 @@ describe('PromotionsService', () => {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  describe('remove', () => {
-    it('xóa mềm: chỉ đặt active = false, không xóa bản ghi', async () => {
-      prisma.promotion.findUnique.mockResolvedValue(existing);
-
-      const result = await service.remove('promo-1');
-
-      expect(prisma.promotion.update).toHaveBeenCalledWith({
-        where: { id: 'promo-1' },
-        data: { active: false },
-      });
-      expect(result.active).toBe(false);
-    });
-
-    it('không tìm thấy => 404', async () => {
-      prisma.promotion.findUnique.mockResolvedValue(null);
-
-      await expect(service.remove('nope')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
-      expect(prisma.promotion.update).not.toHaveBeenCalled();
-    });
-  });
 });

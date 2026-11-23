@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getAccessToken } from "@/lib/api";
 import { money } from "@/lib/format";
 import type { useCart } from "@/lib/cart-store";
 
@@ -96,6 +97,12 @@ export default function CheckoutSummary({
       <button
         type="submit"
         disabled={!canSubmit}
+        onClick={(event) => {
+          if (!getAccessToken()) {
+            event.preventDefault();
+            window.alert("Vui lòng đăng nhập.");
+          }
+        }}
         className="mt-[32px] h-12 w-full rounded-xl bg-[#2F4A3A] text-sm font-semibold text-white transition-colors hover:bg-[#263D2F] disabled:opacity-60"
       >
         Đặt hàng

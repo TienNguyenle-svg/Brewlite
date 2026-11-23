@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   DefaultValuePipe,
-  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -50,9 +49,4 @@ export class PromotionsController {
     return this.promotionsService.update(id, dto);
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Xóa mềm mã giảm giá, active = false (ADMIN)' })
-  remove(@Param('id') id: string) {
-    return this.promotionsService.remove(id);
-  }
 }

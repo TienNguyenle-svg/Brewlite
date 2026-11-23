@@ -4,11 +4,11 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { ApiError } from '../../../lib/api';
 import {
   type AdminPromotion, type PromotionCreatePayload,
-  fetchPromotions, createPromotion, updatePromotion, deactivatePromotion, formatVnd,
+  fetchPromotions, createPromotion, updatePromotion, formatVnd,
 } from '../../../lib/admin';
 import {
   Badge, ErrorBox, Field, Modal, PageHeader, Pagination, PencilIcon,
-  PlusIcon, SearchInput, StatCard, TableSkeleton, Toast, btnDanger,
+  PlusIcon, SearchInput, StatCard, TableSkeleton, Toast,
   btnOutline, btnPrimary, fieldClass, filterBase, useToast,
 } from '../../../components/admin/ui';
 
@@ -88,9 +88,6 @@ export default function AdminVouchersClient() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [confirm, setConfirm] = useState<AdminPromotion | null>(null);
-  const [confirmBusy, setConfirmBusy] = useState(false);
-  const [confirmError, setConfirmError] = useState('');
   const toast = useToast();
 
   const load = useCallback(async (isCancelled: () => boolean) => {
@@ -183,16 +180,6 @@ export default function AdminVouchersClient() {
       reload();
     } catch (err) { toast.show(errorMessage(err)); }
   }
-  async function deactivate() {
-    if (!confirm || confirmBusy) return;
-    setConfirmBusy(true); setConfirmError('');
-    try {
-      await deactivatePromotion(confirm.id);
-      toast.show('Đã vô hiệu hóa mã giảm giá');
-      setConfirm(null); reload();
-    } catch (err) { setConfirmError(errorMessage(err)); }
-    finally { setConfirmBusy(false); }
-  }
 
   return <div className="space-y-5">
     <PageHeader title="Quản lý mã giảm giá"
@@ -237,7 +224,6 @@ export default function AdminVouchersClient() {
                 <td className="px-4 py-4"><div className="flex items-center gap-2">
                   <button aria-label={`Sửa ${p.code}`} title="Chỉnh sửa" onClick={() => openEdit(p)} className="rounded-lg p-2 hover:bg-[#E5EDE2]"><PencilIcon size={16} /></button>
                   <button aria-label={`${p.active ? 'Tắt' : 'Bật'} ${p.code}`} title={p.active ? 'Tắt mã' : 'Bật mã'} onClick={() => void toggle(p)} className={`relative h-6 w-11 rounded-full transition ${p.active ? 'bg-[#507A50]' : 'bg-[#CDD4C9]'}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${p.active ? 'left-6' : 'left-1'}`} /></button>
-                  <button aria-label={`Vô hiệu hóa ${p.code}`} title="Vô hiệu hóa" disabled={!p.active} onClick={() => { setConfirm(p); setConfirmError(''); }} className="rounded-lg p-2 text-[#B7443A] hover:bg-[#FBE9E7] disabled:opacity-30">⊘</button>
                 </div></td>
               </tr>)}</tbody>
             </table>
@@ -246,7 +232,7 @@ export default function AdminVouchersClient() {
             <div className="flex items-start justify-between gap-2"><strong>{p.code}</strong><Badge tone={statusTones[statusOf(p)]}>{statusLabels[statusOf(p)]}</Badge></div>
             <div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-[#617466]">Giá trị giảm</p><strong>{p.type === 'PERCENT' ? `${p.discount}%` : formatVnd(p.discount)}</strong></div><div><p className="text-xs text-[#617466]">Đơn tối thiểu</p><strong>{formatVnd(p.minOrder)}</strong></div></div>
             <p className="mt-3 text-xs text-[#617466]">{formatDate(p.startAt)} – {formatDate(p.expiredAt)} · Đã dùng {p.usedCount}/{p.usageLimit ?? '∞'}</p>
-            <div className="mt-3 flex gap-2 border-t pt-3"><button className={btnOutline} onClick={() => openEdit(p)}>Chỉnh sửa</button><button className={btnOutline} onClick={() => void toggle(p)}>{p.active ? 'Tắt mã' : 'Bật mã'}</button><button className="ml-auto text-sm text-[#B7443A] disabled:opacity-30" disabled={!p.active} onClick={() => { setConfirm(p); setConfirmError(''); }}>Vô hiệu hóa</button></div>
+            <div className="mt-3 flex gap-2 border-t pt-3"><button className={btnOutline} onClick={() => openEdit(p)}>Chỉnh sửa</button><button className={btnOutline} onClick={() => void toggle(p)}>{p.active ? 'Tắt mã' : 'Bật mã'}</button></div>
           </div>)}</div>
           <Pagination page={currentPage} pageCount={pageCount} total={filtered.length} pageSize={PAGE_SIZE} noun="mã giảm giá" onChange={setPage} />
         </>}
@@ -271,13 +257,6 @@ export default function AdminVouchersClient() {
       </form>
     </Modal>}
 
-    {confirm && <Modal onClose={() => !confirmBusy && setConfirm(null)} width={440}>
-      <h2 className="text-xl font-extrabold">Vô hiệu hóa mã giảm giá?</h2>
-      <p className="mt-3 font-bold">{confirm.code}</p>
-      <p className="mt-2 text-sm text-[#617466]">Khách hàng sẽ không thể sử dụng mã này cho đơn hàng mới. Dữ liệu lịch sử vẫn được giữ lại.</p>
-      {confirmError && <div className="mt-4"><ErrorBox>{confirmError}</ErrorBox></div>}
-      <div className="mt-6 flex justify-end gap-3"><button className={btnOutline} disabled={confirmBusy} onClick={() => setConfirm(null)}>Giữ mã</button><button className={btnDanger} disabled={confirmBusy} onClick={() => void deactivate()}>{confirmBusy ? 'Đang xử lý...' : 'Vô hiệu hóa'}</button></div>
-    </Modal>}
     <Toast message={toast.message} />
   </div>;
 }

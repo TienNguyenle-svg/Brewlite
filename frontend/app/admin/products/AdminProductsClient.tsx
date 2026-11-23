@@ -52,7 +52,7 @@ type FormState = {
   category: string;
   recipes: RecipeRow[];
 };
-type FormErrors = { name?: string; price?: string; recipes?: string };
+type FormErrors = { name?: string; price?: string; category?: string; imageUrl?: string; recipes?: string };
 
 const EMPTY_FORM: FormState = {
   name: '',
@@ -73,11 +73,15 @@ function validate(form: FormState, isEdit: boolean): FormErrors {
 
   // Backend chỉ nhận công thức khi tạo mới
   if (!isEdit) {
+    if (!form.category.trim()) errors.category = 'Vui lòng nhập danh mục';
+    if (!form.imageUrl.trim()) errors.imageUrl = 'Vui lòng chọn ảnh sản phẩm';
     const bad = form.recipes.some(
-      (r) => !r.ingredientId || !(Number(r.amount.replace(',', '.')) > 0),
+      (r) => !r.ingredientId || !Number.isFinite(Number(r.amount.replace(',', '.'))) || !(Number(r.amount.replace(',', '.')) > 0),
     );
     const ids = form.recipes.map((r) => r.ingredientId);
-    if (bad) {
+    if (form.recipes.length === 0) {
+      errors.recipes = 'Vui lòng thêm ít nhất một nguyên liệu và định lượng';
+    } else if (bad) {
       errors.recipes =
         'Mỗi dòng công thức cần chọn nguyên liệu và định lượng lớn hơn 0';
     } else if (new Set(ids).size !== ids.length) {
@@ -510,13 +514,13 @@ export default function AdminProductsClient() {
                   className={fieldClass(!!errors.price)}
                 />
               </Field>
-              <Field label="Danh mục">
+              <Field label="Danh mục" error={errors.category}>
                 <input
                   list="category-list"
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  placeholder="Để trống = Khác"
-                  className={fieldClass()}
+                  placeholder="Nhập danh mục"
+                  className={fieldClass(!!errors.category)}
                 />
                 <datalist id="category-list">
                   {categories.map((c) => (
@@ -526,7 +530,7 @@ export default function AdminProductsClient() {
               </Field>
             </div>
 
-            <Field label="Ảnh sản phẩm">
+            <Field label="Ảnh sản phẩm" error={errors.imageUrl}>
               <div className="flex items-center gap-3">
                 <Tile
                   src={form.imageUrl.trim() || null}

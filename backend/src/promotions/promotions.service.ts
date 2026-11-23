@@ -202,20 +202,6 @@ export class PromotionsService {
     });
   }
 
-  /** Xóa mềm: giữ lại bản ghi vì đơn hàng cũ còn tham chiếu tới mã. */
-  async remove(id: string) {
-    const current = await this.prisma.promotion.findUnique({ where: { id } });
-
-    if (!current) {
-      throw new NotFoundException('Không tìm thấy mã giảm giá');
-    }
-
-    return this.prisma.promotion.update({
-      where: { id },
-      data: { active: false },
-    });
-  }
-
   private assertRules(rules: {
     type: string;
     discount: number;
