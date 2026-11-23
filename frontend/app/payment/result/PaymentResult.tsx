@@ -45,10 +45,14 @@ export default function PaymentResult({
       .then(() => {
         if (!active) return;
 
-        const expectedOrderId = sessionStorage.getItem(
-          PENDING_PAYMENT_ORDER_KEY,
-        );
-        if (!orderId || expectedOrderId !== orderId) {
+        // BỎ ĐOẠN CHECK sessionStorage
+        // const expectedOrderId = sessionStorage.getItem(PENDING_PAYMENT_ORDER_KEY);
+        // if (!orderId || expectedOrderId !== orderId) {
+        //   setResult("invalid");
+        //   return;
+        // }
+
+        if (!orderId) {
           setResult("invalid");
           return;
         }
