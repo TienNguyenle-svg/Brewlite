@@ -12,6 +12,7 @@ const NAV = [
   { href: '/admin/inventory', label: 'Kho' },
   { href: '/admin/orders', label: 'Đơn hàng' },
   { href: '/admin/revenue', label: 'Doanh thu' },
+  { href: '/admin/vouchers', label: 'Mã giảm giá' },
 ];
 
 function CupIcon() {

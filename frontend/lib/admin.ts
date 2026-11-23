@@ -280,3 +280,38 @@ export function downloadCsv(filename: string, rows: (string | number)[][]) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// ===== MÃ GIẢM GIÁ =====
+export type AdminPromotion = {
+  id: string;
+  code: string;
+  type: 'PERCENT' | 'FIXED';
+  discount: number;
+  minOrder: number;
+  startAt: string | null;
+  expiredAt: string | null;
+  usageLimit: number | null;
+  active: boolean;
+  usedCount: number;
+  reservedCount: number;
+  remaining: number | null;
+};
+export type PromotionCreatePayload = {
+  code: string;
+  type: 'PERCENT' | 'FIXED';
+  discount: number;
+  minOrder?: number;
+  startAt?: string | null;
+  expiredAt?: string | null;
+  usageLimit?: number | null;
+};
+export type PromotionUpdatePayload = Partial<Omit<PromotionCreatePayload, 'code' | 'type'>> & { active?: boolean };
+export type PromotionPage = { items: AdminPromotion[]; total: number; page: number; limit: number };
+export const fetchPromotions = (page = 1, limit = 100) =>
+  request<PromotionPage>(`/promotions?page=${page}&limit=${limit}`);
+export const createPromotion = (data: PromotionCreatePayload) =>
+  request<AdminPromotion>('/promotions', { method: 'POST', body: JSON.stringify(data) });
+export const updatePromotion = (id: string, data: PromotionUpdatePayload) =>
+  request<AdminPromotion>(`/promotions/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(data) });
+export const deactivatePromotion = (id: string) =>
+  request<AdminPromotion>(`/promotions/${encodeURIComponent(id)}`, { method: 'DELETE' });
