@@ -13,6 +13,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { DiscountsService } from '../discounts/discounts.service';
 import {
   FREE_SHIPPING_THRESHOLD_VND,
+  LOYALTY_REASON,
   MIN_REDEEM_POINTS,
   POINT_VALUE_VND,
   SHIPPING_FEE_VND,
@@ -349,22 +350,23 @@ export class OrdersService {
   }
 
   async cancelOrder(orderId: string, requestingUserId?: string) {
-    const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-      include: { items: true, payments: true },
-    });
-
-    if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
-
-    if (requestingUserId && order.userId !== requestingUserId) {
-      throw new NotFoundException('Không tìm thấy đơn hàng');
-    }
-
-    if (order.status !== 'PAID' && order.status !== 'PENDING') {
-      throw new BadRequestException('Chỉ có thể hủy đơn PENDING hoặc PAID.');
-    }
-
     return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.$queryRaw`SELECT "id" FROM "Order" WHERE "id" = ${orderId} FOR UPDATE`;
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: true, payments: true },
+      });
+
+      if (!order) throw new NotFoundException('Không tìm thấy đơn hàng');
+
+      if (requestingUserId && order.userId !== requestingUserId) {
+        throw new NotFoundException('Không tìm thấy đơn hàng');
+      }
+
+      if (order.status !== 'PAID' && order.status !== 'PENDING') {
+        throw new BadRequestException('Chỉ có thể hủy đơn PENDING hoặc PAID.');
+      }
+
       if (order.status === 'PAID') {
         await this.inventoryService.refundOrder(tx, orderId);
 
@@ -396,6 +398,7 @@ export class OrdersService {
               totalRedeem += t.points;
             } else if (
               reason.includes('CỘNG ĐIỂM') ||
+              reason === LOYALTY_REASON.EARN ||
               reason.includes('EARN') ||
               reason.includes('TÍCH LŨY')
             ) {
@@ -447,7 +450,7 @@ export class OrdersService {
           });
         }
 
-        const payment = order.payments[0];
+        const payment = order.payments.find((attempt) => attempt.status === 'SUCCEEDED');
         if (payment) {
           await tx.payment.update({
             where: { id: payment.id },

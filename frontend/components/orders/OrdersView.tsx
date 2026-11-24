@@ -112,7 +112,7 @@ const STATUS_INFO: Record<
 const STEPS = ["Đã xác nhận", "Đang pha chế", "Sẵn sàng nhận", "Đã nhận"];
 const STEP_OF: Partial<Record<UiStatus, number>> = { PREPARING: 2, READY: 3 };
 
-const STORE_ADDRESS = "28 Nguyễn Thiệp, Bến Nghé, Quận 1, TP. Hồ Chí Minh";
+const STORE_ADDRESS = "Quận 5, TP. Hồ Chí Minh";
 
 // ===== HÀM ĐỊNH DẠNG =====
 function formatVND(n: number) {
@@ -316,25 +316,6 @@ function OrderCard({
   );
 }
 
-function HelpCard() {
-  return (
-    <div className="rounded-2xl bg-stone-100 p-5">
-      <p className="text-sm font-medium text-gray-900">
-        Cần hỗ trợ về đơn hàng?
-      </p>
-      <p className="mt-1 text-xs leading-relaxed text-gray-500">
-        Đội ngũ quán sẵn sàng giúp bạn. Hãy chuẩn bị sẵn mã đơn hàng nhé.
-      </p>
-      <button
-        type="button"
-        className="mt-3 text-xs font-medium text-orange-700 hover:underline"
-      >
-        Chat với quán
-      </button>
-    </div>
-  );
-}
-
 // function PickupCard({ order }: { order?: OrderView }) {
 //   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
 //     STORE_ADDRESS
@@ -343,7 +324,7 @@ function HelpCard() {
 //   return (
 //     <div className="rounded-2xl border border-gray-200 bg-white p-5">
 //       <p className="text-sm font-medium text-gray-900">Nhận tại quán</p>
-//       <p className="mt-3 text-sm text-gray-900">BrewLite · Quận 1</p>
+//       <p className="mt-3 text-sm text-gray-900">BrewLite · Quận 5</p>
 //       <p className="mt-1 text-xs leading-relaxed text-gray-500">
 //         {STORE_ADDRESS}
 //       </p>
@@ -754,7 +735,7 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
         ))}
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="mt-6">
         <div className="flex flex-col gap-4">
           {loading ? (
             <p className="rounded-2xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
@@ -804,14 +785,6 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
           )}
         </div>
 
-        <aside className="flex flex-col gap-4">
-          {/* {tab === "active" ? (
-            <PickupCard order={activeOrders[0]} />
-          ) : (
-            usualItem && <UsualCard item={usualItem} />
-          )} */}
-          <HelpCard />
-        </aside>
       </div>
     </main>
   );

@@ -313,5 +313,3 @@ export const createPromotion = (data: PromotionCreatePayload) =>
   request<AdminPromotion>('/promotions', { method: 'POST', body: JSON.stringify(data) });
 export const updatePromotion = (id: string, data: PromotionUpdatePayload) =>
   request<AdminPromotion>(`/promotions/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(data) });
-export const deactivatePromotion = (id: string) =>
-  request<AdminPromotion>(`/promotions/${encodeURIComponent(id)}`, { method: 'DELETE' });

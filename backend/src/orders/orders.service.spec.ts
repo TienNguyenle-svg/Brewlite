@@ -54,6 +54,55 @@ describe('OrdersService', () => {
     expect(service).toBeDefined();
   });
 
+  it.each(['ORDER_PAID', 'Cộng điểm tích lũy từ đơn order-paid'])(
+    'hủy đơn thu hồi 7 điểm từ 107 về 100 với lý do %s, không thu hồi lần hai',
+    async (reason) => {
+      const order = {
+        id: 'order-paid', userId: 'user-1', status: 'PAID',
+        pointsUsed: 0, items: [],
+        payments: [{ id: 'payment-failed', status: 'FAILED' }, { id: 'payment-paid', status: 'SUCCEEDED' }],
+      };
+      const tx = {
+        $queryRaw: jest.fn().mockResolvedValue([{ loyaltyPoints: 107, pointsOwed: 0 }]),
+        order: {
+          findUnique: jest.fn().mockImplementation(async () => order),
+          update: jest.fn().mockImplementation(async () => {
+            order.status = 'CANCELLED';
+            return order;
+          }),
+        },
+        user: { update: jest.fn() },
+        loyaltyTransaction: {
+          findMany: jest.fn().mockResolvedValue([{ reason, points: 7 }]),
+          create: jest.fn(),
+        },
+        payment: { update: jest.fn() },
+      };
+      const refundOrder = jest.fn();
+      const cancellation = new OrdersService(
+        { $transaction: async (callback: (client: typeof tx) => unknown) => callback(tx) } as never,
+        { refundOrder } as never,
+        discounts as never,
+      );
+
+      await cancellation.cancelOrder(order.id, 'user-1');
+
+      expect(tx.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { loyaltyPoints: 100, pointsOwed: 0 },
+      });
+      expect(tx.loyaltyTransaction.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ points: -7, orderId: order.id }),
+      });
+      expect(tx.payment.update).toHaveBeenCalledWith({
+        where: { id: 'payment-paid' }, data: { status: 'REFUNDED' },
+      });
+      await expect(cancellation.cancelOrder(order.id, 'user-1')).rejects.toBeInstanceOf(BadRequestException);
+      expect(tx.user.update).toHaveBeenCalledTimes(1);
+      expect(refundOrder).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it('rejects order creation without an Idempotency-Key', async () => {
     await expect(
       service.create({} as never, 'user-1', ''),

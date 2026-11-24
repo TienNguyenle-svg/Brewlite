@@ -2,17 +2,28 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { getLoyalty, getProducts } from "@/lib/api"; // <-- Thêm getProducts
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { ApiError, TOKEN_KEY, getAccessToken, getLoyalty, getProducts } from "@/lib/api";
 import { getToken, saveSession, useUser } from "@/lib/auth";
 import { useCart } from "@/lib/cart-store";
 import { money } from "@/lib/format";
 import CartItemRow from "./CartItemRow";
 import PromoForm from "./PromoForm";
 
+function subscribeToSession(callback: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (!event.key || event.key === TOKEN_KEY) callback();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+}
+
 export default function CartView() {
   const cart = useCart();
   const user = useUser();
+  const token = useSyncExternalStore(subscribeToSession, getAccessToken, () => null);
+  const setUsePoints = cart.setUsePoints;
+  const [rejectedToken, setRejectedToken] = useState<string | null>(null);
   const [loyalty, setLoyalty] = useState<{
     userId: string;
     points: number;
@@ -35,22 +46,30 @@ export default function CartView() {
       .finally(() => setCheckingProducts(false));
   }, []);
 
-  // 2. Logic lấy điểm thưởng (giữ nguyên)
+  // Chỉ lấy điểm khi có phiên đăng nhập; ngừng dùng điểm khi phiên không hợp lệ.
   useEffect(() => {
-    if (!user) return;
+    if (!user || !token) {
+      setUsePoints(false);
+      return;
+    }
 
     let active = true;
     void (async () => {
       try {
         const summary = await getLoyalty();
-        if (!active) return;
+        if (!active || getToken() !== token) return;
+        setRejectedToken(null);
+        setLoyaltyError(null);
         setLoyalty({ userId: user.id, points: summary.availablePoints });
-        const token = getToken();
-        if (token) {
-          saveSession(token, { ...user, loyaltyPoints: summary.availablePoints });
-        }
+        saveSession(token, { ...user, loyaltyPoints: summary.availablePoints });
       } catch (error) {
-        if (active) {
+        if (active && getToken() === token) {
+          if (error instanceof ApiError && error.status === 401) {
+            setRejectedToken(token);
+            setLoyalty(null);
+            setUsePoints(false);
+            return;
+          }
           setLoyaltyError({
             userId: user.id,
             message:
@@ -65,7 +84,9 @@ export default function CartView() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [user, token, setUsePoints]);
+
+  const showLoyalty = !!user && !!token && rejectedToken !== token;
 
   const loyaltyErrorMessage =
     user && loyaltyError?.userId === user.id ? loyaltyError.message : null;
@@ -129,7 +150,7 @@ export default function CartView() {
         <h2 className="text-[21px] font-semibold leading-[25px]">
           Đơn hàng
         </h2>
-        {user && (
+        {showLoyalty && (
           <div className="mt-[24px] rounded-xl border border-[#D9CBAA] bg-[#F3EAD8] p-3.5">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -218,6 +239,12 @@ export default function CartView() {
         ) : (
           <Link
             href="/checkout"
+            onClick={(event) => {
+              if (!getToken()) {
+                event.preventDefault();
+                window.alert("Vui lòng đăng nhập.");
+              }
+            }}
             className="mt-[22px] flex h-12 items-center justify-center rounded-xl bg-[#2F4A3A] text-sm font-semibold text-white transition-colors hover:bg-[#263D2F]"
           >
             Đặt hàng

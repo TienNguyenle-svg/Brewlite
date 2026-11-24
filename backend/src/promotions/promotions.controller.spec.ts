@@ -17,7 +17,6 @@ describe('PromotionsController', () => {
     create: jest.fn(),
     findAll: jest.fn(),
     update: jest.fn(),
-    remove: jest.fn(),
   };
 
   beforeEach(() => {
@@ -57,13 +56,6 @@ describe('PromotionsController', () => {
       expect(service.update).toHaveBeenCalledWith('promo-1', dto);
     });
 
-    it('DELETE /promotions/:id => service.remove (xóa mềm)', async () => {
-      service.remove.mockResolvedValue({ id: 'promo-1', active: false });
-
-      await controller.remove('promo-1');
-
-      expect(service.remove).toHaveBeenCalledWith('promo-1');
-    });
   });
 
   describe('khai báo route', () => {
@@ -75,7 +67,7 @@ describe('PromotionsController', () => {
       expect(path(PromotionsController)).toBe('promotions');
     });
 
-    it('đúng HTTP method và đường dẫn của 4 API', () => {
+    it('đúng HTTP method và đường dẫn của 3 API', () => {
       expect(method(proto.create)).toBe(RequestMethod.POST);
       expect(path(proto.create)).toBe('/');
 
@@ -85,8 +77,10 @@ describe('PromotionsController', () => {
       expect(method(proto.update)).toBe(RequestMethod.PATCH);
       expect(path(proto.update)).toBe(':id');
 
-      expect(method(proto.remove)).toBe(RequestMethod.DELETE);
-      expect(path(proto.remove)).toBe(':id');
+      const methods = Object.getOwnPropertyNames(proto)
+        .filter((name) => name !== 'constructor')
+        .map((name) => method(proto[name as keyof PromotionsController]));
+      expect(methods).not.toContain(RequestMethod.DELETE);
     });
   });
 

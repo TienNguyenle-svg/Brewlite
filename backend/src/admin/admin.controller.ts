@@ -34,22 +34,27 @@ export class AdminController {
         name: { type: 'string', example: 'Cà phê trứng' },
         price: { type: 'number', example: 40000 },
         imageUrl: { type: 'string', example: '/images/ca-phe-trung.jpg' },
+        category: { type: 'string', example: 'Cà phê' },
         recipes: {
           type: 'array',
+          minItems: 1,
           items: {
             type: 'object',
             properties: {
               ingredientId: { type: 'string', example: 'ID_CỦA_NGUYÊN_LIỆU' },
               amount: { type: 'number', example: 25 },
             },
+            required: ['ingredientId', 'amount'],
           },
         },
       },
+      required: ['name', 'price', 'category', 'imageUrl', 'recipes'],
     },
   })
   createProduct(@Body() body: { 
     name: string; 
     price: number; 
+    category?: string;
     imageUrl?: string; 
     recipes?: { ingredientId: string; amount: number }[] 
   }) {
