@@ -1,7 +1,0 @@
-$kind: collection
-name: "05 — VNPay IPN và Return: cần query có chữ ký"
-auth:
-  - id: ""
-    type: noauth
-    name: No Auth
-order: 6000
