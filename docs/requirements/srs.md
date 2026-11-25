@@ -103,7 +103,7 @@ Các vai trò sử dụng chung chức năng đăng nhập và đăng xuất. Sa
 |---|---|---|---|
 | FR-17 | Áp dụng mã khuyến mãi theo BR-06. | Should | AC1. Mã hợp lệ và đơn đủ điều kiện thì hệ thống tính đúng số tiền giảm.<br>AC2. Mã không tồn tại, bị tắt, chưa đến `startAt` hoặc quá `expiredAt` thì không áp dụng.<br>AC3. Đơn chưa đạt `minOrder` thì thông báo mức tối thiểu cần đạt.<br>AC4. Mã đã đạt `usageLimit` thì báo hết lượt sử dụng.<br>AC5. Tài khoản đã sử dụng mã trước đó không được dùng lại. |
 | FR-18 | Tự gỡ mã khi đơn không còn đủ điều kiện. | Should | AC1. Khi giảm số lượng làm tiền nước thấp hơn `minOrder`, mã khuyến mãi được gỡ và tổng tiền được tính lại.<br>AC2. Người dùng chủ động gỡ mã thì tiền giảm trở về 0. |
-| FR-19 | Cộng điểm thưởng cho đơn hàng. | Could | AC1. Đơn có tạm tính 50.000đ được cộng 50 điểm theo quy tắc 1 điểm cho mỗi 1.000đ, làm tròn xuống. **[Cần xác nhận quy tắc và thời điểm cộng điểm]**<br>AC2. Mỗi lần cộng điểm được lưu vào `LoyaltyTransaction` kèm lý do.<br>AC3. `GET /users/me/loyalty` trả đúng số điểm hiện có. |
+| FR-19 | Cộng điểm thưởng cho đơn hàng. | Could | AC1. Đơn có tạm tính 50.000đ được cộng 5 điểm theo quy tắc 1 điểm cho mỗi 10.000đ, làm tròn xuống. **[Cần xác nhận quy tắc và thời điểm cộng điểm]**<br>AC2. Mỗi lần cộng điểm được lưu vào `LoyaltyTransaction` kèm lý do.<br>AC3. `GET /users/me/loyalty` trả đúng số điểm hiện có. |
 | FR-20 | Sử dụng điểm thưởng để giảm tiền thanh toán. | Could | AC1. Người dùng được sử dụng điểm trong giới hạn số điểm đang có. Tiền giảm tính theo số điểm nhân với giá trị quy đổi.<br>AC2. Không cho phép dùng nhiều điểm hơn số điểm hiện có.<br>AC3. Điểm dùng cho đơn đang chờ thanh toán được giữ trong `reservedPoints`. Khi đơn bị hủy, số điểm này được trả lại. |
 
 ### 3.6 Đặt hàng
