@@ -1,9 +1,0 @@
-$kind: collection
-name: "03 — ADMIN: kho, sản phẩm, đơn và mã"
-auth:
-  - id: 029eb3f3-ba7e-493f-94ac-a2f1f9a1f127
-    type: bearer
-    name: bearer auth
-    credentials:
-      token: "{{adminToken}}"
-order: 4000

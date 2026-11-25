@@ -1,4 +1,0 @@
-$kind: collection
-name: "06 — Logout: chạy riêng cuối cùng"
-description: Kế thừa authToken; thay Authorization tại request nếu muốn dùng token khác.
-order: 7000

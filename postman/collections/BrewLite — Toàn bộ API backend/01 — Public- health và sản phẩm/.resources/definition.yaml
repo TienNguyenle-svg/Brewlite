@@ -1,7 +1,0 @@
-$kind: collection
-name: "01 — Public: health và sản phẩm"
-auth:
-  - id: ""
-    type: noauth
-    name: No Auth
-order: 2000
