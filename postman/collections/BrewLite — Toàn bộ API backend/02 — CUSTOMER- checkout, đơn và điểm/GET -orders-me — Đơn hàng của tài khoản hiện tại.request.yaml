@@ -1,0 +1,11 @@
+$kind: http-request
+name: GET /orders/me — Đơn hàng của tài khoản hiện tại
+url: "{{baseUrl}}/orders/me"
+method: GET
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: pm.test("HTTP 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 5000

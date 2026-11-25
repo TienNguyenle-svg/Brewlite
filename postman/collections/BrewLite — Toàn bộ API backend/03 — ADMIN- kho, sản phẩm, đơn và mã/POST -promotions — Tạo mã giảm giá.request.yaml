@@ -1,0 +1,31 @@
+$kind: http-request
+name: POST /promotions — Tạo mã giảm giá
+description: Tự sinh code dưới 30 ký tự. Response tự lưu promotionId/promotionCode. Ngày null nghĩa là có hiệu lực ngay và không hết hạn.
+url: "{{baseUrl}}/promotions"
+method: POST
+headers:
+  Accept: application/json
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "code": "{{newPromotionCode}}",
+      "type": "PERCENT",
+      "discount": 10,
+      "minOrder": 50000,
+      "startAt": null,
+      "expiredAt": null,
+      "usageLimit": 100
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.variables.set("newPromotionCode", "PM" + Date.now() + Math.floor(Math.random() * 1000000).toString().padStart(6, "0"));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 201", function () { pm.response.to.have.status(201); });
+      if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); if (data.id) pm.collectionVariables.set("promotionId", data.id); }
+      if (pm.response.code === 201) pm.collectionVariables.set("promotionCode", pm.response.json().code);
+    language: text/javascript
+order: 13000

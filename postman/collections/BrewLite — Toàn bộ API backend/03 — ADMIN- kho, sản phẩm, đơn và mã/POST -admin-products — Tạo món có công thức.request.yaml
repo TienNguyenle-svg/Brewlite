@@ -1,0 +1,30 @@
+$kind: http-request
+name: POST /admin/products — Tạo món có công thức
+description: Chạy POST /admin/ingredients trước hoặc nhập UUID ingredientId sẵn có. Bắt buộc tên, giá nguyên không âm, danh mục, ảnh, ít nhất một nguyên liệu và định lượng > 0. Lưu adminProductId riêng để sửa/ngừng bán món test, không tự thay productId đang dùng đặt hàng.
+url: "{{baseUrl}}/admin/products"
+method: POST
+headers:
+  Accept: application/json
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Cà phê Postman {{$guid}}",
+      "price": 30000,
+      "category": "Cà phê",
+      "imageUrl": "/images/hero-1.jpg",
+      "recipes": [
+        {
+          "ingredientId": "{{ingredientId}}",
+          "amount": 12
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 201", function () { pm.response.to.have.status(201); });
+      if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); if (data.id) pm.collectionVariables.set("adminProductId", data.id); }
+    language: text/javascript
+order: 6000

@@ -31,7 +31,13 @@ async function main() {
   await prisma.user.create({
     data: { email: 'barista@brewlite.com', passwordHash, role: 'BARISTA' },
   });
-  console.log('- Đã tạo 3 tài khoản test (Mật khẩu: a123456)');
+  await prisma.user.create({
+    data: { email: 'test@gmailcom', passwordHash, role: 'CUSTOMER' },
+  });
+  await prisma.user.create({
+    data: { email: 'user@gmailcom', passwordHash, role: 'CUSTOMER' },
+  });
+  console.log('- Đã tạo tài khoản test (Mật khẩu: a123456)');
 
   // 3. Tạo nguyên liệu trong kho
   const i_botCaPhe = await prisma.ingredient.create({ data: { name: 'Bột cà phê', stock: 5000, unit: 'gram' } });
@@ -143,9 +149,23 @@ async function main() {
   // ==========================================
   // 7. TẠO ĐƠN HÀNG MẪU VÀ KHUYẾN MÃI
   // ==========================================
-  await prisma.promotion.create({
-    data: { code: 'WELCOME10', discount: 10, type: 'PERCENT', minOrder: 50000, active: true },
-  });
+await prisma.promotion.createMany({
+  data: [
+    // Giảm 10% cho đơn từ 50k
+    { code: 'WELCOME10', discount: 10, type: 'PERCENT', minOrder: 50000, active: true },
+
+    // Giảm 20% cho đơn từ 200k
+    { code: 'SALE20', discount: 20, type: 'PERCENT', minOrder: 200000, active: true },
+
+    // Giảm thẳng 30k cho đơn từ 100k
+    { code: 'GIAM30K', discount: 30000, type: 'FIXED', minOrder: 100000, active: true },
+
+    // Giảm thẳng 50k cho đơn từ 300k
+    { code: 'GIAM50K', discount: 50000, type: 'FIXED', minOrder: 300000, active: true },
+
+  ],
+  skipDuplicates: true, 
+});
 
   const caPheSuaId = createdProducts['Cà phê sữa đá'];
   const traDaoId = createdProducts['Trà đào cam sả'];

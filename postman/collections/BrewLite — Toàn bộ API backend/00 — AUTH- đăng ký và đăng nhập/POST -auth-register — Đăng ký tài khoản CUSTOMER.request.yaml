@@ -1,0 +1,27 @@
+$kind: http-request
+name: POST /auth/register — Đăng ký tài khoản CUSTOMER
+description: Email/mật khẩu mẫu, không phải tài khoản thật có sẵn. Sửa registerEmail thành email chưa dùng trước khi gửi. Mật khẩu 6-72 ký tự, gồm chữ và số. Endpoint chỉ tạo CUSTOMER, không cấp quyền ADMIN/BARISTA, không trả token.
+url: "{{baseUrl}}/auth/register"
+method: POST
+headers:
+  Accept: application/json
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{registerEmail}}",
+      "password": "{{registerPassword}}"
+    }
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 201", function () { pm.response.to.have.status(201); });
+      if (pm.response.code === 201) {
+        const data = pm.response.json();
+        pm.test("Tạo tài khoản CUSTOMER", function () { pm.expect(data.user.role).to.equal("CUSTOMER"); });
+      }
+    language: text/javascript
+order: 1000

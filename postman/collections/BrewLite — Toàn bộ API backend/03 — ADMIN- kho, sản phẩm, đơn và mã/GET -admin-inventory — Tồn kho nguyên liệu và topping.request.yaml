@@ -1,0 +1,12 @@
+$kind: http-request
+name: GET /admin/inventory — Tồn kho nguyên liệu và topping
+description: Copy ingredientId/toppingId nếu dùng dữ liệu sẵn có. Các request tạo mới tự lưu ID riêng.
+url: "{{baseUrl}}/admin/inventory"
+method: GET
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: pm.test("HTTP 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 1000

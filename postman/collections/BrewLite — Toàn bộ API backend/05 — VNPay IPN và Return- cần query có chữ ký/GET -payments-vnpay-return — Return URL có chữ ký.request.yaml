@@ -1,0 +1,19 @@
+$kind: http-request
+name: GET /payments/vnpay-return — Return URL có chữ ký
+description: Không dùng token. Dán toàn bộ query gốc Return URL (không có ? đầu, giữ nguyên encoding, gồm vnp_SecureHash) vào vnpayReturnQuery. Không chứa secret và không tự tạo chữ ký. Request tắt followRedirects để kiểm tra 302 API thay vì trang frontend. Chỉ gửi khi đã có giao dịch/query hợp lệ; không chọn trong tải thông thường.
+url: "{{baseUrl}}/payments/vnpay-return?{{vnpayReturnQuery}}"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  "{{vnpayReturnQuery}}": null
+scripts:
+  - type: beforeRequest
+    code: if (!pm.variables.get("vnpayReturnQuery")) throw new Error("Nhập query Return URL VNPay có chữ ký vào vnpayReturnQuery trước khi gửi.");
+    language: text/javascript
+  - type: afterResponse
+    code: pm.test("HTTP 302", function () { pm.response.to.have.status(302); });
+    language: text/javascript
+settings:
+  followRedirects: false
+order: 2000

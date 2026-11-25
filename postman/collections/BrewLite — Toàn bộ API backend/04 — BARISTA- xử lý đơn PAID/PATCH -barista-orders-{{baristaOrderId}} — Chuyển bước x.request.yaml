@@ -1,0 +1,19 @@
+$kind: http-request
+name: PATCH /barista/orders/{{baristaOrderId}} — Chuyển bước xử lý đơn
+description: Điền baristaOrderId của đơn PAID. PAID -> PREPARING -> READY -> COMPLETED; gửi lần lượt status tương ứng. Đơn từ POST /orders còn PENDING nên chưa chuyển bước barista được. Không tự lấy ID đơn bất kỳ.
+url: "{{baseUrl}}/barista/orders/{{baristaOrderId}}"
+method: PATCH
+headers:
+  Accept: application/json
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "PREPARING"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("HTTP 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 2000

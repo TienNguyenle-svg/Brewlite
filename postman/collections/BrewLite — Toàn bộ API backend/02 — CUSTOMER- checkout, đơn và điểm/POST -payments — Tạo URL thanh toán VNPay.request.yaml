@@ -1,0 +1,39 @@
+$kind: http-request
+name: POST /payments — Tạo URL thanh toán VNPay
+description: Chỉ CUSTOMER, dùng cùng tài khoản đã tạo đơn. Chạy POST /orders trước. Header tự sinh PAY-<15 chữ số> (backend chỉ cho tối đa 15 chữ số). Nếu đã có payment còn hạn, dùng lại fixedPaymentKey bằng key đã dùng; đổi key không tạo thêm payment song song khi lượt cũ còn hiệu lực. Muốn retry payment FAILED/hết hạn phải dùng key mới và còn trong thời hạn cho phép. Response lưu paymentId, paymentUrl, paymentAmount, lastPaymentKey. Tạo URL chưa có nghĩa đã thanh toán; không tự mở cổng VNPay.
+url: "{{baseUrl}}/payments"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+  - key: Idempotency-Key
+    value: "{{paymentIdempotencyKey}}"
+    description: PAY-<tối đa 15 số>, tự sinh. Muốn replay nhập fixedPaymentKey từ lastPaymentKey.
+body:
+  type: json
+  content: |-
+    {
+      "orderId": "{{orderId}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const fixed = pm.variables.get("fixedPaymentKey");
+      const key = fixed || ("PAY-" + Math.floor(Math.random() * 1000000000000000).toString().padStart(15, "0"));
+      if (!/^PAY-\d{1,15}$/.test(key)) throw new Error("fixedPaymentKey phải có dạng PAY-<1 đến 15 chữ số>.");
+      pm.variables.set("paymentIdempotencyKey", key);
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 201", function () { pm.response.to.have.status(201); });
+      if (pm.response.code === 201) {
+        const data = pm.response.json();
+        if (data.paymentId) pm.collectionVariables.set("paymentId", data.paymentId);
+        pm.collectionVariables.set("paymentUrl", data.paymentUrl || "");
+        if (typeof data.amount === "number") pm.collectionVariables.set("paymentAmount", String(data.amount));
+        pm.collectionVariables.set("lastPaymentKey", pm.variables.get("paymentIdempotencyKey"));
+      }
+    language: text/javascript
+order: 4000

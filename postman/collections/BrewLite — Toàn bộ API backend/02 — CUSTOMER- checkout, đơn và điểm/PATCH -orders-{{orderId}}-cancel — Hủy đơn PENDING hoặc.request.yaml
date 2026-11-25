@@ -1,0 +1,12 @@
+$kind: http-request
+name: PATCH /orders/{{orderId}}/cancel — Hủy đơn PENDING hoặc PAID
+description: Chỉ chủ đơn CUSTOMER. Code hiện nhận PENDING hoặc PAID; không hủy PREPARING/READY/COMPLETED/CANCELLED. Điền orderId của đúng đơn cần hủy. Không chọn tùy tiện khi chạy tải.
+url: "{{baseUrl}}/orders/{{orderId}}/cancel"
+method: PATCH
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: pm.test("HTTP 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 6000
