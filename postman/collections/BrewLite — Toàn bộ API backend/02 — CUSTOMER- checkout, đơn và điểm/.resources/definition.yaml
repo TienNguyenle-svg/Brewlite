@@ -1,0 +1,9 @@
+$kind: collection
+name: "02 — CUSTOMER: checkout, đơn và điểm"
+auth:
+  - id: ef2d3499-cbf1-4571-9833-91c6054e3cfe
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{customerToken}}"
+order: 3000

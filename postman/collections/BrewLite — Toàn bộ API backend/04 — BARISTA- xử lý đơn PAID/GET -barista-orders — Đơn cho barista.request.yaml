@@ -1,0 +1,17 @@
+$kind: http-request
+name: GET /barista/orders — Đơn cho barista
+description: Chỉ BARISTA. Backend không có GET /barista/orders/:id.
+url: "{{baseUrl}}/barista/orders"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  - key: status
+    value: COMPLETED
+    disabled: true
+    description: Bật để xem đơn hoàn thành; mặc định bỏ query xem PAID/PREPARING/READY.
+scripts:
+  - type: afterResponse
+    code: pm.test("HTTP 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 1000

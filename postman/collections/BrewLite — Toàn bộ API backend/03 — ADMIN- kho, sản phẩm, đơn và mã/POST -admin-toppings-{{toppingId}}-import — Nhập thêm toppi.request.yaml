@@ -1,0 +1,18 @@
+$kind: http-request
+name: POST /admin/toppings/{{toppingId}}/import — Nhập thêm topping
+url: "{{baseUrl}}/admin/toppings/{{toppingId}}/import"
+method: POST
+headers:
+  Accept: application/json
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "amount": 10
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("HTTP 201", function () { pm.response.to.have.status(201); });
+    language: text/javascript
+order: 5000

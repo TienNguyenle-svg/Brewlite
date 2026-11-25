@@ -1,0 +1,7 @@
+$kind: collection
+name: "00 — AUTH: đăng ký và đăng nhập"
+auth:
+  - id: ""
+    type: noauth
+    name: No Auth
+order: 1000

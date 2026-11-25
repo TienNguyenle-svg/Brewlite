@@ -1,0 +1,11 @@
+$kind: http-request
+name: GET /admin/orders — Tất cả đơn hàng
+url: "{{baseUrl}}/admin/orders"
+method: GET
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: pm.test("HTTP 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 11000

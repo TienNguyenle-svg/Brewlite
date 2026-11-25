@@ -1,0 +1,13 @@
+$kind: http-request
+name: GET / — API hoạt động
+url: "{{baseUrl}}/"
+method: GET
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 200", function () { pm.response.to.have.status(200); });
+      pm.test("API hello", function () { pm.expect(pm.response.text()).to.equal("Hello World!"); });
+    language: text/javascript
+order: 1000

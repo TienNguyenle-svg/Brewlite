@@ -1,0 +1,12 @@
+$kind: http-request
+name: GET /users/me/loyalty — Số dư và lịch sử điểm
+description: Chỉ CUSTOMER. customerToken mặc định tham chiếu authToken trong environment/collection.
+url: "{{baseUrl}}/users/me/loyalty"
+method: GET
+headers:
+  Accept: application/json
+scripts:
+  - type: afterResponse
+    code: pm.test("HTTP 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 1000

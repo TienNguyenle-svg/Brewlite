@@ -662,7 +662,7 @@ export default function OrdersView({ placedId }: { placedId?: string }) {
 
   const tabs: { id: Tab; label: string; count: number }[] = [
     { id: "active", label: "Đang xử lý", count: activeOrders.length },
-    { id: "history", label: "Đơn đã hủy", count: historyOrders.length },
+    { id: "history", label: "Lịch sử đơn", count: historyOrders.length },
   ];
 
   return (

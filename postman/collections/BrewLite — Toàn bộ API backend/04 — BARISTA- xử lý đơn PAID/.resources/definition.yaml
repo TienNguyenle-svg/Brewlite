@@ -1,0 +1,9 @@
+$kind: collection
+name: "04 — BARISTA: xử lý đơn PAID"
+auth:
+  - id: 8aa26b5d-5053-4703-be8d-28c5a6a4b7d7
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{baristaToken}}"
+order: 5000

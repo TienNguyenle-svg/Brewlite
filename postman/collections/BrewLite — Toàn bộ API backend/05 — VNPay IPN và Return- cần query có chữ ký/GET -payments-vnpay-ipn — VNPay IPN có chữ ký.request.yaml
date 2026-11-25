@@ -1,0 +1,21 @@
+$kind: http-request
+name: GET /payments/vnpay-ipn — VNPay IPN có chữ ký
+description: "Dán toàn bộ query IPN hợp lệ (không dấu ? đầu, giữ encoding, gồm vnp_SecureHash) vào vnpayIpnQuery. Backend kiểm tra chữ ký, mã website, payment và số tiền. Không tự ký query và không chứa VNPAY_HASH_SECRET. Không chỉ kiểm tra HTTP 200: assertion còn yêu cầu RspCode=00. Gửi query sai có thể nhận HTTP 200 nhưng RspCode=97/01/04/99. Không chạy trong tải khi chưa chuẩn bị giao dịch/query hợp lệ."
+url: "{{baseUrl}}/payments/vnpay-ipn?{{vnpayIpnQuery}}"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  "{{vnpayIpnQuery}}": null
+auth:
+  type: noauth
+scripts:
+  - type: beforeRequest
+    code: if (!pm.variables.get("vnpayIpnQuery")) throw new Error("Nhập query IPN VNPay có chữ ký vào vnpayIpnQuery trước khi gửi.");
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("HTTP 200", function () { pm.response.to.have.status(200); });
+      if (pm.response.code === 200) pm.test("VNPay IPN được chấp nhận", function () { pm.expect(pm.response.json().RspCode).to.equal("00"); });
+    language: text/javascript
+order: 1000
